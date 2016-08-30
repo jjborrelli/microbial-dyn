@@ -1,6 +1,10 @@
-mouse <- read.csv("C:/Users/borre_000/Desktop/murineMICROBEint.csv", row.names = 1)
-mouseSE <- read.csv("C:/Users/borre_000/Desktop/murineMICROBEintSE.csv", row.names = 1)
-alphas <- read.csv("C:/Users/borre_000/Desktop/murineMICROBEa.csv")
+library(deSolve)
+
+
+
+mouse <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/murineMICROBEint.csv", row.names = 1)
+mouseSE <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/murineMICROBEintSE.csv", row.names = 1)
+alphas <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/murineMICROBEa.csv")
 
 mse <- as.matrix(mouseSE)
 mse[is.na(mse)] <- 0
@@ -15,8 +19,7 @@ lvmod <- function(times, state, parms){
   })
 }
 
-ext1 <- function (times, states, parms) 
-{
+ext1 <- function (times, states, parms){
   with(as.list(states), {
     states[states < 10^-30] <- 0 
     return(c(states))
@@ -24,26 +27,28 @@ ext1 <- function (times, states, parms)
 }
 
 
-library(deSolve)
-
-
 parms <- list(alpha = (alphas$Alpha), m = m)
-
 
 system.time(
 res1 <- ode(runif(17), 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time =  1:1000))
 )
 res1
-matplot(res1[,-1], typ = "l")
+matplot(res1[,-1], typ = "l", lwd = 2)
 
 
-B <- matrix(runif(17 * 100, .5, 1), nrow = 17, ncol = 100)
+B <- matrix(runif(17 * 1000, .5, 1), nrow = 17, ncol = 1000)
 
-out <- matrix(nrow = 100, ncol = 17)
-for(i in 1:100){
-  out[i,] <- ode(B[,i], 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time = 1:1000))[1000, -1]
+strt <- Sys.time()
+out <- matrix(nrow = 1000, ncol = 17)
+tte <- matrix(nrow = 1000, ncol = 17)
+for(i in 1:1000){
+  res <- ode(B[,i], 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time = 1:1000))
+  tte[i,] <- apply(res[,-1], 2, function(x) 1000 - sum(x == 0))
+  out[i,] <- res[1000, -1]
   print(i)
 }
+end <- Sys.time()
+end - strt
 
 persist <- apply(out, 1, function(x){sum(x > 0)})
 hist(persist)
@@ -109,7 +114,7 @@ p1med <- c()
 temp <- list()
 p1 <- list()
 for(i in 1:17){
-  temp[[i]] <- dropoutSP(x = i, iter = 200, t = 100, B = B, par = parms)
+  temp[[i]] <- dropoutSP(x = i, iter = 500, t = 1000, B = B, par = parms)
   p1[[i]] <- apply(temp[[i]], 1, function(x) sum(x > 0))
   
   p1mu[i] <- mean(p1[[i]])
@@ -129,10 +134,10 @@ boxplot(nz/200)
 strt <- Sys.time()
 #p2mu <- c()
 #p2med <- c()
-temp2 <- list()
+temp2 <- lapply(1:17, function(x) lapply(1:500, function(y) matrix(NA, nrow = 1000, ncol = 17)))
 #p2 <- list()
 for(i in 1:17){
-  temp2[[i]] <- dropoutSP2(x = i, iter = 1000, t = 100, B = B, par = parms)
+  temp2[[i]] <- dropoutSP2(x = i, iter = 500, t = 1000, B = B, par = parms)
   #p2[[i]] <- apply(temp2[[i]], 1, function(x) sum(x > 0))
   
   #p2mu[i] <- mean(p2[[i]])
@@ -142,6 +147,14 @@ for(i in 1:17){
 }
 end <- Sys.time()
 end-strt
+
+length(temp2[[1]])
+#get time to extinction
+lapply(temp2, function(x){sapply(x, function(y){apply(y[,-1], 2, function(x) 1000 - sum(x == 0))})})
+#get equilibrium comms
+lapply(temp2, function(x){sapply(x, function(y){y[1000,-1]})})
+
+
 
 library(rootSolve)
 eig <- c()
