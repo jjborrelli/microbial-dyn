@@ -3,6 +3,7 @@ library(deSolve)
 
 
 mouse <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/murineMICROBEint.csv", row.names = 1)
+mouse2 <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/murineMICROBEint2.csv", row.names = 1)
 mouseSE <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/murineMICROBEintSE.csv", row.names = 1)
 alphas <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/murineMICROBEa.csv")
 
@@ -10,6 +11,7 @@ mse <- as.matrix(mouseSE)
 mse[is.na(mse)] <- 0
 
 m <- as.matrix(mouse)
+mALT <- as.matrix(mouse2)
 
 lvmod <- function(times, state, parms){
   with(as.list(c(state, parms)), {
@@ -35,7 +37,7 @@ ext1 <- function (times, states, parms){
 }
 
 
-parms <- list(alpha = (alphas$Alpha), m = m)
+parms <- list(alpha = (alphas$Alpha), m = mALT)
 
 system.time(
 res1 <- ode(runif(17), 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time =  1:1000))
@@ -57,6 +59,26 @@ for(i in 1:1000){
 }
 end <- Sys.time()
 end - strt
+
+resi <- list()
+
+for(i in 1:100){
+  p1 <- out[63,]
+  neg <- FALSE
+  while(!neg){
+    p1[17] <- p1[sample(1:17, 1)] + abs(rnorm(1, 0, .1))
+    neg <- sum(p1 < 0) == 0
+  }
+  resi[[i]] <- ode(p1, 1:500, parms = parms, func = lvmod, events = list(func = ext1, time = 1:500))
+  print(i)
+}
+
+
+## TO DO
+##  - FINISH WORKING OUT ABOVE METHOD TO TEST PERTURBATIONS OF EQUILIBRIUM COMMUNITIES
+
+
+
 
 persist <- apply(out, 1, function(x){sum(x > 0)})
 hist(persist)
@@ -293,7 +315,7 @@ boxplot(tte2)
 
 eq1 <- t(sapply(out2, function(x) x[1000,-1]))
 boxplot(eq1)
-
+apply(eq1, 2, median)
 
 B1 <- matrix(runif(11*500), ncol = 500, nrow = 11)
 strt <- Sys.time()
@@ -328,10 +350,14 @@ eq <- lapply(temp2, function(x){t(sapply(x, function(y){y[999,-1]}))})
 
 
 
-
-
+m2 <- m
+m2[(abs(m) - as.matrix(mouseSE)) < 0] <- 0 
 
 d1 <- cbind(m[upper.tri(m)], t(m)[upper.tri(m)])
+d1.2 <- cbind(m2[upper.tri(m2)], t(m2)[upper.tri(m2)])
 d2 <- cbind(as.matrix(ints1)[upper.tri(as.matrix(ints1))], t(as.matrix(ints1))[upper.tri(as.matrix(ints1))])
 
-mean(d2)
+dx <- d1.2/abs(d1.2)
+dx[is.nan(dx)] <- 0
+rowSums(dx)
+
