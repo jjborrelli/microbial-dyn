@@ -268,6 +268,33 @@ system.time(
 res1
 matplot(res1[,-1], typ = "l", lwd = 2)
 
+
+B1 <- matrix(runif(11*1000), ncol = 1000, nrow = 11)
+strt <- Sys.time()
+out2 <- list()#matrix(nrow = 1000, ncol = 11)
+tte2 <- matrix(nrow = 1000, ncol = 11)
+for(i in 1:1000){
+  res <- ode(B1[,i], 1:1000, parms = parms, func = lvmod2, events = list(func = ext1, time = 1:1000))
+  tte2[i,] <- apply(res[,-1], 2, function(x) 1000 - sum(x == 0))
+  out2[[i]] <- res
+  print(i)
+}
+end <- Sys.time()
+end - strt
+
+mout <- lapply(out2, function(x){melt(x[,-1])})
+mout2 <- lapply(1:1000, function(x) mout[[x]] <- cbind(mout[[x]], iter = x))
+library(data.table)
+mout3 <- rbindlist(mout2[sample(1:1000, 100)])
+#library(ggplot2)
+ggplot(mout3, aes(x = Var1, y = value)) + geom_point() + facet_wrap(~Var2, scales = "free_y")
+
+boxplot(tte2)
+
+eq1 <- t(sapply(out2, function(x) x[1000,-1]))
+boxplot(eq1)
+
+
 B1 <- matrix(runif(11*500), ncol = 500, nrow = 11)
 strt <- Sys.time()
 dyn <- lapply(1:11, function(x) lapply(1:500, function(y) matrix(NA, nrow = 1000, ncol = 17)))
@@ -291,3 +318,20 @@ for(i in 1:11){
 
 #get equilibrium comms
 eq <- lapply(temp2, function(x){t(sapply(x, function(y){y[999,-1]}))})
+
+
+
+
+
+
+
+
+
+
+
+
+
+d1 <- cbind(m[upper.tri(m)], t(m)[upper.tri(m)])
+d2 <- cbind(as.matrix(ints1)[upper.tri(as.matrix(ints1))], t(as.matrix(ints1))[upper.tri(as.matrix(ints1))])
+
+mean(d2)
