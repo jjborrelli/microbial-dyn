@@ -19,6 +19,14 @@ lvmod <- function(times, state, parms){
   })
 }
 
+lvmod2 <- function(times, state, parms){
+  with(as.list(c(state, parms)), {
+    dB <- state * parms$alpha + state * parms$m %*% state
+    
+    list(dB)
+  })
+}
+
 ext1 <- function (times, states, parms){
   with(as.list(states), {
     states[states < 10^-30] <- 0 
@@ -87,7 +95,7 @@ dropoutSP2 <- function(x, iter = 100, t = 1000, B, par, mod = lvmod, ev = ext1){
   B[x,] <- 0
   out2 <- list()#matrix(nrow = iter, ncol = nrow(par$m))
   for(j in 1:iter){
-    out2[[j]] <- ode(B[,j], 1:t, parms = par, func = mod, events = list(func = ev, time = 1:t))[-1,]
+    out2[[j]] <- ode(B[,j], 1:t, parms = par, func = mod, events = list(func = ev, time = 1:t))[,-1]
   }
   return(out2)
 }
@@ -150,9 +158,17 @@ end-strt
 
 length(temp2[[1]])
 #get time to extinction
-lapply(temp2, function(x){sapply(x, function(y){apply(y[,-1], 2, function(x) 1000 - sum(x == 0))})})
+t2e <- lapply(temp2, function(x){t(sapply(x, function(y){apply(y[,-1], 2, function(x) 1000 - sum(x == 0))}))})
+
+loc <- matrix(c((1:17) - .5, rep(-10, 17), (1:17) + .5, rep(1010, 17)), ncol = 4)
+par(mfrow = c(6, 3))
+for(i in 1:17){
+  boxplot(t2e[[i]])
+  rect(loc[i,1], loc[i,2], loc[i,3], loc[i,4], col = "grey75")
+}
+
 #get equilibrium comms
-lapply(temp2, function(x){sapply(x, function(y){y[1000,-1]})})
+eq <- lapply(temp2, function(x){t(sapply(x, function(y){y[999,-1]}))})
 
 
 
@@ -226,3 +242,52 @@ plot(mre)
 
 out1 <- ode(xi, 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time = 1:1000))
 matplot(out1[,-1], typ = "l")
+
+
+
+
+
+
+
+
+
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+
+ints1 <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/ecomod-ints.csv", row.names = 1)
+grow1 <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/ecomod-Growth.csv")
+
+parms <- list(alpha = unlist(grow1), m = as.matrix(ints1))
+
+system.time(
+  res1 <- ode(runif(11), 1:1000, parms = parms, func = lvmod2, events = list(func = ext1, time =  1:1000))
+)
+res1
+matplot(res1[,-1], typ = "l", lwd = 2)
+
+B1 <- matrix(runif(11*500), ncol = 500, nrow = 11)
+strt <- Sys.time()
+dyn <- lapply(1:11, function(x) lapply(1:500, function(y) matrix(NA, nrow = 1000, ncol = 17)))
+for(i in 1:11){
+  dyn[[i]] <- dropoutSP2(x = i, iter = 500, t = 1000, B = B1, par = parms, mod = lvmod2)
+  print(i)
+}
+end <- Sys.time()
+end-strt
+
+length(temp2[[1]])
+#get time to extinction
+t2e2 <- lapply(dyn, function(x){t(sapply(x, function(y){apply(y, 2, function(x) 1000 - sum(x == 0))}))})
+
+loc <- matrix(c((1:11) - .5, rep(-10, 11), (1:11) + .5, rep(1010, 11)), ncol = 4)
+par(mfrow = c(3, 4))
+for(i in 1:11){
+  boxplot(t2e2[[i]])
+  rect(loc[i,1], loc[i,2], loc[i,3], loc[i,4], col = "grey75")
+}
+
+#get equilibrium comms
+eq <- lapply(temp2, function(x){t(sapply(x, function(y){y[999,-1]}))})
