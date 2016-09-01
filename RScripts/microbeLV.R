@@ -12,6 +12,8 @@ mse[is.na(mse)] <- 0
 
 m <- as.matrix(mouse)
 mALT <- as.matrix(mouse2)
+mSTR <- as.matrix(mouse2)
+mSTR[abs(mSTR) < 2] <- 0
 
 lvmod <- function(times, state, parms){
   with(as.list(c(state, parms)), {
@@ -38,6 +40,8 @@ ext1 <- function (times, states, parms){
 
 
 parms <- list(alpha = (alphas$Alpha), m = mALT)
+parms <- list(alpha = (alphas$Alpha), m = m)
+parms <- list(alpha = (alphas$Alpha), m = mSTR)
 
 system.time(
 res1 <- ode(runif(17), 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time =  1:1000))
@@ -49,29 +53,39 @@ matplot(res1[,-1], typ = "l", lwd = 2)
 B <- matrix(runif(17 * 1000, .5, 1), nrow = 17, ncol = 1000)
 
 strt <- Sys.time()
-out <- matrix(nrow = 1000, ncol = 17)
+out <- list()#matrix(nrow = 1000, ncol = 17)
 tte <- matrix(nrow = 1000, ncol = 17)
 for(i in 1:1000){
   res <- ode(B[,i], 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time = 1:1000))
   tte[i,] <- apply(res[,-1], 2, function(x) 1000 - sum(x == 0))
-  out[i,] <- res[1000, -1]
+  out[[i]] <- res#[1000, -1]
   print(i)
 }
 end <- Sys.time()
 end - strt
 
-resi <- list()
+n.uniq <- unique(lapply(out, function(x) which(x[1000,-1] > 0)))
+size3 <- sapply(lapply(out, function(x) which(x[1000,-1] > 0)), function(y) length(y))
+eqcomm <- t(sapply(out, function(x){x[1000,-1]}))
+boxplot(eqcomm[size3 == 2,])
+boxplot(eqcomm[size3 == 3,])
+boxplot(eqcomm[size3 == 5,])
 
+
+resi <- list()
+pert <- c()
 for(i in 1:100){
-  p1 <- out[63,]
+  p1 <- out[[1]][1000,-1]
   neg <- FALSE
   while(!neg){
     p1[17] <- p1[sample(1:17, 1)] + abs(rnorm(1, 0, .1))
     neg <- sum(p1 < 0) == 0
   }
-  resi[[i]] <- ode(p1, 1:500, parms = parms, func = lvmod, events = list(func = ext1, time = 1:500))
+  pert[i] <- p1[17]
+  resi[[i]] <- ode(p1, 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time = 1:1000))
   print(i)
 }
+
 
 
 ## TO DO
@@ -361,3 +375,21 @@ dx <- d1.2/abs(d1.2)
 dx[is.nan(dx)] <- 0
 rowSums(dx)
 
+m[1,]
+m[,1]
+x <- vector(length = 17)
+
+
+ncomp <- c()
+namen <- c()
+for(i in 1:17){
+  r1 <- ifelse(mALT[i,] < 0, x <- "neg", ifelse(mALT[i,] > 0, x <- "pos", x <- "0"))
+  r2 <- ifelse(mALT[,i] < 0, x <- "neg", ifelse(mALT[,i] > 0, x <- "pos", x <- "0"))
+  ncomp[i] <- sum(r1 == "neg" & r2 == "neg")
+  namen[i] <- sum(r1 == "neg" & r2 == "0" | r2 == "neg" & r1 == "0")
+}
+
+
+
+lapply(out, function(x) mALT[which(x[1000,-1] > 0), which(x[1000,-1] > 0)])
+lapply(out, function(x) which(x[1000,-1] > 0))
