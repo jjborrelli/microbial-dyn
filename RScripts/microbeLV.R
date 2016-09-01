@@ -397,8 +397,10 @@ lapply(out, function(x) mALT[which(x[1000,-1] > 0), which(x[1000,-1] > 0)])
 lapply(out, function(x) which(x[1000,-1] > 0))
 
 
-
-g1 <- melt(mSTR)
+rownames(mSTR) <- colnames(mSTR)
+rownames(mALT) <- colnames(mALT)
+g1 <- melt(mSTR[c(1,3,4,5,8,11,16),c(1,3,4,5,8,11,16)])
+g1 <- melt(mALT[c(1,4,6,13,15),c(1,4,6,13,15)])
 g2 <- g1[g1$value != 0,]
 g3 <- graph.edgelist(as.matrix(g2)[,1:2])
 E(g3)$weights <- g2$value
