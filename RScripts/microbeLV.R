@@ -44,7 +44,7 @@ parms <- list(alpha = (alphas$Alpha), m = m)
 parms <- list(alpha = (alphas$Alpha), m = mSTR)
 
 system.time(
-res1 <- ode(runif(17), 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time =  1:1000))
+res1 <- ode(runif(17, 1e3, 1e6), 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time =  1:1000))
 )
 res1
 matplot(res1[,-1], typ = "l", lwd = 2)
@@ -370,6 +370,7 @@ m2[(abs(m) - as.matrix(mouseSE)) < 0] <- 0
 
 d1 <- cbind(m[upper.tri(m)], t(m)[upper.tri(m)])
 d1.2 <- cbind(m2[upper.tri(m2)], t(m2)[upper.tri(m2)])
+d1.3 <- cbind(mSTR[upper.tri(mSTR)], t(mSTR)[upper.tri(mSTR)])
 d2 <- cbind(as.matrix(ints1)[upper.tri(as.matrix(ints1))], t(as.matrix(ints1))[upper.tri(as.matrix(ints1))])
 
 dx <- d1.2/abs(d1.2)
@@ -394,3 +395,11 @@ for(i in 1:17){
 
 lapply(out, function(x) mALT[which(x[1000,-1] > 0), which(x[1000,-1] > 0)])
 lapply(out, function(x) which(x[1000,-1] > 0))
+
+
+
+g1 <- melt(mSTR)
+g2 <- g1[g1$value != 0,]
+g3 <- graph.edgelist(as.matrix(g2)[,1:2])
+E(g3)$weights <- g2$value
+plot(g3, layout = layout.circle, edge.color = factor(g2$value > 0))
