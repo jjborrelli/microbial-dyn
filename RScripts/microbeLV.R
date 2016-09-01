@@ -74,19 +74,20 @@ boxplot(eqcomm[size3 == 5,])
 
 resi <- list()
 pert <- c()
-for(i in 1:100){
+for(i in 1:1000){
   p1 <- out[[1]][1000,-1]
   neg <- FALSE
   while(!neg){
-    p1[17] <- p1[sample(1:17, 1)] + abs(rnorm(1, 0, .1))
+    p1[17] <- p1[sample(1:17, 1)] + abs(rnorm(1, 0, .2))
     neg <- sum(p1 < 0) == 0
   }
   pert[i] <- p1[17]
   resi[[i]] <- ode(p1, 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time = 1:1000))
   print(i)
 }
+plot(round(rowSums(t(sapply(resi, function(x) x[1000,-1]))), 5))
 
-
+plot(sapply(resi, function(x) sum(x[,18] > 0))~pert)
 
 ## TO DO
 ##  - FINISH WORKING OUT ABOVE METHOD TO TEST PERTURBATIONS OF EQUILIBRIUM COMMUNITIES
