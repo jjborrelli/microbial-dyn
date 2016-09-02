@@ -205,7 +205,13 @@ for(i in 1:17){
 }
 
 #get equilibrium comms
-eq <- lapply(temp2, function(x){t(sapply(x, function(y){y[999,-1]}))})
+eq <- lapply(temp2, function(x){t(sapply(x, function(y){tail(y, 1)}))})
+eq[[1]]
+
+u2 <- lapply(lapply(eq, function(x){lapply(1:nrow(x), function(y) which(x[y,] > 0))}), unique)
+sapply(u2, length)
+lapply(u2, function(x) sapply(x, length))
+write.csv(melt(u2), "~/Desktop/GitHub/microbial-dyn/Data/removalCOMM3.csv")
 
 
 
