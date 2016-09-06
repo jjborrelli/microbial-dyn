@@ -211,7 +211,7 @@ eq[[1]]
 u2 <- lapply(lapply(eq, function(x){lapply(1:nrow(x), function(y) which(x[y,] > 0))}), unique)
 sapply(u2, length)
 lapply(u2, function(x) sapply(x, length))
-write.csv(melt(u2), "~/Desktop/GitHub/microbial-dyn/Data/removalCOMM3.csv")
+#write.csv(melt(u2), "~/Desktop/GitHub/microbial-dyn/Data/removalCOMM3.csv")
 
 
 
@@ -304,6 +304,9 @@ ints1 <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/ecomod-ints.csv", row.nam
 grow1 <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/ecomod-Growth.csv")
 
 parms <- list(alpha = unlist(grow1), m = as.matrix(ints1))
+parms$m[abs(parms$m) < quantile(abs(parms$m))[3]] <- 0
+diag(parms$m) <- diag(as.matrix(ints1))
+parms$m[abs(parms$m) > quantile(abs(parms$m))[4]] <- 0
 
 system.time(
   res1 <- ode(runif(11), 1:1000, parms = parms, func = lvmod2, events = list(func = ext1, time =  1:1000))
@@ -324,6 +327,16 @@ for(i in 1:1000){
 }
 end <- Sys.time()
 end - strt
+
+eq <- t(sapply(out2, function(x) tail(x, 1)[-1]))
+eq[1,]
+unique(apply(eq, 1, function(x) which(x > 0)))
+
+u2 <- lapply(lapply(eq, function(x){lapply(1:nrow(x), function(y) which(x[y,] > 0))}), unique)
+sapply(u2, length)
+lapply(u2, function(x) sapply(x, length))
+#write.csv(melt(u2), "~/Desktop/GitHub/microbial-dyn/Data/removalCOMM3.csv")
+
 
 mout <- lapply(out2, function(x){melt(x[,-1])})
 mout2 <- lapply(1:1000, function(x) mout[[x]] <- cbind(mout[[x]], iter = x))
@@ -360,15 +373,24 @@ for(i in 1:11){
 }
 
 #get equilibrium comms
-eq <- lapply(temp2, function(x){t(sapply(x, function(y){y[999,-1]}))})
+eq <- lapply(dyn, function(y) t(sapply(y, function(x) tail(x, 1))))
+
+u2 <- lapply(lapply(eq, function(x){lapply(1:nrow(x), function(y) which(x[y,] > 0))}), unique)
+sapply(u2, length)
+melt(lapply(u2, function(x) sapply(x, length)))
+
+write.csv(melt(u2), "~/Desktop/GitHub/microbial-dyn/Data/remCOMM1-stein.csv")
 
 
+sumpos <- c()
+sumneg <- c()
+for(i in 1:11){
+  sumpos[i] <- sum(c(parms$m[i,][parms$m[i,] > 0], parms$m[,i][parms$m[,i] > 0]))
+  sumneg[i] <- sum(c(parms$m[i,][parms$m[i,] < 0], parms$m[,i][parms$m[,i] < 0]))
+}
+sumpos
 
-
-
-
-
-
+dim(dyn[[1]][1][1])
 
 
 m2 <- m
