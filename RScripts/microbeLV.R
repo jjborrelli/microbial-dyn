@@ -309,9 +309,9 @@ diag(parms$m) <- diag(as.matrix(ints1))
 parms$m[abs(parms$m) > quantile(abs(parms$m))[4]] <- 0
 
 system.time(
-  res1 <- ode(runif(11), 1:1000, parms = parms, func = lvmod2, events = list(func = ext1, time =  1:1000))
+  res1 <- ode(res1[1000,-1], 1:1000, parms = parms, func = lvmod2, events = list(func = ext1, time =  1:1000))
 )
-res1
+res1[1000,-1]
 matplot(res1[,-1], typ = "l", lwd = 2)
 
 
@@ -332,7 +332,7 @@ eq <- t(sapply(out2, function(x) tail(x, 1)[-1]))
 eq[1,]
 unique(apply(eq, 1, function(x) which(x > 0)))
 
-u2 <- lapply(lapply(eq, function(x){lapply(1:nrow(x), function(y) which(x[y,] > 0))}), unique)
+
 sapply(u2, length)
 lapply(u2, function(x) sapply(x, length))
 #write.csv(melt(u2), "~/Desktop/GitHub/microbial-dyn/Data/removalCOMM3.csv")
@@ -379,7 +379,19 @@ u2 <- lapply(lapply(eq, function(x){lapply(1:nrow(x), function(y) which(x[y,] > 
 sapply(u2, length)
 melt(lapply(u2, function(x) sapply(x, length)))
 
-write.csv(melt(u2), "~/Desktop/GitHub/microbial-dyn/Data/remCOMM1-stein.csv")
+u2 <- lapply(lapply(eq, function(x){lapply(1:nrow(x), function(y) which(x[y,] > 0))}), paste0)
+lapply(u2, table)
+
+par(mfrow = c(3,4))
+for(i in 1:11){barplot(lapply(u2, table)[[i]], main = i)}
+#dev.off()
+
+u3 <- lapply(eq, function(x){lapply(1:nrow(x), function(y) x[y,][which(x[y,] > 0)])})
+
+
+
+
+#write.csv(melt(u2), "~/Desktop/GitHub/microbial-dyn/Data/remCOMM1-stein.csv")
 
 
 sumpos <- c()
