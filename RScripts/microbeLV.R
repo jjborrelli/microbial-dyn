@@ -309,7 +309,7 @@ diag(parms$m) <- diag(as.matrix(ints1))
 parms$m[abs(parms$m) > quantile(abs(parms$m))[4]] <- 0
 
 system.time(
-  res1 <- ode(res1[1000,-1], 1:1000, parms = parms, func = lvmod2, events = list(func = ext1, time =  1:1000))
+  res1 <- ode(res, 1:13, parms = parms, func = lvmod2, events = list(func = ext1, time =  1:11))
 )
 res1[1000,-1]
 matplot(res1[,-1], typ = "l", lwd = 2)
@@ -445,3 +445,9 @@ g2 <- g1[g1$value != 0,]
 g3 <- graph.edgelist(as.matrix(g2)[,1:2])
 E(g3)$weights <- g2$value
 plot(g3, layout = layout.circle, edge.color = factor(g2$value > 0))
+
+
+
+
+test2 <- melt(lapply(dyn, function(x){t(sapply(x, function(y){apply(y, 2, sd)}))})[-4])
+ggplot(test2, aes(x = factor(Var2), y = value)) + geom_boxplot(aes(fill = factor(L1))) + facet_wrap(~L1)
