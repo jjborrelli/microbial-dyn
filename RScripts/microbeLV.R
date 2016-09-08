@@ -451,3 +451,16 @@ plot(g3, layout = layout.circle, edge.color = factor(g2$value > 0))
 
 test2 <- melt(lapply(dyn, function(x){t(sapply(x, function(y){apply(y, 2, sd)}))})[-4])
 ggplot(test2, aes(x = factor(Var2), y = value)) + geom_boxplot(aes(fill = factor(L1))) + facet_wrap(~L1)
+
+
+
+library(rootSolve)
+
+eig <- c()
+states <- matrix(runif(11*1000), 11, 1000)
+for(i in 1:1000){
+  myj <- jacobian.full(y = states[,i], func = lvmod2, parms = parms)
+  eig[i] <- max(Re(eigen(myj)$values))
+}
+hist(eig)
+ggpairs(t(states[,which(eig < 0)])) 
