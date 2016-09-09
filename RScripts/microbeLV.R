@@ -455,7 +455,7 @@ ggplot(test2, aes(x = factor(Var2), y = value)) + geom_boxplot(aes(fill = factor
 
 
 library(rootSolve)
-
+library(GGally)
 eig <- c()
 states <- matrix(runif(11*1000), 11, 1000)
 for(i in 1:1000){
