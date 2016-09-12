@@ -1,16 +1,24 @@
 library(dplyr)
 library(reshape2)
 library(ggplot2)
+library(deSolve)
 
 stOTU <- as.data.frame(t(read.csv("Data/stein-OTUcount.csv", header = F, row.names = 1)))
 head(stOTU)
 table(stOTU[stOTU$Population == 2,2])
 
+
+
+ints1 <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/ecomod-ints.csv", row.names = 1)
+grow1 <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/ecomod-Growth.csv")
+
+parms <- list(alpha = unlist(grow1), m = as.matrix(ints1))
+
 matplot(select(stOTU, undefined_genus_of_Enterobacteriaceae:Other), typ = "l")
 
 otuCOUNT <- select(stOTU, undefined_genus_of_Enterobacteriaceae:Other)
-barplot(t(otuCOUNT[stOTU$Population == 1 & stOTU$Replicate == 1,])~factor(stOTU[stOTU$Population == 1 & stOTU$Replicate == 1,4]))
-?barplot
+barplot(t(otuCOUNT[stOTU$Population == 1 & stOTU$Replicate == 1,]))  
+
 
 
 stOTU[stOTU$Population == 1 & stOTU$Replicate == 1,]
@@ -20,7 +28,9 @@ res1 <- ode(unlist(otuCOUNT[stOTU$Population == 1 & stOTU$Replicate == 1,][1,]),
 times <- stOTU[stOTU$Population == 1 & stOTU$Replicate == 3,4]
 barplot(t(res1[res1[,1] %in% times, -1]))
 
-ggplot(melt(res1[,-1]), aes(x = Var1, y = value, fill = Var2)) + geom_area(position = "stack")
+times2 <- rep(times, 11)
+
+ggplot(melt(res1[,-1]), aes(x = times2, y = value, fill = Var2)) + geom_area(position = "stack")
 
 
 table(stOTU$Population)
