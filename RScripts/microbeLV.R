@@ -474,13 +474,14 @@ ggpairs(t(states[,which(eig < 0)]))
 #########################################################################################################
 # pairwise
 
-com1 <- t(combn(1:11, 2))
+com1 <- t(combn(1:11, 5))
 par2 <- parms
-res1 <- list()
+eigs1 <- c()
 for(i in 1:nrow(com1)){
   par2$m <- parms$m[com1[i,],com1[i,]]
-  par2$alpha <- parms$m[com1[i,]]
-  res1[[i]] <- ode(runif(2, .5, 1), 0:30, parms = par2, func = lvmod2, events = list(func = ext1, time =  1:200))
+  par2$alpha <- parms$alpha[com1[i,]]
+  eigs1[i] <- max(Re(eigen(jacobian.full(solve(parms$m[com1[i,], com1[i,]])%*%parms$alpha[com1[i,]], lvmod2, parms = par2))$values))
   print(i)
 }
-
+boxplot(eigs1)
+solve(parms$m[c(1,2), c(1,2)])%*%parms$alpha[c(1,2)]
