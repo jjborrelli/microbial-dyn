@@ -23,9 +23,9 @@ barplot(t(otuCOUNT[stOTU$Population == 1 & stOTU$Replicate == 1,]))
 
 stOTU[stOTU$Population == 1 & stOTU$Replicate == 1,]
 
-res1 <- ode(unlist(otuCOUNT[stOTU$Population == 1 & stOTU$Replicate == 1,][1,]), c(0,2,6,13), parms = parms, func = lvmod2, events = list(func = ext1, time =  c(0,2,6,13)))
+res1 <- ode(unlist(otuCOUNT[stOTU$Population == 1 & stOTU$Replicate == 2,][1,]), 1:100, parms = parms, func = lvmod2, events = list(func = ext1, time =  1:100))
 
-times <- stOTU[stOTU$Population == 1 & stOTU$Replicate == 3,4]
+times <- stOTU[stOTU$Population == 1 & stOTU$Replicate == 1,4]
 barplot(t(res1[res1[,1] %in% times, -1]))
 
 times2 <- rep(times, 11)
@@ -50,3 +50,6 @@ for(i in 1:9){
 res2 <- lapply(res1, function(x) x[,-1])
 res3 <- lapply(res2, function(x) t(apply(x, 1, function(y) y/sum(y))))
 ggplot(melt(res3), aes(x = Var1, y = value, fill = Var2)) + geom_area(position = "stack") + facet_wrap(~L1)
+
+
+
