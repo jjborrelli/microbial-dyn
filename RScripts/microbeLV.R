@@ -1,5 +1,5 @@
 library(deSolve)
-
+library(rootSolve)
 
 
 mouse <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/murineMICROBEint.csv", row.names = 1)
@@ -44,10 +44,10 @@ parms <- list(alpha = (alphas$Alpha), m = m)
 parms <- list(alpha = (alphas$Alpha), m = mSTR)
 
 system.time(
-res1 <- ode(runif(17), 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time =  1:1000))
+res2 <- ode(res1[1000,-1], 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time =  1:1000))
 )
 #res1
-matplot(res1[,-1], typ = "l", lwd = 2, ylab = "B", xlab = "Time")
+matplot(res2[,-1], typ = "l", lwd = 2, ylab = "B", xlab = "Time")
 
 
 B <- matrix(runif(17 * 1000, .5, 1), nrow = 17, ncol = 1000)
@@ -484,4 +484,3 @@ for(i in 1:nrow(com1)){
   print(i)
 }
 boxplot(eigs1)
-solve(parms$m[c(1,2), c(1,2)])%*%parms$alpha[c(1,2)]
