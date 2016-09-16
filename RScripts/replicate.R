@@ -2,6 +2,7 @@ library(dplyr)
 library(reshape2)
 library(ggplot2)
 library(deSolve)
+library(rootSolve)
 
 stOTU <- as.data.frame(t(read.csv("Data/stein-OTUcount.csv", header = F, row.names = 1)))
 head(stOTU)
@@ -51,5 +52,32 @@ res2 <- lapply(res1, function(x) x[,-1])
 res3 <- lapply(res2, function(x) t(apply(x, 1, function(y) y/sum(y))))
 ggplot(melt(res3), aes(x = Var1, y = value, fill = Var2)) + geom_area(position = "stack") + facet_wrap(~L1)
 
+#B1 <- matrix(runif(11*1000), ncol = 1000, nrow = 11)
+B1 <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/intialABUND2.csv", row.names = 1)
+B2 <- B1
+B2[9,] <- 0
+strt <- Sys.time()
+out2 <- list()
+out3 <- list()
+tte2 <- matrix(nrow = 1000, ncol = 11)
+tte3 <- matrix(nrow = 1000, ncol = 11)
+for(i in 1:1000){
+  out2[[i]] <- ode(B1[,i], 1:1000, parms = parms, func = lvmod2, events = list(func = ext1, time = 1:1000))
+  out3[[i]] <- ode(B2[,i], 1:1000, parms = parms, func = lvmod2, events = list(func = ext1, time = 1:1000))
+  tte2[i,] <- apply(out2[[i]][,-1], 2, function(x) 1000 - sum(x == 0))
+  tte3[i,] <- apply(out3[[i]][,-1], 2, function(x) 1000 - sum(x == 0))
+  
+  print(i)
+}
+end <- Sys.time()
+end - strt
 
+eq2 <- t(sapply(out2, function(x) tail(x, 1)[-1]))
+unique(apply(eq2, 1, function(x) which(x > 0)))
+barplot(t(eq2[999:1000,-1]))
+cbind(eq2[1000,][order(eq2[1000,], decreasing = T)],colnames(parms$m)[order(eq2[1000,], decreasing = T)])
 
+eq3 <- t(sapply(out3, function(x) tail(x, 1)[-1]))
+unique(apply(eq3, 1, function(x) which(x > 0)))
+barplot(t(eq3[999:1000,-1]))
+cbind(eq3[1000,][order(eq3[1000,], decreasing = T)],colnames(parms$m)[order(eq3[1000,], decreasing = T)])

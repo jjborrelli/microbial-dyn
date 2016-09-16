@@ -315,20 +315,23 @@ res1[1000,-1]
 matplot(res1[,-1], typ = "l", lwd = 2)
 
 
-B1 <- matrix(runif(11*1000), ncol = 1000, nrow = 11)
+#B1 <- matrix(runif(11*1000), ncol = 1000, nrow = 11)
+B1 <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/intialABUND2.csv", row.names = 1)
+B2 <- B1
+B2[9,] <- 0
 strt <- Sys.time()
-out2 <- list()#matrix(nrow = 1000, ncol = 11)
+out3 <- list()#matrix(nrow = 1000, ncol = 11)
 tte2 <- matrix(nrow = 1000, ncol = 11)
 for(i in 1:1000){
-  res <- ode(B1[,i], 1:1000, parms = parms, func = lvmod2, events = list(func = ext1, time = 1:1000))
+  res <- ode(B2[,i], 1:1000, parms = parms, func = lvmod2, events = list(func = ext1, time = 1:1000))
   tte2[i,] <- apply(res[,-1], 2, function(x) 1000 - sum(x == 0))
-  out2[[i]] <- res
+  out3[[i]] <- res
   print(i)
 }
 end <- Sys.time()
 end - strt
 
-eq <- t(sapply(out2, function(x) tail(x, 1)[-1]))
+eq <- t(sapply(out3, function(x) tail(x, 1)[-1]))
 eq[1,]
 unique(apply(eq, 1, function(x) which(x > 0)))
 
