@@ -52,6 +52,15 @@ res2 <- lapply(res1, function(x) x[,-1])
 res3 <- lapply(res2, function(x) t(apply(x, 1, function(y) y/sum(y))))
 ggplot(melt(res3), aes(x = Var1, y = value, fill = Var2)) + geom_area(position = "stack") + facet_wrap(~L1)
 
+##############################################################################################
+##############################################################################################
+##############################################################################################
+#####   Get equilibrium/steady-state communities
+#####   Determine their eigenvalues
+#####      1. with C. diff 
+#####      2. without C. diff
+
+
 #B1 <- matrix(runif(11*1000), ncol = 1000, nrow = 11)
 B1 <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/intialABUND2.csv", row.names = 1)
 B2 <- B1
@@ -76,8 +85,44 @@ eq2 <- t(sapply(out2, function(x) tail(x, 1)[-1]))
 unique(apply(eq2, 1, function(x) which(x > 0)))
 barplot(t(eq2[999:1000,-1]))
 cbind(eq2[1000,][order(eq2[1000,], decreasing = T)],colnames(parms$m)[order(eq2[1000,], decreasing = T)])
+unique(apply(eq2, 1, function(x) max(Re(eigen(jacobian.full(x, lvmod2, parms = parms))$values))))
+eqabund <- colMeans(eq2[which(eq2[,9] != 0),])
+max(eigen(jacobian.full(eqabund[which(eqabund > 0)], lvmod2, 
+                        parms = list(alpha = parms$alpha[which(eqabund > 0)], 
+                                     m = parms$m[which(eqabund > 0), which(eqabund > 0)])))$values)
+colMeans(eq2[which(eq2[,9] != 0),])
 
 eq3 <- t(sapply(out3, function(x) tail(x, 1)[-1]))
 unique(apply(eq3, 1, function(x) which(x > 0)))
 barplot(t(eq3[999:1000,-1]))
 cbind(eq3[1000,][order(eq3[1000,], decreasing = T)],colnames(parms$m)[order(eq3[1000,], decreasing = T)])
+eqabund2 <- colMeans(eq3)
+max(Re(eigen(jacobian.full(eqabund2[which(eqabund2 > 0)], lvmod2, 
+                           parms = list(alpha = parms$alpha[which(eqabund2 > 0)], 
+                                        m = parms$m[which(eqabund2 > 0),which(eqabund2 > 0)])))$values))
+
+
+
+##############################################################################################
+##############################################################################################
+##############################################################################################
+#####   Perturb equilibrium/steady-state communities
+#####   Determine the effect on their eigenvalues
+#####      1. with C. diff 
+#####      2. without C. diff
+
+
+## Comm 1 with Cdiff
+init.abund <- eqabund[which(eqabund !=0)]
+growth <- parms$alpha[which(eqabund !=0)]
+imat <- parms$m[which(eqabund !=0),which(eqabund !=0)] 
+
+par1 <- list(alpha = growth, m = imat)
+out <- ode(init.abund, 1:1000, parms = par1, func = lvmod2, events = list(func = ext1, time = 1:1000))
+matplot(out[,-1], typ = "l")
+
+ia2 <- init.abund
+for(i in 1:length(init.abund)){
+  ia2[i] <- 0#ia2[i]*(rbeta(1,1,4)*sample(c(1,-1),1,prob = c(.5,.5)))
+  out <- ode(ia2, 1:1000, parms = par1, func = lvmod2, events = list(func = ext1, time = 1:1000))
+}
