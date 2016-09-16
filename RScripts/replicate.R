@@ -126,3 +126,60 @@ for(i in 1:length(init.abund)){
   ia2[i] <- 0#ia2[i]*(rbeta(1,1,4)*sample(c(1,-1),1,prob = c(.5,.5)))
   out <- ode(ia2, 1:1000, parms = par1, func = lvmod2, events = list(func = ext1, time = 1:1000))
 }
+
+imat2 <- imat*-1
+diag(imat2) <- diag(imat)
+par1 <- list(alpha = growth, m = imat2)
+eig <- eigen(jacobian.full(init.abund, lvmod2, parms = par1))
+plot(Re(eig$values), Im(eig$values))
+
+
+e1 <- c()
+for(i in 1:length(imat)){
+  imat2 <- imat
+  imat2[i] <- 0
+  par1 <- list(alpha = growth, m = imat2)
+  eig <- eigen(jacobian.full(init.abund, lvmod2, parms = par1))
+  e1[i] <- max(Re(eig$values))
+}
+
+e2 <- c()
+cor <- c()
+eg1 <- t(combn(1:nrow(imat),2))
+for(i in 1:nrow(eg1)){
+  imat2 <- imat
+  imat2[eg1[i,1], eg1[i,2]] <- 0
+  imat2[eg1[i,2], eg1[i,1]] <- 0
+  par1 <- list(alpha = growth, m = imat2)
+  
+  cor[i] <- cor.test(imat2[upper.tri(imat2)], t(imat2)[upper.tri(imat2)])$estimate
+  eig <- eigen(jacobian.full(init.abund, lvmod2, parms = par1))
+  e2[i] <- max(Re(eig$values))
+}
+
+hist(e2)
+eg1[which(e2 > 0),]
+imat[eg1[,1]]
+
+fun1 <- function(x, mat){
+  c(mat[x[1], x[2]],mat[x[2], x[1]])
+}
+
+t(apply(eg1, 1, fun1, mat = imat))[which(e2 > 0),]
+plot(cor, e2)
+
+e3 <- c()
+for(i in 1:1000){
+  #imat2 <- matrix(rnorm(length(imat),mean = imat, sd = .01), 10, 10)
+  imat2 <- imat
+  imat2[unique(eg1[which(e2 > 0),1]),unique(eg1[which(e2 > 0),2])] <- rnorm(length(imat2[unique(eg1[which(e2 > 0),1]),unique(eg1[which(e2 > 0),2])]), imat2[unique(eg1[which(e2 > 0),1]),unique(eg1[which(e2 > 0),2])], .0001)
+  imat2[unique(eg1[which(!e2 > 0),1]),unique(eg1[which(!e2 > 0),2])] <- rnorm(length(imat2[unique(eg1[which(!e2 > 0),1]),unique(eg1[which(!e2 > 0),2])]), imat2[unique(eg1[which(!e2 > 0),1]),unique(eg1[which(!e2 > 0),2])], .15)
+  par1 <- list(alpha = growth, m = imat2)
+  eig <- eigen(jacobian.full(init.abund, lvmod2, parms = par1))
+  e3[i] <- max(Re(eig$values))
+}
+
+hist(e3)
+
+
+
