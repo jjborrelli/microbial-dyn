@@ -63,34 +63,46 @@ ggplot(melt(res3), aes(x = Var1, y = value, fill = Var2)) + geom_area(position =
 
 #B1 <- matrix(runif(11*1000), ncol = 1000, nrow = 11)
 B1 <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/intialABUND2.csv", row.names = 1)
-B2 <- B1
-B2[9,] <- 0
+B3 <- B2 <- B1
+B2[9,] <- runif(1000, 10^-9, 10^-6)
+B3[9,] <- 0
 strt <- Sys.time()
+out1 <- list()
 out2 <- list()
 out3 <- list()
 tte2 <- matrix(nrow = 1000, ncol = 11)
 tte3 <- matrix(nrow = 1000, ncol = 11)
 for(i in 1:1000){
-  out2[[i]] <- ode(B1[,i], 1:1000, parms = parms, func = lvmod2, events = list(func = ext1, time = 1:1000))
-  out3[[i]] <- ode(B2[,i], 1:1000, parms = parms, func = lvmod2, events = list(func = ext1, time = 1:1000))
-  tte2[i,] <- apply(out2[[i]][,-1], 2, function(x) 1000 - sum(x == 0))
-  tte3[i,] <- apply(out3[[i]][,-1], 2, function(x) 1000 - sum(x == 0))
+  out1[[i]] <- ode(B1[,i], 1:1000, parms = parms, func = lvmod2, events = list(func = ext1, time = 1:1000))
+  out2[[i]] <- ode(B2[,i], 1:1000, parms = parms, func = lvmod2, events = list(func = ext1, time = 1:1000))
+  out3[[i]] <- ode(B3[,i], 1:1000, parms = parms, func = lvmod2, events = list(func = ext1, time = 1:1000))
   
   print(i)
 }
 end <- Sys.time()
 end - strt
 
+eq1 <- t(sapply(out1, function(x) tail(x, 1)[-1]))
+unique(apply(eq1, 1, function(x) which(x > 0)))
+barplot(t(eq1[999:1000,-1]))
+cbind(eq1[1000,][order(eq1[1000,], decreasing = T)],colnames(parms$m)[order(eq1[1000,], decreasing = T)])
+unique(apply(eq1, 1, function(x) max(Re(eigen(jacobian.full(x, lvmod2, parms = parms))$values))))
+eqabund <- colMeans(eq1[which(eq2[,9] != 0),])
+max(eigen(jacobian.full(eqabund[which(eqabund > 0)], lvmod2, 
+                        parms = list(alpha = parms$alpha[which(eqabund > 0)], 
+                                     m = parms$m[which(eqabund > 0), which(eqabund > 0)])))$values)
+colMeans(eq2[which(eq2[,9] != 0),])
+
 eq2 <- t(sapply(out2, function(x) tail(x, 1)[-1]))
 unique(apply(eq2, 1, function(x) which(x > 0)))
 barplot(t(eq2[999:1000,-1]))
 cbind(eq2[1000,][order(eq2[1000,], decreasing = T)],colnames(parms$m)[order(eq2[1000,], decreasing = T)])
 unique(apply(eq2, 1, function(x) max(Re(eigen(jacobian.full(x, lvmod2, parms = parms))$values))))
-eqabund <- colMeans(eq2[which(eq2[,9] != 0),])
-max(eigen(jacobian.full(eqabund[which(eqabund > 0)], lvmod2, 
+eqabund <- colMeans(eq2)
+max(Re(eigen(jacobian.full(eqabund[which(eqabund > 0)], lvmod2, 
                         parms = list(alpha = parms$alpha[which(eqabund > 0)], 
-                                     m = parms$m[which(eqabund > 0), which(eqabund > 0)])))$values)
-colMeans(eq2[which(eq2[,9] != 0),])
+                                     m = parms$m[which(eqabund > 0), which(eqabund > 0)])))$values))
+colMeans(eq2)
 
 eq3 <- t(sapply(out3, function(x) tail(x, 1)[-1]))
 unique(apply(eq3, 1, function(x) which(x > 0)))
@@ -101,6 +113,8 @@ max(Re(eigen(jacobian.full(eqabund2[which(eqabund2 > 0)], lvmod2,
                            parms = list(alpha = parms$alpha[which(eqabund2 > 0)], 
                                         m = parms$m[which(eqabund2 > 0),which(eqabund2 > 0)])))$values))
 
+
+barplot(cbind(eq1[1000,], eq2[1000,], eq3[1000,]))
 
 
 ##############################################################################################
@@ -182,4 +196,70 @@ for(i in 1:1000){
 hist(e3)
 
 
+##############################################################################################
+##############################################################################################
+##############################################################################################
+#####   Look at strong/core microbiome + keep it constant
+#####   Vary weakly interacting microbe ints
+#####      1 
+#####      2
 
+core <- order(eq2[1000,], decreasing = T)[1:5]
+periph <- order(eq2[1000,], decreasing = T)[6:11]
+
+par <- parms
+
+## Periphery
+par$m[periph, periph] <- rnorm(length(parms$m[periph, periph]), parms$m[periph, periph], abs(parms$m[periph, periph]*.25)) 
+
+par.lst <- lapply(1:1000, function(x){par <- parms; par$m[periph, periph] <- rnorm(length(parms$m[periph, periph]), parms$m[periph, periph], abs(parms$m[periph, periph]*.25));diag(par$m) <- diag(parms$m);return(par)})
+
+
+strt <- Sys.time()
+res1 <- list()
+for(i in 1:1000){
+  res1[[i]] <- ode(B1[,1], 1:1000, parms = par.lst[[i]], func = lvmod2, events = list(func = ext1, time = 1:1000))
+  
+  print(i)
+}
+end <- Sys.time()
+end - strt
+
+eqcp <- t(sapply(res1, function(x) tail(x, 1)[-1]))
+table(apply(eqcp, 1, function(x) paste0(which(x > 0), collapse = ",")))
+
+eqcomm <- lapply(unique(apply(eqcp, 1, function(x) which(x > 0))), paste0, collapse = ",")
+eqc <- apply(eqcp, 1, function(x) paste0(which(x > 0), collapse = ","))
+
+barplot(t(sapply(1:11, function(x) if(sum(eqc %in% eqcomm[[x]]) > 1){colMeans(eqcp[eqc %in% eqcomm[[x]],])}else{eqcp[eqc %in% eqcomm[[x]],]}))) 
+mabund <- colMeans(eqcp[eqc %in% eqcomm[[1]],])
+plist <- par.lst[eqc %in% eqcomm[[1]]]
+
+j1 <- list()
+for(i in 1:length(plist)){
+  j1[[i]] <- jacobian.full(mabund, lvmod2, parms = plist[[i]])
+}
+
+
+## Core
+
+par.lst2 <- lapply(1:1000, function(x){par <- parms; par$m[core, core] <- rnorm(length(parms$m[core, core]), parms$m[core, core], abs(parms$m[core, core]*.25));diag(par$m) <- diag(parms$m);return(par)})
+
+
+strt <- Sys.time()
+res1 <- list()
+for(i in 1:1000){
+  res1[[i]] <- ode(B1[,1], 1:1000, parms = par.lst2[[i]], func = lvmod2, events = list(func = ext1, time = 1:1000))
+  
+  print(i)
+}
+end <- Sys.time()
+end - strt
+
+eqCORE <- t(sapply(res1, function(x) tail(x, 1)[-1]))
+table(apply(eqCORE, 1, function(x) paste0(which(x > 0), collapse = ",")))
+
+eqcommC <- lapply(unique(apply(eqCORE, 1, function(x) which(x > 0))), paste0, collapse = ",")
+eqco <- apply(eqCORE, 1, function(x) paste0(which(x > 0), collapse = ","))
+
+barplot(sapply(1:57, function(x) if(sum(eqco %in% eqcommC[[x]]) > 1){colMeans(eqCORE[eqco %in% eqcommC[[x]],])}else{eqCORE[eqco %in% eqcommC[[x]],]})[,-52]) 
