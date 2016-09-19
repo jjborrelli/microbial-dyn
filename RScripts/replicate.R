@@ -212,7 +212,7 @@ par <- parms
 ## Periphery
 par$m[periph, periph] <- rnorm(length(parms$m[periph, periph]), parms$m[periph, periph], abs(parms$m[periph, periph]*.25)) 
 
-par.lst <- lapply(1:1000, function(x){par <- parms; par$m[periph, periph] <- rnorm(length(parms$m[periph, periph]), parms$m[periph, periph], abs(parms$m[periph, periph]*.25));diag(par$m) <- diag(parms$m);return(par)})
+par.lst <- lapply(1:1000, function(x){par <- parms; par$m[periph, periph] <- rnorm(length(parms$m[periph, periph]), parms$m[periph, periph], abs(parms$m[periph, periph]));diag(par$m) <- diag(parms$m);return(par)})
 
 
 strt <- Sys.time()
@@ -263,3 +263,29 @@ eqcommC <- lapply(unique(apply(eqCORE, 1, function(x) which(x > 0))), paste0, co
 eqco <- apply(eqCORE, 1, function(x) paste0(which(x > 0), collapse = ","))
 
 barplot(sapply(1:57, function(x) if(sum(eqco %in% eqcommC[[x]]) > 1){colMeans(eqCORE[eqco %in% eqcommC[[x]],])}else{eqCORE[eqco %in% eqcommC[[x]],]})[,-52]) 
+
+
+
+######
+######
+
+mco <- parms$m[core, core]
+mpe <- parms$m[periph, periph]
+
+c(mean(mco[mco < 0]), mean(mco[mco > 0]))
+c(mean(mpe[mpe < 0]), mean(mpe[mpe > 0]))
+
+cin <- cbind(mco[upper.tri(mco)], t(mco)[upper.tri(mco)]) # 4 mut, 4 pred, 2 comp
+pin <- cbind(mpe[upper.tri(mpe)], t(mpe)[upper.tri(mpe)]) # 3 mut, 6 pred, 6 comp
+
+sum(cin > 0)/length(cin)
+sum(pin > 0)/length(pin)
+######
+######
+
+
+id <- 1:11
+id[core] <- "green"
+id[periph] <- "blue"
+
+plot(parms$alpha, diag(parms$m), col = id, pch = 16)
