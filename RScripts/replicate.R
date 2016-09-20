@@ -212,7 +212,7 @@ par <- parms
 ## Periphery
 par$m[periph, periph] <- rnorm(length(parms$m[periph, periph]), parms$m[periph, periph], abs(parms$m[periph, periph]*.25)) 
 
-par.lst <- lapply(1:1000, function(x){par <- parms; par$m[periph, periph] <- rnorm(length(parms$m[periph, periph]), parms$m[periph, periph], abs(parms$m[periph, periph])*.25);diag(par$m) <- diag(parms$m);return(par)})
+par.lst <- lapply(1:1000, function(x){par <- parms; par$m[periph, periph] <- rnorm(length(parms$m[periph, periph]), parms$m[periph, periph], abs(parms$m[periph, periph])*.25);return(par)})
 
 
 strt <- Sys.time()
@@ -225,7 +225,8 @@ for(i in 1:1000){
 end <- Sys.time()
 end - strt
 
-eqcp <- t(sapply(res1, function(x) tail(x, 1)[-1]))
+eqcp <- t(sapply(res1, function(x) if(nrow(x) == 1000){x[1000,-1]}else{rep(NA,11)}))
+eqcp <- eqcp[complete.cases(eqcp),]
 table(apply(eqcp, 1, function(x) paste0(which(x > 0), collapse = ",")))
 
 eqcomm <- lapply(unique(apply(eqcp, 1, function(x) which(x > 0))), paste0, collapse = ",")
@@ -298,12 +299,33 @@ id[periph] <- "blue"
 
 plot(parms$alpha, diag(parms$m), col = id, pch = 16)
 
+## Core<-->Periph
+
+
+par.lst3 <- lapply(1:1000, function(x){par <- parms; par$m[periph, -periph] <- rnorm(length(parms$m[periph, -periph]), parms$m[periph, -periph], abs(parms$m[periph, -periph])*.25); par$m[-periph, periph] <- rnorm(length(parms$m[-periph, periph]), parms$m[-periph, periph], abs(parms$m[-periph, periph])*.25); return(par)})
+
+
+strt <- Sys.time()
+res1 <- list()
+for(i in 1:1000){
+  res1[[i]] <- ode(B1[,1], 1:1000, parms = par.lst3[[i]], func = lvmod2, events = list(func = ext1, time = 1:1000))
+  
+  print(i)
+}
+end <- Sys.time()
+end - strt
+
+eq.cp <- t(sapply(res1, function(x) if(nrow(x) == 1000){x[1000,-1]}else{rep(NA,11)}))
+eq.cp <- eq.cp[complete.cases(eq.cp),]
+table(apply(eq.cp, 1, function(x) paste0(which(x > 0), collapse = ",")))
+eqcommCP <- sapply(unique(apply(eq.cp, 1, function(x) which(x > 0))), paste0, collapse = ",")
+
 
 ##############################################################################################
 ##############################################################################################
 ##############################################################################################
-#####   
-#####   
+#####   Create simulated "core" sets of microbes with parametrically bootstrapped interactions
+#####   - bootstrapped from orig data
 #####       
 #####      
 
@@ -311,14 +333,32 @@ mtest <- matrix(rnorm(11*11, mean(m2), sd(m2)), 11, 11)
 diag(mtest) <- -abs(rnorm(11, .77, 1.23))
 
 mtest
-par2 <- list(alpha = parms$alpha, m = mtest)
+par2 <- list()
+sta <- runif(5, .5, 1)
 res2 <- list()
-for(i in 1:100){
-  mtest <- matrix(rnorm(11*11, mean(m2), sd(m2)), 11, 11)
-  diag(mtest) <- -abs(rnorm(11, .77, 1.23))
-  par2 <- list(alpha = parms$alpha, m = mtest)
+for(i in 1:1000){
+  mtest <- matrix(rnorm(5*5, mean(m2), sd(m2)), 5, 5)
+  diag(mtest) <- -abs(rnorm(5, .77, 1.23))
   
-  res2[[i]] <- ode(B1[,1], 1:1000, parms = par2, func = lvmod2, events = list(func = ext1, time = 1:1000))
+  par2[[i]] <- list(alpha = rbeta(5, 1.5, 2), m = mtest)
+  
+  res2[[i]] <- ode(sta, 1:1000, parms = par2[[i]], func = lvmod2, events = list(func = ext1, time = 1:1000))
   
   print(i)
 }
+
+all1 <- which(apply(t(sapply(res2, function(x) tail(x[,-1], 1))), 1, function(y) sum(y > 0)) == 5)
+t(sapply(res2, function(x) if(nrow(x) == 1000){x[1000,-1]}else{c(0,0,0,0,0)}))[all1,]
+eqc1 <- t(sapply(res2, function(x) if(nrow(x) == 1000){x[1000,-1]}else{c(0,0,0,0,0)}))[all1,]
+
+all2 <- all1[-which(rowSums(eqc1) == 0)]
+
+eqc2 <- eqc1[-which(rowSums(eqc1) == 0),]
+barplot(t(eqc2[1:20,]))
+par3 <- par2[all2]
+
+eigs <- sapply(1:nrow(eqc2), function(x){jac <- jacobian.full(eqc2[x,], lvmod2, parms = par3[[x]]);eig <- max(Re(eigen(jac)$values));return(eig)})
+hist(eigs)
+
+plot(sapply(par3, function(x) sum(x$m < 0)), eig)
+
