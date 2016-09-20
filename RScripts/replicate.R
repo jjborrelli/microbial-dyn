@@ -212,7 +212,7 @@ par <- parms
 ## Periphery
 par$m[periph, periph] <- rnorm(length(parms$m[periph, periph]), parms$m[periph, periph], abs(parms$m[periph, periph]*.25)) 
 
-par.lst <- lapply(1:1000, function(x){par <- parms; par$m[periph, periph] <- rnorm(length(parms$m[periph, periph]), parms$m[periph, periph], abs(parms$m[periph, periph]));diag(par$m) <- diag(parms$m);return(par)})
+par.lst <- lapply(1:1000, function(x){par <- parms; par$m[periph, periph] <- rnorm(length(parms$m[periph, periph]), parms$m[periph, periph], abs(parms$m[periph, periph])*.25);diag(par$m) <- diag(parms$m);return(par)})
 
 
 strt <- Sys.time()
@@ -231,7 +231,7 @@ table(apply(eqcp, 1, function(x) paste0(which(x > 0), collapse = ",")))
 eqcomm <- lapply(unique(apply(eqcp, 1, function(x) which(x > 0))), paste0, collapse = ",")
 eqc <- apply(eqcp, 1, function(x) paste0(which(x > 0), collapse = ","))
 
-barplot(t(sapply(1:11, function(x) if(sum(eqc %in% eqcomm[[x]]) > 1){colMeans(eqcp[eqc %in% eqcomm[[x]],])}else{eqcp[eqc %in% eqcomm[[x]],]}))) 
+barplot((sapply(1:11, function(x) if(sum(eqc %in% eqcomm[[x]]) > 1){colMeans(eqcp[eqc %in% eqcomm[[x]],])}else{eqcp[eqc %in% eqcomm[[x]],]}))) 
 mabund <- colMeans(eqcp[eqc %in% eqcomm[[1]],])
 plist <- par.lst[eqc %in% eqcomm[[1]]]
 
@@ -239,6 +239,14 @@ j1 <- list()
 for(i in 1:length(plist)){
   j1[[i]] <- jacobian.full(mabund, lvmod2, parms = plist[[i]])
 }
+
+j2 <- sapply(j1, function(x) max(Re(eigen(x)$values)))
+boxplot(j2)
+abline(h = 0)
+
+### look at periph in par.lst for eq and non-eq
+perpar1 <- lapply(plist, function(x) x$m[periph, periph])
+perpar2 <- lapply(par.lst[!eqc %in% eqcomm[[1]]], function(x) x$m[periph, periph])
 
 
 ## Core
@@ -289,3 +297,28 @@ id[core] <- "green"
 id[periph] <- "blue"
 
 plot(parms$alpha, diag(parms$m), col = id, pch = 16)
+
+
+##############################################################################################
+##############################################################################################
+##############################################################################################
+#####   
+#####   
+#####       
+#####      
+
+mtest <- matrix(rnorm(11*11, mean(m2), sd(m2)), 11, 11)
+diag(mtest) <- -abs(rnorm(11, .77, 1.23))
+
+mtest
+par2 <- list(alpha = parms$alpha, m = mtest)
+res2 <- list()
+for(i in 1:100){
+  mtest <- matrix(rnorm(11*11, mean(m2), sd(m2)), 11, 11)
+  diag(mtest) <- -abs(rnorm(11, .77, 1.23))
+  par2 <- list(alpha = parms$alpha, m = mtest)
+  
+  res2[[i]] <- ode(B1[,1], 1:1000, parms = par2, func = lvmod2, events = list(func = ext1, time = 1:1000))
+  
+  print(i)
+}
