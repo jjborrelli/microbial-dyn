@@ -362,3 +362,18 @@ hist(eigs)
 
 plot(sapply(par3, function(x) sum(x$m < 0)), eig)
 
+itypes <- function(x){
+  i1 <- x[upper.tri(x)]
+  i2 <- t(x)[upper.tri(x)] 
+  
+  comp <- sum(i1 < 0 & i2 < 0)
+  mut <- sum(i1 > 0 & i2 > 0)
+  pred <- sum(i1 > 0 & i2 < 0 | i1 < 0 & i2 > 0)
+  amens <- sum(i1 < 0 & i2  == 0 | i1 == 0 & i2 < 0)
+  comm <- sum(i1 > 0 & i2  == 0 | i1 == 0 & i2 > 0)
+  
+  return(c(comp = comp, mut = mut, pred = pred, amens = amens, comm = comm))
+}
+
+ints1 <- sapply(par2, function(x) itypes(x$m))
+rowSums(ints1[,all2])
