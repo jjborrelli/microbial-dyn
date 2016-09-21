@@ -84,7 +84,7 @@ end - strt
 
 eq1 <- t(sapply(out1, function(x) tail(x, 1)[-1]))
 unique(apply(eq1, 1, function(x) which(x > 0)))
-barplot(t(eq1[999:1000,-1]))
+barplot(t(eq1[1000,-1]), names.arg = )
 cbind(eq1[1000,][order(eq1[1000,], decreasing = T)],colnames(parms$m)[order(eq1[1000,], decreasing = T)])
 unique(apply(eq1, 1, function(x) max(Re(eigen(jacobian.full(x, lvmod2, parms = parms))$values))))
 eqabund <- colMeans(eq1[which(eq2[,9] != 0),])
@@ -377,3 +377,6 @@ itypes <- function(x){
 
 ints1 <- sapply(par2, function(x) itypes(x$m))
 rowSums(ints1[,all2])
+
+itypes(parms$m[core,core])
+itypes(parms$m[periph, periph])
