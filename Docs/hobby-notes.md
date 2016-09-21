@@ -1,0 +1,5 @@
+Need to figure out whether we can use relative abundance measures of OTUs to determine several stability measures. In particular we want to be able to parameterize Lotka-Volterra models of species interactions to assess whether the community is locally stable (in the sense of the eigenvalues) and whether the community has permanence (species maintain positive abundance based on projections from the model). By the approaches that typically require absolute abundances to realtive abundance data we will be able to unlock a tremendous amount of data that has been collected. 
+
+Discovering the identity of keystone taxa in the gut microbial community is imperative to understanding the factors underlying the stability of the microbiome. Prior studies have used networks of co-occurrence and correlations to assign 'keystoneness' to different OTUs. We want to use a novel approach, from the field of economics, called market basket analysis (MBA) to identify the relationships among mcirobial taxa.    
+
+Why do we care about stability? 
