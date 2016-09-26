@@ -380,3 +380,16 @@ rowSums(ints1[,all2])
 
 itypes(parms$m[core,core])
 itypes(parms$m[periph, periph])
+
+par1$m[core, core] <- 0
+par1$m[periph, periph] <- 0
+
+itypes(par1$m)
+itypes(parms$m)
+
+ity <- cbind(melt(c(itypes(par1$m)/sum(itypes(par1$m)),itypes(parms$m[periph, periph])/sum(itypes(parms$m[periph, periph])),itypes(parms$m[core, core])/sum(itypes(parms$m[core, core])))), typ = names(c(itypes(par1$m)/sum(itypes(par1$m)),itypes(parms$m[periph, periph])/sum(itypes(parms$m[periph, periph])),itypes(parms$m[core, core])/sum(itypes(parms$m[core, core])))), num = rep(c("ext", "rare", "abund"), each = 5))
+
+ggplot(ity, aes(x = factor(num), y = value)) + geom_bar(stat = "identity", aes(fill = typ))
+
+
+
