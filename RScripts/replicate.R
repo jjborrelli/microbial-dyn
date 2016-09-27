@@ -329,27 +329,28 @@ eqcommCP <- sapply(unique(apply(eq.cp, 1, function(x) which(x > 0))), paste0, co
 #####       
 #####      
 
+m2 <- parms$m
 mtest <- matrix(rnorm(11*11, mean(m2), sd(m2)), 11, 11)
 diag(mtest) <- -abs(rnorm(11, .77, 1.23))
 
 mtest
 par2 <- list()
-sta <- runif(5, .5, 1)
+sta <- runif(11, .5, 1)
 res2 <- list()
 for(i in 1:1000){
-  mtest <- matrix(rnorm(5*5, mean(m2), sd(m2)), 5, 5)
-  diag(mtest) <- -abs(rnorm(5, .77, 1.23))
+  mtest <- matrix(rnorm(11*11, mean(m2), sd(m2)), 11, 11)
+  diag(mtest) <- -abs(rnorm(11, .77, 1.23))
   
-  par2[[i]] <- list(alpha = rbeta(5, 1.5, 2), m = mtest)
+  par2[[i]] <- list(alpha = rbeta(11, 1.5, 2), m = mtest)
   
   res2[[i]] <- ode(sta, 1:1000, parms = par2[[i]], func = lvmod2, events = list(func = ext1, time = 1:1000))
   
   print(i)
 }
 
-all1 <- which(apply(t(sapply(res2, function(x) tail(x[,-1], 1))), 1, function(y) sum(y > 0)) == 5)
+all1 <- which(apply(t(sapply(res2, function(x) tail(x[,-1], 1))), 1, function(y) sum(y > 0)) > 7)
 t(sapply(res2, function(x) if(nrow(x) == 1000){x[1000,-1]}else{c(0,0,0,0,0)}))[all1,]
-eqc1 <- t(sapply(res2, function(x) if(nrow(x) == 1000){x[1000,-1]}else{c(0,0,0,0,0)}))[all1,]
+eqc1 <- t(sapply(res2, function(x) if(nrow(x) == 1000){x[1000,-1]}else{rep(0, 11)}))[all1,]
 
 all2 <- all1[-which(rowSums(eqc1) == 0)]
 
@@ -360,7 +361,12 @@ par3 <- par2[all2]
 eigs <- sapply(1:nrow(eqc2), function(x){jac <- jacobian.full(eqc2[x,], lvmod2, parms = par3[[x]]);eig <- max(Re(eigen(jac)$values));return(eig)})
 hist(eigs)
 
-plot(sapply(par3, function(x) sum(x$m < 0)), eig)
+plot(sapply(par3, function(x) sum(x$m < 0)), eigs)
+
+typs <- matrix(nrow = length(all2), ncol = 5)
+for(i in 1:length(all2)){
+  typs[i,] <- itypes(par3[[i]]$m[order(eqc2[i,], decreasing = T)[1:5],order(eqc2[i,], decreasing = T)[1:5]])
+}
 
 itypes <- function(x){
   i1 <- x[upper.tri(x)]
@@ -389,7 +395,9 @@ itypes(parms$m)
 
 ity <- cbind(melt(c(itypes(par1$m)/sum(itypes(par1$m)),itypes(parms$m[periph, periph])/sum(itypes(parms$m[periph, periph])),itypes(parms$m[core, core])/sum(itypes(parms$m[core, core])))), typ = names(c(itypes(par1$m)/sum(itypes(par1$m)),itypes(parms$m[periph, periph])/sum(itypes(parms$m[periph, periph])),itypes(parms$m[core, core])/sum(itypes(parms$m[core, core])))), num = rep(c("ext", "rare", "abund"), each = 5))
 
-ggplot(ity, aes(x = factor(num), y = value)) + geom_bar(stat = "identity", aes(fill = typ))
+ity2 <- cbind(melt(itypes(parms$m)/sum(itypes(parms$m))), typ = names(itypes(parms$m)), num = rep("all", 5))
+
+ggplot(rbind(ity, ity2), aes(x = factor(num), y = value)) + geom_bar(stat = "identity", aes(fill = typ))
 
 
 
