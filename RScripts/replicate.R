@@ -348,7 +348,7 @@ for(i in 1:1000){
   print(i)
 }
 
-all1 <- which(apply(t(sapply(res2, function(x) tail(x[,-1], 1))), 1, function(y) sum(y > 0)) > 7)
+all1 <- which(apply(t(sapply(res2, function(x) tail(x[,-1], 1))), 1, function(y) sum(y > 0)) > 0)
 t(sapply(res2, function(x) if(nrow(x) == 1000){x[1000,-1]}else{c(0,0,0,0,0)}))[all1,]
 eqc1 <- t(sapply(res2, function(x) if(nrow(x) == 1000){x[1000,-1]}else{rep(0, 11)}))[all1,]
 
@@ -364,9 +364,27 @@ hist(eigs)
 plot(sapply(par3, function(x) sum(x$m < 0)), eigs)
 
 typs <- matrix(nrow = length(all2), ncol = 5)
+typs2 <- matrix(nrow = length(all2), ncol = 5)
 for(i in 1:length(all2)){
   typs[i,] <- itypes(par3[[i]]$m[order(eqc2[i,], decreasing = T)[1:5],order(eqc2[i,], decreasing = T)[1:5]])
+  typs2[i,] <- itypes(par3[[i]]$m) 
 }
+
+tprop <- t(apply(typs2, 1, function(x){x/sum(x)}))
+plot(tprop[,1], spp)
+spp <- apply(eqc2, 1, function(x) sum(x > 0))/11
+fit1 <- (betareg(spp~tprop[,1]))
+summary(fit1)
+points(fit1$fitted.values~tprop[,1], pch = 20, col = "blue")
+fit2 <- betareg(spp~tprop[,2])
+summary(fit2)
+fit3 <- betareg(spp~tprop[,3])
+summary(fit3)
+
+
+
+
+
 
 itypes <- function(x){
   i1 <- x[upper.tri(x)]
