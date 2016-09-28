@@ -22,7 +22,7 @@ comm <- list()
 comm[[1]] <- ode(runif(2), 1:ti, parms = parms.m[[1]], func = lvmod2, events = list(func = ext1, time = 1:ti))
 matplot(comm[[1]][,-1], typ = "l")
 
-for(i in 2:iter){
+for(i in 319:iter){
   cond <- F
   while(!cond){
     parms.m[[i]]$m <- rbind(cbind(parms.m[[i-1]]$m, rnorm(nrow(parms.m[[i-1]]$m), mean(m2), sd(m2))), rnorm(ncol(parms.m[[i-1]]$m)+1, mean(m2), sd(m2)))
@@ -59,4 +59,7 @@ dim(releq)
 ggplot(melt(releq), aes(x = Var2, y = value, fill = factor(Var1))) + geom_bar(stat = "identity") + scale_fill_brewer()
 
 numSP <- apply(releq, 2, function(x) sum(x > 0))
-plot(numSP)
+plot(numSP, typ = "o")
+
+
+eqcomm <- apply(releq, 2, function(x) which(x > 0))
