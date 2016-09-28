@@ -63,3 +63,18 @@ plot(numSP, typ = "o")
 
 
 eqcomm <- apply(releq, 2, function(x) which(x > 0))
+dim(parms.m[[iter]]$m)
+
+ity <- lapply(1:500, function(x){itypes(parms.m[[iter]]$m[eqcomm[[x]],eqcomm[[x]]])})
+inty <- do.call(rbind, ity)[,1:3]
+inty2 <- t(apply(inty, 1, function(x) x/sum(x)))
+
+d <- sapply(1:500, function(x){mean(diag(parms.m[[iter]]$m[eqcomm[[x]],eqcomm[[x]]]))})
+gr <- sapply(1:500, function(x){mean(parms.m[[iter]]$alpha[eqcomm[[x]]])})
+
+plot(inty2[,1], numSP)
+plot(inty2[,2], numSP)
+plot(inty2[,3], numSP)
+
+summary(lm(numSP~inty2[,1:2]+d+gr))
+summary(lm(numSP~inty2[,1:2]))
