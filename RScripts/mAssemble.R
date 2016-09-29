@@ -51,6 +51,7 @@ colnames(reltraj) <- 1:51
 ggplot(melt(reltraj), aes(x = Var1, y = value)) + geom_line(aes(col = factor(Var2)))
 
 eqtraj <- sapply(comm2, function(x) x[ti, -1])
+intraj <- sapply(comm2, function(x) x[1, -1])
 barplot(eqtraj)
 releq <- apply(eqtraj, 2, function(x) x/sum(x))
 barplot(releq)
@@ -63,6 +64,7 @@ plot(numSP, typ = "o")
 
 
 eqcomm <- apply(releq, 2, function(x) which(x > 0))
+incomm <- apply(intraj, 2, function(x) which(x > 0))
 dim(parms.m[[iter]]$m)
 
 ity <- lapply(1:500, function(x){itypes(parms.m[[iter]]$m[eqcomm[[x]],eqcomm[[x]]])})
@@ -78,3 +80,18 @@ plot(inty2[,3], numSP)
 
 summary(lm(numSP~inty2[,1:2]+d+gr))
 summary(lm(numSP~inty2[,1:2]))
+
+ity3 <- t(sapply(1:500, function(x){itypes(parms.m[[iter]]$m[incomm[[x]], incomm[[x]]])}))
+inty3 <- t(apply(ity3, 1, function(x) x/sum(x)))
+
+d2 <- sapply(1:500, function(x){mean(diag(parms.m[[iter]]$m[incomm[[x]], incomm[[x]]]))})
+gr2 <- sapply(1:500, function(x){mean(parms.m[[iter]]$alpha[incomm[[x]]])})
+
+fit1 <- lm(numSP~inty3[,1:2]+d2+gr2)
+fit2 <- lm(numSP~inty3[,1:2])
+summary(fit1)
+anova(fit1, fit2)
+
+
+sf1 <- cbind(sapply(incomm, length) - (sapply(incomm, length) - sapply(eqcomm, length)), (sapply(incomm, length) - sapply(eqcomm, length)))
+summary(glm(sf1~inty3[,1:2]+d2+gr2, family = "binomial"))
