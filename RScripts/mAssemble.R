@@ -10,19 +10,20 @@ grow1 <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/ecomod-Growth.csv")
 
 parms <- list(alpha = unlist(grow1), m = as.matrix(ints1))
 
-ti <- 100
-iter <- 500
+ti <- 500
+iter <- 50
+sp.init <- sample(1:11, 2)
 parms.m <- lapply(1:iter, function(x) parms)
 parms.m[[1]] <- parms
-parms.m[[1]]$alpha <- parms.m[[1]]$alpha[1:2]
-parms.m[[1]]$m <- parms.m[[1]]$m[1:2, 1:2]
+parms.m[[1]]$alpha <- parms.m[[1]]$alpha[sp.init]
+parms.m[[1]]$m <- parms.m[[1]]$m[sp.init, sp.init]
 m2 <- parms$m
 
 comm <- list()
 comm[[1]] <- ode(runif(2), 1:ti, parms = parms.m[[1]], func = lvmod2, events = list(func = ext1, time = 1:ti))
 matplot(comm[[1]][,-1], typ = "l")
 
-for(i in 319:iter){
+for(i in 2:iter){
   cond <- F
   while(!cond){
     parms.m[[i]]$m <- rbind(cbind(parms.m[[i-1]]$m, rnorm(nrow(parms.m[[i-1]]$m), mean(m2), sd(m2))), rnorm(ncol(parms.m[[i-1]]$m)+1, mean(m2), sd(m2)))
@@ -95,3 +96,5 @@ anova(fit1, fit2)
 
 sf1 <- cbind(sapply(incomm, length) - (sapply(incomm, length) - sapply(eqcomm, length)), (sapply(incomm, length) - sapply(eqcomm, length)))
 summary(glm(sf1~inty3[,1:2]+d2+gr2, family = "binomial"))
+
+ico1 <- t(sapply(2:500, function(x){icor(parms.m[[iter]]$m[incomm[[x]], incomm[[x]]])}))

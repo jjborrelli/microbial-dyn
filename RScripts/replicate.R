@@ -384,7 +384,13 @@ summary(fit3)
 
 
 
-
+icor <- function(x){
+  i1 <- x[upper.tri(x)]
+  i2 <- t(x)[upper.tri(x)] 
+  
+  ct <- cor.test(i1, i2)
+  return(c(ct$statistic, ct$p.value))
+}
 
 itypes <- function(x){
   i1 <- x[upper.tri(x)]
