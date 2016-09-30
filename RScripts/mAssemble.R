@@ -68,7 +68,7 @@ eqcomm <- apply(releq, 2, function(x) which(x > 0))
 incomm <- apply(intraj, 2, function(x) which(x > 0))
 dim(parms.m[[iter]]$m)
 
-ity <- lapply(1:500, function(x){itypes(parms.m[[iter]]$m[eqcomm[[x]],eqcomm[[x]]])})
+ity <- lapply(1:50, function(x){itypes(parms.m[[iter]]$m[eqcomm[[x]],eqcomm[[x]]])})
 inty <- do.call(rbind, ity)[,1:3]
 inty2 <- t(apply(inty, 1, function(x) x/sum(x)))
 

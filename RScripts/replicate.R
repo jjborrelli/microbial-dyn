@@ -337,11 +337,15 @@ mtest
 par2 <- list()
 sta <- runif(11, .5, 1)
 res2 <- list()
-for(i in 1:1000){
-  mtest <- matrix(rnorm(11*11, mean(m2), sd(m2)), 11, 11)
-  diag(mtest) <- -abs(rnorm(11, .77, 1.23))
+for(i in 1:2000){
+  mtest <- matrix(nrow = 11, ncol = 11)
+  int.shuff <- sample(c(m2[upper.tri(m2)], m2[lower.tri(m2)]), 110)
+  mtest[upper.tri(mtest)] <- int.shuff[1:55]
+  mtest[lower.tri(mtest)] <- int.shuff[56:110]
   
-  par2[[i]] <- list(alpha = rbeta(11, 1.5, 2), m = mtest)
+  diag(mtest) <- sample(diag(m2), 11)
+  
+  par2[[i]] <- list(alpha = parms$alpha, m = mtest)
   
   res2[[i]] <- ode(sta, 1:1000, parms = par2[[i]], func = lvmod2, events = list(func = ext1, time = 1:1000))
   
@@ -364,13 +368,13 @@ hist(eigs)
 plot(sapply(par3, function(x) sum(x$m < 0)), eigs)
 
 typs <- matrix(nrow = length(all2), ncol = 5)
-typs2 <- matrix(nrow = length(all2), ncol = 5)
+typs2 <- matrix(nrow = length(all2), ncol = 2)
 for(i in 1:length(all2)){
-  typs[i,] <- itypes(par3[[i]]$m[order(eqc2[i,], decreasing = T)[1:5],order(eqc2[i,], decreasing = T)[1:5]])
-  typs2[i,] <- itypes(par3[[i]]$m) 
+  typs[i,] <- itypes(par3[[i]]$m[eqc2[i,] > 0, eqc2[i,] > 0])
+  typs2[i,] <- icor(par3[[i]]$m) 
 }
 
-tprop <- t(apply(typs2, 1, function(x){x/sum(x)}))
+tprop <- t(apply(typs, 1, function(x){x/sum(x)}))
 plot(tprop[,1], spp)
 spp <- apply(eqc2, 1, function(x) sum(x > 0))/11
 fit1 <- (betareg(spp~tprop[,1]))
@@ -381,8 +385,32 @@ summary(fit2)
 fit3 <- betareg(spp~tprop[,3])
 summary(fit3)
 
+sf1 <- cbind(apply(eqc2, 1, function(x) sum(x > 0)), rep(11, 1091)-apply(eqc2, 1, function(x) sum(x > 0)))
+d2 <- sapply(1:length(all2), function(x){mean(diag(par3[[x]]$m[eqc2[x,]>0, eqc2[x,]>0]))})
+gr2 <- sapply(1:length(all2), function(x){mean(par3[[x]]$alpha[eqc2[x,]>0])})
 
+fitA <- glm(sf1~tprop[,1:2], family = "binomial")
+fitA2 <- glm(sf1~tprop[,3], family = "binomial")
+fitB <- glm(sf1~tprop[,1:2]+d2+gr2, family = "binomial")
+fitB2 <- glm(sf1~tprop[,1:2]+d2+gr2+typs2[,1], family = "binomial")
+fitC <- glm(sf1~typs2[,1], family = "binomial")
 
+itysp <- list()
+for(i in 1:length(all2)){
+  itysp[[i]] <- itypes.sp(par3[[i]]$m)
+  itysp[[i]] <- cbind(itysp[[i]], as.numeric(eqc2[i,] > 0)) 
+}
+all3 <- do.call(rbind, itysp)
+
+fitD <- glm(all3[,ncol(all3)]~all3[,1:2], family = "binomial")
+fitD2 <- glm(all3[,ncol(all3)]~all3[,3], family = "binomial")
+fitD3 <- glm(all3[,ncol(all3)]~all3[,c(1:2,4,5)], family = "binomial")
+summary(fitD)
+summary(fitD2)
+summary(fitD3)
+
+plot(all3[,4]~all3[,2])
+points(fitD$fitted.values~all3[,2], pch = 20, col = "blue")
 
 icor <- function(x){
   i1 <- x[upper.tri(x)]
@@ -403,6 +431,23 @@ itypes <- function(x){
   comm <- sum(i1 > 0 & i2  == 0 | i1 == 0 & i2 > 0)
   
   return(c(comp = comp, mut = mut, pred = pred, amens = amens, comm = comm))
+}
+
+itypes.sp <- function(x){
+  mm1 <- matrix(nrow = nrow(x), ncol = 5)
+  for(i in 1:nrow(x)){
+    i1 <- x[i, -i]
+    i2 <- x[-i, i]
+    
+    comp <- sum(i1 < 0 & i2 < 0)
+    mut <- sum(i1 > 0 & i2 > 0)
+    pred <- sum(i1 > 0 & i2 < 0 | i1 < 0 & i2 > 0)
+    amens <- sum(i1 < 0 & i2  == 0 | i1 == 0 & i2 < 0)
+    comm <- sum(i1 > 0 & i2  == 0 | i1 == 0 & i2 > 0)
+    
+    mm1[i,] <- c(c(comp = comp, mut = mut, pred = pred)/sum(c(comp = comp, mut = mut, pred = pred)), x[i,i], cor.test(i1, i2)$statistic)
+  }
+  return(mm1)
 }
 
 ints1 <- sapply(par2, function(x) itypes(x$m))
