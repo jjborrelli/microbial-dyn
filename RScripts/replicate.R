@@ -335,26 +335,33 @@ diag(mtest) <- -abs(rnorm(11, .77, 1.23))
 
 mtest
 par2 <- list()
+par2.1 <- list()
 sta <- runif(11, .5, 1)
 res2 <- list()
 for(i in 1:2000){
   mtest <- matrix(nrow = 11, ncol = 11)
-  int.shuff <- sample(c(m2[upper.tri(m2)], m2[lower.tri(m2)]), 110)
-  mtest[upper.tri(mtest)] <- int.shuff[1:55]
-  mtest[lower.tri(mtest)] <- int.shuff[56:110]
+  #int.shuff <- sample(c(m2[upper.tri(m2)], m2[lower.tri(m2)]), 110)
+  #mtest[upper.tri(mtest)] <- int.shuff[1:55]
+  #mtest[lower.tri(mtest)] <- int.shuff[56:110]
   
-  diag(mtest) <- sample(diag(m2), 11)
+  int.shuff1 <- rnorm(110, mean(c(m2[upper.tri(m2)], m2[lower.tri(m2)])), sd(c(m2[upper.tri(m2)], m2[lower.tri(m2)])))
+  mtest[upper.tri(mtest)] <- int.shuff1[1:55]
+  mtest[lower.tri(mtest)] <- int.shuff1[56:110]
   
-  par2[[i]] <- list(alpha = parms$alpha, m = mtest)
   
-  res2[[i]] <- ode(sta, 1:1000, parms = par2[[i]], func = lvmod2, events = list(func = ext1, time = 1:1000))
+  #diag(mtest) <- sample(diag(m2), 11)
+  diag(mtest) <- -abs(rnorm(11, mean(diag(m2)), sd(diag(m2))))
+  
+  par2.1[[i]] <- list(alpha = parms$alpha, m = mtest)
+  
+  res3[[i]] <- ode(sta, 1:1000, parms = par2.1[[i]], func = lvmod2, events = list(func = ext1, time = 1:1000))
   
   print(i)
 }
 
-all1 <- which(apply(t(sapply(res2, function(x) tail(x[,-1], 1))), 1, function(y) sum(y > 0)) > 0)
+all1 <- which(apply(t(sapply(res3, function(x) tail(x[,-1], 1))), 1, function(y) sum(y > 0)) > 0)
 t(sapply(res2, function(x) if(nrow(x) == 1000){x[1000,-1]}else{c(0,0,0,0,0)}))[all1,]
-eqc1 <- t(sapply(res2, function(x) if(nrow(x) == 1000){x[1000,-1]}else{rep(0, 11)}))[all1,]
+eqc1 <- t(sapply(res3, function(x) if(nrow(x) == 1000){x[1000,-1]}else{rep(0, 11)}))[all1,]
 
 all2 <- all1[-which(rowSums(eqc1) == 0)]
 
@@ -368,13 +375,16 @@ hist(eigs)
 plot(sapply(par3, function(x) sum(x$m < 0)), eigs)
 
 typs <- matrix(nrow = length(all2), ncol = 5)
+typs3 <- matrix(nrow = length(all2), ncol = 5)
 typs2 <- matrix(nrow = length(all2), ncol = 2)
 for(i in 1:length(all2)){
   typs[i,] <- itypes(par3[[i]]$m[eqc2[i,] > 0, eqc2[i,] > 0])
+  typs3[i,] <- itypes(par3[[i]]$m)
   typs2[i,] <- icor(par3[[i]]$m) 
 }
 
-tprop <- t(apply(typs, 1, function(x){x/sum(x)}))
+tprop <- t(apply(typs3, 1, function(x){x/sum(x)}))
+tprop2 <- apply(typs3, 1, function(x) x[1]/x[2])
 plot(tprop[,1], spp)
 spp <- apply(eqc2, 1, function(x) sum(x > 0))/11
 fit1 <- (betareg(spp~tprop[,1]))
@@ -385,32 +395,50 @@ summary(fit2)
 fit3 <- betareg(spp~tprop[,3])
 summary(fit3)
 
-sf1 <- cbind(apply(eqc2, 1, function(x) sum(x > 0)), rep(11, 1091)-apply(eqc2, 1, function(x) sum(x > 0)))
+sf1 <- cbind(apply(eqc2, 1, function(x) sum(x > 0)), rep(11, 1533)-apply(eqc2, 1, function(x) sum(x > 0)))
 d2 <- sapply(1:length(all2), function(x){mean(diag(par3[[x]]$m[eqc2[x,]>0, eqc2[x,]>0]))})
 gr2 <- sapply(1:length(all2), function(x){mean(par3[[x]]$alpha[eqc2[x,]>0])})
 
-fitA <- glm(sf1~tprop[,1:2], family = "binomial")
-fitA2 <- glm(sf1~tprop[,3], family = "binomial")
+
+fit1A <- glm(sf1~tprop2, family = "binomial")
+summary(fit1A)
+# effects of comp and mut
+fitA <- glm(sf1~tprop[,1], family = "binomial")
+summary(fitA)
+# effects of pred
+fitA2 <- glm(sf1~tprop[,2], family = "binomial")
+# effects of comp and mut and diag and growth
 fitB <- glm(sf1~tprop[,1:2]+d2+gr2, family = "binomial")
+# effects of comp and mut and diag and growth and correlation
 fitB2 <- glm(sf1~tprop[,1:2]+d2+gr2+typs2[,1], family = "binomial")
+# effects of correlation
 fitC <- glm(sf1~typs2[,1], family = "binomial")
 
 itysp <- list()
 for(i in 1:length(all2)){
   itysp[[i]] <- itypes.sp(par3[[i]]$m)
-  itysp[[i]] <- cbind(itysp[[i]], as.numeric(eqc2[i,] > 0)) 
+  itysp[[i]] <- cbind(itysp[[i]], par3[[i]]$alpha, as.numeric(eqc2[i,] > 0)) 
 }
 all3 <- do.call(rbind, itysp)
 
+# effects of comp and mut
 fitD <- glm(all3[,ncol(all3)]~all3[,1:2], family = "binomial")
+# effects of pred
 fitD2 <- glm(all3[,ncol(all3)]~all3[,3], family = "binomial")
-fitD3 <- glm(all3[,ncol(all3)]~all3[,c(1:2,4,5)], family = "binomial")
+# effects of comp and mut and self and correlation and growth
+fitD3 <- glm(all3[,ncol(all3)]~all3[,c(1:2,4,5,6)], family = "binomial")
+# effects of comp and mut and growth
+fitD4 <- glm(all3[,ncol(all3)]~all3[,c(1:2,6)], family = "binomial")
+
 summary(fitD)
 summary(fitD2)
 summary(fitD3)
+summary(fitD4)
+
 
 plot(all3[,4]~all3[,2])
 points(fitD$fitted.values~all3[,2], pch = 20, col = "blue")
+
 
 icor <- function(x){
   i1 <- x[upper.tri(x)]
@@ -469,4 +497,5 @@ ity2 <- cbind(melt(itypes(parms$m)/sum(itypes(parms$m))), typ = names(itypes(par
 ggplot(rbind(ity, ity2), aes(x = factor(num), y = value)) + geom_bar(stat = "identity", aes(fill = typ))
 
 
-
+mycol <- c("#ffffe5", "#ff7bc", "#ffffcc", "#ffeda0", "#fed976", "#feb24c", "#fd8d3c", "#fc4e2a", "#e31a1c", "#bd0026", "#800026")
+ggplot(melt(res3[[278]][,-1]), aes(x = Var1, y = value)) + geom_area(aes(col = factor(Var2), fill = factor(Var2)), position = "stack") + scale_fill_manual(values = mycol)
