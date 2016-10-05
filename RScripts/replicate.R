@@ -333,44 +333,57 @@ m2 <- parms$m
 mtest <- matrix(rnorm(11*11, mean(m2), sd(m2)), 11, 11)
 diag(mtest) <- -abs(rnorm(11, .77, 1.23))
 
-mtest
+time1 <- Sys.time()
 par2 <- list()
 par2.1 <- list()
 sta <- runif(11, .5, 1)
 res2 <- list()
-for(i in 1:2000){
+for(i in 1:5000){
+  mtest1 <- matrix(nrow = 11, ncol = 11)
+  int.shuff <- sample(c(m2[upper.tri(m2)], m2[lower.tri(m2)]), 110)
+  mtest1[upper.tri(mtest1)] <- int.shuff[1:55]
+  mtest1[lower.tri(mtest1)] <- int.shuff[56:110]
+ 
   mtest <- matrix(nrow = 11, ncol = 11)
-  #int.shuff <- sample(c(m2[upper.tri(m2)], m2[lower.tri(m2)]), 110)
-  #mtest[upper.tri(mtest)] <- int.shuff[1:55]
-  #mtest[lower.tri(mtest)] <- int.shuff[56:110]
-  
   int.shuff1 <- rnorm(110, mean(c(m2[upper.tri(m2)], m2[lower.tri(m2)])), sd(c(m2[upper.tri(m2)], m2[lower.tri(m2)])))
   mtest[upper.tri(mtest)] <- int.shuff1[1:55]
   mtest[lower.tri(mtest)] <- int.shuff1[56:110]
   
   
-  #diag(mtest) <- sample(diag(m2), 11)
+  diag(mtest1) <- sample(diag(m2), 11)
   diag(mtest) <- -abs(rnorm(11, mean(diag(m2)), sd(diag(m2))))
   
+  par2[[i]] <- list(alpha = parms$alpha, m = mtest1)
   par2.1[[i]] <- list(alpha = parms$alpha, m = mtest)
   
+  res2[[i]] <- ode(sta, 1:1000, parms = par2[[i]], func = lvmod2, events = list(func = ext1, time = 1:1000))
   res3[[i]] <- ode(sta, 1:1000, parms = par2.1[[i]], func = lvmod2, events = list(func = ext1, time = 1:1000))
   
   print(i)
 }
 
-all1 <- which(apply(t(sapply(res3, function(x) tail(x[,-1], 1))), 1, function(y) sum(y > 0)) > 0)
-t(sapply(res2, function(x) if(nrow(x) == 1000){x[1000,-1]}else{c(0,0,0,0,0)}))[all1,]
-eqc1 <- t(sapply(res3, function(x) if(nrow(x) == 1000){x[1000,-1]}else{rep(0, 11)}))[all1,]
+Sys.time() - time1
+
+all1 <- which(apply(t(sapply(res2, function(x) tail(x[,-1], 1))), 1, function(y) sum(y > 0)) > 0)
+all1.1 <- which(apply(t(sapply(res3, function(x) tail(x[,-1], 1))), 1, function(y) sum(y > 0)) > 0)
+
+eqc1 <- t(sapply(res2, function(x) if(nrow(x) == 1000){x[1000,-1]}else{rep(0, 11)}))[all1,]
+eqc1.1 <- t(sapply(res3, function(x) if(nrow(x) == 1000){x[1000,-1]}else{rep(0, 11)}))[all1,]
 
 all2 <- all1[-which(rowSums(eqc1) == 0)]
+all2.1 <- all1[-which(rowSums(eqc1.1) == 0)]
 
 eqc2 <- eqc1[-which(rowSums(eqc1) == 0),]
+eqc2.1 <- eqc1.1[-which(rowSums(eqc1.1) == 0),]
+
 barplot(t(eqc2[1:20,]))
 par3 <- par2[all2]
+par3.1 <- par2[all2.1]
 
 eigs <- sapply(1:nrow(eqc2), function(x){jac <- jacobian.full(eqc2[x,], lvmod2, parms = par3[[x]]);eig <- max(Re(eigen(jac)$values));return(eig)})
+eigs.1 <- sapply(1:nrow(eqc2.1), function(x){jac <- jacobian.full(eqc2.1[x,], lvmod2, parms = par3.1[[x]]);eig <- max(Re(eigen(jac)$values));return(eig)})
 hist(eigs)
+hist(eigs.1)
 
 plot(sapply(par3, function(x) sum(x$m < 0)), eigs)
 
