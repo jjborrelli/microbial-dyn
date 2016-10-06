@@ -45,10 +45,10 @@ parms <- list(alpha = (alphas$Alpha), m = m)
 parms <- list(alpha = (alphas$Alpha), m = mSTR)
 
 system.time(
-res2 <- ode(res1[1000,-1], 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time =  1:1000))
+r2 <- ode(runif(17, .1,1), 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time =  1:1000))
 )
 #res1
-matplot(res2[,-1], typ = "l", lwd = 2, ylab = "B", xlab = "Time")
+matplot(r2[1:10,-1], typ = "l", lwd = 3, ylab = "B", xlab = "Time")
 
 
 B <- matrix(runif(17 * 1000, .5, 1), nrow = 17, ncol = 1000)

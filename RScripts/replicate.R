@@ -391,9 +391,9 @@ typs <- matrix(nrow = length(all2), ncol = 5)
 typs3 <- matrix(nrow = length(all2), ncol = 5)
 typs2 <- matrix(nrow = length(all2), ncol = 2)
 for(i in 1:length(all2)){
-  typs[i,] <- itypes(par3[[i]]$m[eqc2[i,] > 0, eqc2[i,] > 0])
+  typs[i,] <- itypes(par3[[i]]$m[eqc2.1[i,] > 0, eqc2[i,] > 0])
   typs3[i,] <- itypes(par3[[i]]$m)
-  typs2[i,] <- icor(par3[[i]]$m) 
+  #typs2[i,] <- icor(par3[[i]]$m) 
 }
 
 tprop <- t(apply(typs3, 1, function(x){x/sum(x)}))
@@ -408,7 +408,7 @@ summary(fit2)
 fit3 <- betareg(spp~tprop[,3])
 summary(fit3)
 
-sf1 <- cbind(apply(eqc2, 1, function(x) sum(x > 0)), rep(11, 1533)-apply(eqc2, 1, function(x) sum(x > 0)))
+sf1 <- cbind(apply(eqc2, 1, function(x) sum(x > 0)), rep(11, nrow(eqc2))-apply(eqc2, 1, function(x) sum(x > 0)))
 d2 <- sapply(1:length(all2), function(x){mean(diag(par3[[x]]$m[eqc2[x,]>0, eqc2[x,]>0]))})
 gr2 <- sapply(1:length(all2), function(x){mean(par3[[x]]$alpha[eqc2[x,]>0])})
 
@@ -423,7 +423,7 @@ fitA2 <- glm(sf1~tprop[,2], family = "binomial")
 # effects of comp and mut and diag and growth
 fitB <- glm(sf1~tprop[,1:2]+d2+gr2, family = "binomial")
 # effects of comp and mut and diag and growth and correlation
-fitB2 <- glm(sf1~tprop[,1:2]+d2+gr2+typs2[,1], family = "binomial")
+fitB2 <- glm(sf1~tprop2+d2+typs2[,1], family = "binomial")
 # effects of correlation
 fitC <- glm(sf1~typs2[,1], family = "binomial")
 
@@ -435,7 +435,7 @@ for(i in 1:length(all2)){
 all3 <- do.call(rbind, itysp)
 
 # effects of comp and mut
-fitD <- glm(all3[,ncol(all3)]~all3[,1:2], family = "binomial")
+fitD <- glm(all3[,ncol(all3)]~all3[,1], family = "binomial")
 # effects of pred
 fitD2 <- glm(all3[,ncol(all3)]~all3[,3], family = "binomial")
 # effects of comp and mut and self and correlation and growth
@@ -511,4 +511,5 @@ ggplot(rbind(ity, ity2), aes(x = factor(num), y = value)) + geom_bar(stat = "ide
 
 
 mycol <- c("#ffffe5", "#ff7bc", "#ffffcc", "#ffeda0", "#fed976", "#feb24c", "#fd8d3c", "#fc4e2a", "#e31a1c", "#bd0026", "#800026")
-ggplot(melt(res3[[278]][,-1]), aes(x = Var1, y = value)) + geom_area(aes(col = factor(Var2), fill = factor(Var2)), position = "stack") + scale_fill_manual(values = mycol)
+t(apply(r2[1:10, -1], 1, function(x) x/sum(x)))
+ggplot(melt(t(apply(r2[1:20, -1], 1, function(x) x/sum(x)))), aes(x = Var1, y = value)) + geom_area(aes(col = factor(Var2), fill = factor(Var2)), position = "stack") + xlab("Time") + ylab("Relative Abundance")
