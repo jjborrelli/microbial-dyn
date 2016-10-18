@@ -98,27 +98,50 @@ summary(lm(unlist(lapply(1:sum(use), function(x) r2[use][[x]][1000,-1][r2[use][[
 
 #############################
 #############################
-rem <- list()
-pers <- c()
-x <- 1
-spp1 <- eqcomm[[x]]
-initial1 <- mats[spp1, spp1]
-for(i in 1:nrow(initial1)){
+dyn <- r2[use]
+
+keystone <- function(x, dyn, eqcomm, mats){
+  rem <- list()
+  pers <- c()
+
+  dyna <- dyn[[x]]
+  spp1 <- eqcomm[[x]]
+  initial1 <- mats[spp1, spp1]
+  for(i in 1:nrow(initial1)){
+    
+    parms <- list(alpha = growth[spp1[-i]], m = initial1[-i,-i])
+    states <- dyna[1000,-1][dyna[1000,-1] > 0] 
+    states <- states[-i]
+    
+    rem[[i]] <- ode(states, 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time =  1:1000))
+    matplot(rem[[i]][,-1], typ = "l")
+    
+    if(nrow(rem[[i]]) == 1000){
+      pers[i] <- sum(rem[[i]][1000,-1] > 0)/(nrow(initial1) -1)
+    }else{
+      pers[i] <- NA
+    }
+    
+    
+    print(i)
+  }
   
-  parms <- list(alpha = growth[spp1[-i]], m = initial1[-i,-i])
-  states <- r2[use][[x]][1000,-1][r2[use][[x]][1000,-1] > 0] 
-  states <- states[-i]
   
-  rem[[i]] <- ode(states, 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time =  1:1000))
-  matplot(rem[[i]][,-1], typ = "l")
+  init.biom <- mean(dyna[1000,-1][dyna[1000,-1] > 0])
+  delta.biom <- sapply(rem, function(x) if(nrow(x) == 1000){mean(x[1000,-1] - init.biom)}else{NA})
   
-  pers[i] <- sum(rem[[i]][1000,-1] > 0)/(nrow(initial1) -1)
+  vary <- lapply(rem, function(x) if(nrow(x) == 1000){apply(x[800:1000,-1], 2, function(y) sd(y)/mean(y))}else{NA})
+  meanvary <- sapply(vary, function(x){x[is.nan(x)] <- 0; ifelse(is.na(x), NA, mean(x))})
   
-  print(i)
+  dat <- matrix(c(delta.biom, meanvary, pers), nrow = nrow(initial1), ncol = 3)
+  #return(cbind(dat, t(sapply(rem, function(x) as.numeric(x[1000,-1] > 0)))))
+  return(dat)
 }
+system.time(
+ks1 <- keystone(1, dyn = r2[use], eqcomm, mats)
+)
 
-init.biom <- mean(r2[use][[x]][1000,-1][r2[use][[x]][1000,-1] > 0])
-delta.biom <- sapply(rem, function(x) mean(x[1000,-1] - init.biom))
-
-lapply(rem, function(x) apply(x[,-1], 2, function(y) sd(y)/mean(y)))
-
+ks1 <- list()
+for(i in 1:sum(use)){
+  ks1[[i]] <- keystone(i, dyn = r2[use], eqcomm, mats)
+}
