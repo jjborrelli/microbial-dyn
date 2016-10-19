@@ -131,15 +131,18 @@ keystone <- function(x, dyn, eqcomm, mats){
   }
   
   
-  init.biom <- mean(dyna[1000,-1][dyna[1000,-1] > 0])
-  delta.biom <- sapply(rem, function(x) if(nrow(x) == 1000){mean(x[1000,-1] - init.biom)}else{NA})
-  
+  init.biom <- dyna[1000,-1][dyna[1000,-1] > 0]
+  delta.biom <- sapply(rem, function(x) if(nrow(x) == 1000){mean(x[1000,-1] - mean(init.biom))}else{NA})
+  delta.eq <- sapply(1:length(rem), function(x) if(nrow(rem[[x]]) == 1000){rem[[x]][1000,-1] - init.biom[-x]}else{rep(NA, length(init.biom[-1]))})
+   
   vary <- lapply(rem, function(x) if(nrow(x) == 1000){apply(x[800:1000,-1], 2, function(y) sd(y)/mean(y))}else{NA})
-  meanvary <- sapply(vary, function(x){x[is.nan(x)] <- 0; mean(x)})
+  mean.vary <- sapply(vary, function(x){x[is.nan(x)] <- 0; mean(x)})
+  init.vary <- lapply(rem, function(x) if(nrow(x) == 1000){apply(x[1:50,-1], 2, function(y) sd(y)/mean(y))}else{NA})
+  m.init.vary <- sapply(init.vary, mean)
   
-  dat <- cbind(delta.biom, meanvary, pers)  #matrix(c(delta.biom, meanvary, pers), nrow = nrow(initial1), ncol = 3)
+  dat <- cbind(delta.biom, meanvary, m.init.vary, pers)  #matrix(c(delta.biom, meanvary, pers), nrow = nrow(initial1), ncol = 3)
   #return(cbind(dat, t(sapply(rem, function(x) as.numeric(x[1000,-1] > 0)))))
-  return(dat)
+  return(cbind(dat, t(delta.eq)))
 }
 #system.time(
 #ks2 <- keystone(5, dyn = r2[use], eqcomm, mats)
