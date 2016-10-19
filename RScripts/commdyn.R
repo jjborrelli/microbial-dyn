@@ -56,6 +56,8 @@ itypes.sp <- function(x){
   return(mm1)
 }
 
+t.start <- Sys.time()
+
 S <- 200
 growth <- runif(S, .01, 1)
 K <- quantile(1:100, rbeta(S, 1, 2))
@@ -95,9 +97,11 @@ itySP <- lapply(matuse, itypes.sp)
 
 summary(lm(unlist(lapply(1:sum(use), function(x) r2[use][[x]][1000,-1][r2[use][[x]][1000,-1] > 0]))~do.call(rbind, itySP)))
 
+t.simend <- Sys.time()
+#############################
+#############################
+t.key <- Sys.time()
 
-#############################
-#############################
 dyn <- r2[use]
 
 keystone <- function(x, dyn, eqcomm, mats){
@@ -131,17 +135,24 @@ keystone <- function(x, dyn, eqcomm, mats){
   delta.biom <- sapply(rem, function(x) if(nrow(x) == 1000){mean(x[1000,-1] - init.biom)}else{NA})
   
   vary <- lapply(rem, function(x) if(nrow(x) == 1000){apply(x[800:1000,-1], 2, function(y) sd(y)/mean(y))}else{NA})
-  meanvary <- sapply(vary, function(x){x[is.nan(x)] <- 0; ifelse(is.na(x), NA, mean(x))})
+  meanvary <- sapply(vary, function(x){x[is.nan(x)] <- 0; mean(x)})
   
-  dat <- matrix(c(delta.biom, meanvary, pers), nrow = nrow(initial1), ncol = 3)
+  dat <- cbind(delta.biom, meanvary, pers)  #matrix(c(delta.biom, meanvary, pers), nrow = nrow(initial1), ncol = 3)
   #return(cbind(dat, t(sapply(rem, function(x) as.numeric(x[1000,-1] > 0)))))
   return(dat)
 }
-system.time(
-ks1 <- keystone(1, dyn = r2[use], eqcomm, mats)
-)
+#system.time(
+#ks2 <- keystone(5, dyn = r2[use], eqcomm, mats)
+#)
 
 ks1 <- list()
 for(i in 1:sum(use)){
   ks1[[i]] <- keystone(i, dyn = r2[use], eqcomm, mats)
 }
+
+
+t.end <- Sys.time()
+t.end - t.start
+
+allks <- do.call(rbind, ks1)
+dim(allks[complete.cases(allks),])
