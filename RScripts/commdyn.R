@@ -104,7 +104,7 @@ t.key <- Sys.time()
 
 dyn <- r2[use]
 
-keystone <- function(x, dyn, eqcomm, mats){
+keystone <- function(x, dyn, eqcomm, mats, growth){
   rem <- list()
   pers <- c()
 
@@ -140,22 +140,31 @@ keystone <- function(x, dyn, eqcomm, mats){
   init.vary <- lapply(rem, function(x) if(nrow(x) == 1000){apply(x[1:50,-1], 2, function(y) sd(y)/mean(y))}else{NA})
   m.init.vary <- sapply(init.vary, mean)
   
-  dat <- cbind(delta.biom, meanvary, m.init.vary, pers)  #matrix(c(delta.biom, meanvary, pers), nrow = nrow(initial1), ncol = 3)
+  is.eq <- t(sapply(rem, function(x) if(nrow(x) == 1000){(x[1000,-1] > 0)*1}else{NA}))
+  
+  dat <- cbind(delta.biom, mean.vary, m.init.vary, pers)  #matrix(c(delta.biom, meanvary, pers), nrow = nrow(initial1), ncol = 3)
   #return(cbind(dat, t(sapply(rem, function(x) as.numeric(x[1000,-1] > 0)))))
-  return(cbind(dat, t(delta.eq)))
+  return(list(dat, t(delta.eq), is.eq))
 }
 #system.time(
-#ks2 <- keystone(5, dyn = r2[use], eqcomm, mats)
+#ks2 <- keystone(2, dyn = r2[use], eqcomm, mats)
 #)
 
 ks1 <- list()
+ks2 <- list()
+ks3 <- list()
 for(i in 1:sum(use)){
-  ks1[[i]] <- keystone(i, dyn = r2[use], eqcomm, mats)
+  KS <- keystone(i, dyn = r2[use], eqcomm, mats, growth)
+  ks1[[i]] <- KS[[1]] # biomass variability and persistence
+  ks2[[i]] <- KS[[2]] # change in spp biomass with removal
+  ks3[[i]] <- KS[[3]] # who went extinct
+  
+  cat(paste("\n ------------------|   ", i, "   |------------------ \n"))
 }
 
 
 t.end <- Sys.time()
 t.end - t.start
 
-allks <- do.call(rbind, ks1)
+allks <- do.call(rbind, lapply(ks1, function(x) x[,1:4]))
 dim(allks[complete.cases(allks),])
