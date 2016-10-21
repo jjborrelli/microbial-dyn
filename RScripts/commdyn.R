@@ -182,7 +182,9 @@ K <- quantile(1:100, rbeta(S, 1, 2))                                # carrying c
 mats <- get.adjacency(erdos.renyi.game(S, .1, "gnp"), sparse = F)   # create interaction matrix of all spp in pool
 nINT <- sum(mats)                                                   # total number of interactions 
 
-mats[mats != 0] <- runif(nINT, -1, 1)                               # sample interaction strengths 
+INTstr <- runif(nINT, -1, 1)                                        # sample interaction strengths 
+
+mats[mats != 0] <- INTstr                                           # fill in interaction strengths 
 diag(mats) <- -1                                                    # self limitation set to -1
 
 ## 
@@ -288,22 +290,26 @@ t.end - t.start                                                     # total time
 ###
 
 
-itySP2 <- do.call(rbind, itySP)
-istrSP2 <- do.call(rbind, istrSP)
-allks <- do.call(rbind, lapply(ks1, function(x) x[,1:4]))
-fit1 <- lm(allks[complete.cases(allks),1] ~ istrSP2[complete.cases(allks),2])
-summary(fit1)
+itySP2 <- do.call(rbind, itySP)                                     # get species level participation in interaction types
+istrSP2 <- do.call(rbind, istrSP)                                   # get species level interaction type strengths
+allks <- do.call(rbind, lapply(ks1, function(x) x[,1:4]))           # all biomass, variation, and persistence
+
+## Correlations among different stability measures
+stabi <- data.frame(allks[complete.cases(allks),], eigen = unlist(eigkey)[complete.cases(allks)])
+stabi2 <- data.frame(allks[complete.cases(allks),][allks[complete.cases(allks),4] > 0,], eigen = unlist(eigkey)[complete.cases(allks)][allks[complete.cases(allks),4] > 0])
+ggpairs(stabi2)
+
 
 plot(allks[complete.cases(allks),1][allks[complete.cases(allks),4] != 0] ~ istrSP2[complete.cases(allks),2][allks[complete.cases(allks),4] != 0])
 abline(fit1, col = "blue")
 
-p.key <- sapply(ks1, function(x) which.max(x[,4]))
+p.key <- sapply(ks1, function(x) which.min(x[,4][which(x[,4] > 0)]))
 eqcomm
 allkeys <- sapply(1:sum(use), function(x) eqcomm[[x]][p.key[x]])
 ggplot(data.frame(x = allkeys), aes(x = x)) + geom_bar() 
 
 
-
-
+destab.sp <- lapply(1:sum(use), function(x) eqcomm[[x]][which(eigkey[[x]] > 0)])
+destab <- lapply(1:sum(use), function(x) ks1[[x]][which(eigkey[[x]] > 0),1:4])
 
 
