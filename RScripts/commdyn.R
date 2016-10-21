@@ -310,6 +310,12 @@ ggplot(data.frame(x = allkeys), aes(x = x)) + geom_bar()
 
 
 destab.sp <- lapply(1:sum(use), function(x) eqcomm[[x]][which(eigkey[[x]] > 0)])
-destab <- lapply(1:sum(use), function(x) ks1[[x]][which(eigkey[[x]] > 0),1:4])
+destab <- lapply(1:sum(use), function(x) istrSP[[x]][which(eigkey[[x]] > 0),])
 
-
+cdist <- dist(eqmat)
+dim(as.matrix(cdist))
+allkeys
+table(allkeys)
+cdist[which(as.character(allkeys) %in% names(which.max(table(allkeys))))]
+mean(cdist)
+hist(cdist)
