@@ -56,6 +56,24 @@ itypes.sp <- function(x){
   return(mm1)
 }
 
+istr.sp <- function(x){
+  mm1 <- matrix(nrow = nrow(x), ncol = 3)
+  for(i in 1:nrow(x)){
+    i1 <- x[i, -i]
+    i2 <- x[-i, i]
+    
+    comp <- which(i1 < 0 & i2 < 0)
+    mut <- which(i1 > 0 & i2 > 0)
+    pred <- which(i1 > 0 & i2 < 0 | i1 < 0 & i2 > 0)
+    amens <- which(i1 < 0 & i2  == 0 | i1 == 0 & i2 < 0)
+    comm <- which(i1 > 0 & i2  == 0 | i1 == 0 & i2 > 0)
+    
+    mm1[i,] <- c(comp = mean(c(i1[comp],i2[comp])), mut = mean(c(i1[mut],i2[mut])), pred = mean(c(i1[pred],i2[pred])))
+    mm1[i,][is.nan(mm1[i,])] <- 0
+  }
+  return(mm1)
+}
+
 t.start <- Sys.time()
 
 S <- 200
@@ -95,7 +113,33 @@ plot(ity[,1]/ity[,2])
 
 itySP <- lapply(matuse, itypes.sp)
 
+istrSP <- lapply(matuse, istr.sp)
+
 summary(lm(unlist(lapply(1:sum(use), function(x) r2[use][[x]][1000,-1][r2[use][[x]][1000,-1] > 0]))~do.call(rbind, itySP)))
+
+eigenkey <- function(mat){
+  ev.init <- max(Re(eigen(mat)$values))
+  ev.key <- c()
+  for(i in 1:nrow(mat)){
+    newmat <- mat[-i,-i]
+    ev.key[i] <- max(Re(eigen(newmat)$values))
+  }
+  return(ev.key)
+}
+
+eigkey <- lapply(matuse, eigenkey)
+summary(lm(unlist(eigkey)~do.call(rbind, itySP)))
+summary(lm(unlist(eigkey)~do.call(rbind, istrSP)))
+
+getgraph <- function(mat){
+  mat[mat != 0] <- 1
+  diag(mat) <- 0
+  g <- graph.adjacency(mat)
+  return(g)
+}
+
+allg <- lapply(matuse, getgraph)
+plot(unlist(eigkey)~unlist(sapply(allg, degree)))
 
 t.simend <- Sys.time()
 #############################
@@ -166,5 +210,13 @@ for(i in 1:sum(use)){
 t.end <- Sys.time()
 t.end - t.start
 
+itySP2 <- do.call(rbind, itySP)
+istrSP2 <- do.call(rbind, istrSP)
 allks <- do.call(rbind, lapply(ks1, function(x) x[,1:4]))
-dim(allks[complete.cases(allks),])
+fit1 <- lm(allks[complete.cases(allks),1] ~ istrSP2[complete.cases(allks),2])
+summary(fit1)
+
+plot(allks[complete.cases(allks),1][allks[complete.cases(allks),4] != 0] ~ istrSP2[complete.cases(allks),2][allks[complete.cases(allks),4] != 0])
+abline(fit1, col = "blue")
+
+quantile(allks[complete.cases(allks),1])
