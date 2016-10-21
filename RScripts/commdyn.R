@@ -1,6 +1,21 @@
+
+
+
+###
+### LIBRARIES
+###
+
+
 library(igraph)
 library(NetIndices)
 library(deSolve)
+library(ggplot2)
+
+
+###
+### FUNCTIONS
+###
+
 
 # Basic Lotka-Volterra model
 lvmod <- function(times, state, parms){
@@ -61,7 +76,6 @@ itypes.sp <- function(x){
   return(mm1)
 }
 
-
 # compute mean strength of each type interaction a spp participates in
 istr.sp <- function(x){
   mm1 <- matrix(nrow = nrow(x), ncol = 3)
@@ -80,6 +94,84 @@ istr.sp <- function(x){
   }
   return(mm1)
 }
+
+# function describes how species removal affects the local stability (magnitude of Max(Re(Lambda))) of the equilibrium comm
+eigenkey <- function(mat){
+  ev.init <- max(Re(eigen(mat)$values))                             # initial eigenvalue for the community
+  ev.key <- c()
+  for(i in 1:nrow(mat)){
+    newmat <- mat[-i,-i]                                            # species removed from comm
+    ev.key[i] <- max(Re(eigen(newmat)$values))                      # eigenvalue of perturbed community
+  }
+  return(ev.key)                                                    # return new eigenvalue (should this be the difference?)
+}
+
+# function to get network properties (for now just the network)
+getgraph <- function(mat){
+  mat[mat != 0] <- 1
+  diag(mat) <- 0
+  g <- graph.adjacency(mat)
+  return(g)
+}
+
+# function to simulate impact of independent removals of all species in equilibrium comm
+keystone <- function(x, dyn, eqcomm, mats, growth){
+  rem <- list()                                                     # list for ode results
+  pers <- c()                                                       # vector for persistence (could be done outside the loop)
+  
+  dyna <- dyn[[x]]                                                  # which initial community dynamics are we using
+  spp1 <- eqcomm[[x]]                                               # what species from initial community are present at equilibrium
+  initial1 <- mats[spp1, spp1]                                      # interaction matrix for equilibrium community
+  for(i in 1:nrow(initial1)){
+    
+    parms <- list(alpha = growth[spp1[-i]], m = initial1[-i,-i])    # parameters of community with species i removed
+    states <- dyna[1000,-1][dyna[1000,-1] > 0]                      # initial (eq) abundances from prior dynamics
+    states <- states[-i]                                            # remove species i from initial (eq) abundances
+    
+    # simulation of new perturbed community
+    rem[[i]] <- ode(states, 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time =  1:1000))
+    matplot(rem[[i]][,-1], typ = "l")                               # plot dynamics
+    
+    if(nrow(rem[[i]]) == 1000){                                     # if statement to determine if the run worked or crapped out
+      pers[i] <- sum(rem[[i]][1000,-1] > 0)/(nrow(initial1) -1)     # what fraction of species have positive abundance
+    }else{
+      pers[i] <- NA                                                 # if run crashed gives NA
+    }
+    
+    
+    print(i)
+  }
+  
+  # initial abundances for the removal sim
+  init.biom <- dyna[1000,-1][dyna[1000,-1] > 0]
+  # change in mean abundance following each removal
+  delta.biom <- sapply(rem, function(x) if(nrow(x) == 1000){mean(x[1000,-1] - mean(init.biom))}else{NA})
+  # change in equilibrium abundance following removal for each species
+  delta.eq <- sapply(1:length(rem), function(x) if(nrow(rem[[x]]) == 1000){rem[[x]][1000,-1] - init.biom[-x]}else{rep(NA, length(init.biom[-1]))})
+  
+  # get coefficient of variation for each species following each removal (last 200 timesteps)
+  vary <- lapply(rem, function(x) if(nrow(x) == 1000){apply(x[800:1000,-1], 2, function(y) sd(y)/mean(y))}else{NA})
+  # mean CV following each removal
+  mean.vary <- sapply(vary, function(x){x[is.nan(x)] <- 0; mean(x)})
+  # get coefficient of variation for each species following each removal (first 50 timesteps)
+  init.vary <- lapply(rem, function(x) if(nrow(x) == 1000){apply(x[1:50,-1], 2, function(y) sd(y)/mean(y))}else{NA})
+  # mean CV immediately following each removal
+  m.init.vary <- sapply(init.vary, mean)
+  
+  # does each species have positive abundance at equilibrium following each removal
+  is.eq <- t(sapply(rem, function(x) if(nrow(x) == 1000){(x[1000,-1] > 0)*1}else{NA}))
+  
+  # get data matrix for abundance change, variability, and persistence
+  dat <- cbind(delta.biom, mean.vary, m.init.vary, pers)  
+  
+  return(list(dat, t(delta.eq), is.eq))
+}
+
+
+
+###
+### SIMULATION
+###
 
 
 t.start <- Sys.time()                                               # begin timing of complete simulation run
@@ -144,92 +236,27 @@ istrSP <- lapply(matuse, istr.sp)
 # quick test to see if interaction participation influences equilibrium abundance
 summary(lm(unlist(lapply(1:sum(use), function(x) r2[use][[x]][1000,-1][r2[use][[x]][1000,-1] > 0]))~do.call(rbind, itySP)))
 
-# function describes how species removal affects the local stability (magnitude of Max(Re(Lambda))) of the equilibrium comm
-eigenkey <- function(mat){
-  ev.init <- max(Re(eigen(mat)$values))                             # initial eigenvalue for the community
-  ev.key <- c()
-  for(i in 1:nrow(mat)){
-    newmat <- mat[-i,-i]                                            # species removed from comm
-    ev.key[i] <- max(Re(eigen(newmat)$values))                      # eigenvalue of perturbed community
-  }
-  return(ev.key)                                                    # return new eigenvalue (should this be the difference?)
-}
 
 eigkey <- lapply(matuse, eigenkey)                                  # how each spp removal affects eigenval of comm
 summary(lm(unlist(eigkey)~do.call(rbind, itySP)))                   # relationship btwn eig and interaction types
 summary(lm(unlist(eigkey)~do.call(rbind, istrSP)))                  # relationship btwn eig and interaction strengths
 
-# function to get network properties (for now just the network)
-getgraph <- function(mat){
-  mat[mat != 0] <- 1
-  diag(mat) <- 0
-  g <- graph.adjacency(mat)
-  return(g)
-}
 
 allg <- lapply(matuse, getgraph)                                    # get the network for each local eq comm
 plot(unlist(eigkey)~unlist(sapply(allg, degree)))                   # look at relationship between degree and eig
 
 t.simend <- Sys.time()                                              # note time initial comm sim ends
-#############################
-#############################
+
+
+
+###
+### CHECK FOR KEYSTONE SPECIES
+###
+
 t.key <- Sys.time()                                                 # note time keystone simm starts
 
+
 dyn <- r2[use]                                                      # get new object of dynamics list for runs that worked
-
-
-# function to simulate impact of independent removals of all species in equilibrium comm
-keystone <- function(x, dyn, eqcomm, mats, growth){
-  rem <- list()                                                     # list for ode results
-  pers <- c()                                                       # vector for persistence (could be done outside the loop)
-
-  dyna <- dyn[[x]]                                                  # which initial community dynamics are we using
-  spp1 <- eqcomm[[x]]                                               # what species from initial community are present at equilibrium
-  initial1 <- mats[spp1, spp1]                                      # interaction matrix for equilibrium community
-  for(i in 1:nrow(initial1)){
-    
-    parms <- list(alpha = growth[spp1[-i]], m = initial1[-i,-i])    # parameters of community with species i removed
-    states <- dyna[1000,-1][dyna[1000,-1] > 0]                      # initial (eq) abundances from prior dynamics
-    states <- states[-i]                                            # remove species i from initial (eq) abundances
-    
-    # simulation of new perturbed community
-    rem[[i]] <- ode(states, 1:1000, parms = parms, func = lvmod, events = list(func = ext1, time =  1:1000))
-    matplot(rem[[i]][,-1], typ = "l")                               # plot dynamics
-    
-    if(nrow(rem[[i]]) == 1000){                                     # if statement to determine if the run worked or crapped out
-      pers[i] <- sum(rem[[i]][1000,-1] > 0)/(nrow(initial1) -1)     # what fraction of species have positive abundance
-    }else{
-      pers[i] <- NA                                                 # if run crashed gives NA
-    }
-    
-    
-    print(i)
-  }
-  
-  # initial abundances for the removal sim
-  init.biom <- dyna[1000,-1][dyna[1000,-1] > 0]
-  # change in mean abundance following each removal
-  delta.biom <- sapply(rem, function(x) if(nrow(x) == 1000){mean(x[1000,-1] - mean(init.biom))}else{NA})
-  # change in equilibrium abundance following removal for each species
-  delta.eq <- sapply(1:length(rem), function(x) if(nrow(rem[[x]]) == 1000){rem[[x]][1000,-1] - init.biom[-x]}else{rep(NA, length(init.biom[-1]))})
-   
-  # get coefficient of variation for each species following each removal (last 200 timesteps)
-  vary <- lapply(rem, function(x) if(nrow(x) == 1000){apply(x[800:1000,-1], 2, function(y) sd(y)/mean(y))}else{NA})
-  # mean CV following each removal
-  mean.vary <- sapply(vary, function(x){x[is.nan(x)] <- 0; mean(x)})
-  # get coefficient of variation for each species following each removal (first 50 timesteps)
-  init.vary <- lapply(rem, function(x) if(nrow(x) == 1000){apply(x[1:50,-1], 2, function(y) sd(y)/mean(y))}else{NA})
-  # mean CV immediately following each removal
-  m.init.vary <- sapply(init.vary, mean)
-  
-  # does each species have positive abundance at equilibrium following each removal
-  is.eq <- t(sapply(rem, function(x) if(nrow(x) == 1000){(x[1000,-1] > 0)*1}else{NA}))
-  
-  # get data matrix for abundance change, variability, and persistence
-  dat <- cbind(delta.biom, mean.vary, m.init.vary, pers)  
-  
-  return(list(dat, t(delta.eq), is.eq))
-}
 
 # quick test of function
 #system.time(
@@ -254,6 +281,13 @@ for(i in 1:sum(use)){
 t.end <- Sys.time()                                                 # what time does the simulation end
 t.end - t.start                                                     # total time spent simulating from start to finish
 
+
+
+###
+### ANALYSIS
+###
+
+
 itySP2 <- do.call(rbind, itySP)
 istrSP2 <- do.call(rbind, istrSP)
 allks <- do.call(rbind, lapply(ks1, function(x) x[,1:4]))
@@ -263,11 +297,10 @@ summary(fit1)
 plot(allks[complete.cases(allks),1][allks[complete.cases(allks),4] != 0] ~ istrSP2[complete.cases(allks),2][allks[complete.cases(allks),4] != 0])
 abline(fit1, col = "blue")
 
-quantile(allks[complete.cases(allks),1])
-
-
-
-
+p.key <- sapply(ks1, function(x) which.max(x[,4]))
+eqcomm
+allkeys <- sapply(1:sum(use), function(x) eqcomm[[x]][p.key[x]])
+ggplot(data.frame(x = allkeys), aes(x = x)) + geom_bar() 
 
 
 
