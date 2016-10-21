@@ -1,3 +1,6 @@
+### SAVED WORK
+# save.image("~/Desktop/simul-example.Rdata")
+# load("~/Desktop/simul-example.Rdata")
 
 
 
