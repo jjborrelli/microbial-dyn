@@ -307,7 +307,7 @@ istrSP2 <- do.call(rbind, istrSP)                                   # get specie
 allks <- do.call(rbind, lapply(ks1, function(x) x[,1:4]))           # all biomass, variation, and persistence
 
 # put all data together in single matrix
-allks <- cbind(allks, sp.id = unlist(eqcomm), n.comp = itySP2[,1], n.mut = itySP2[,2], n.pred = itySP2[,3], 
+allks <- cbind(allks, eig = unlist(eigkey), sp.id = unlist(eqcomm), n.comp = itySP2[,1], n.mut = itySP2[,2], n.pred = itySP2[,3], 
                s.comp = istrSP2[,1], s.mut = istrSP2[,2], s.pred = istrSP2[,3], bet = unlist(betw), close = unlist(clocent),
                neigh = unlist(g.neighbors2),  ec = unlist(ecent), hub = unlist(hscore), pr = unlist(p.rank))
 ccak <- complete.cases(allks)                                       # only use complete cases
@@ -340,12 +340,22 @@ cdist[which(as.character(allkeys) %in% names(which.max(table(allkeys))))]
 mean(cdist)
 hist(cdist)
 
-pcdat <- allks[ccak,1:4]                                            # pull out stability data for PCA
+
+
+
+pcdat <- allks[ccak,1:5]                                            # pull out stability data for PCA
 pcdat.norm <- apply(pcdat, 2, function(x) (x-mean(x))/sd(x))        # normalize data
 pcA <- princomp(pcdat.norm)                                         # PCA on normalized stability data
 summary(pcA)                                                        # summary, how much variation explained per axis
 loadings(pcA)                                                       # what is on each axis
 plot(pcA$scores[,1:2])                                              # PCA scores for first two axes of variation
+
+pcdat2 <- allks[ccak, 6:18]
+pcdat.norm2 <- apply(pcdat2, 2, function(x) (x-mean(x))/sd(x))
+pcB <- princomp(pcdat.norm2)
+summary(pcB)
+loadings(pcB)
+
 
 
 ## Modeling
@@ -359,23 +369,34 @@ fit3 <- glm(m.init.vary~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+
             family = "gaussian", data = mydat, na.action = "na.fail")
 fit4 <- glm(cbind(ceiling(pers*100), (100-ceiling(pers*100)))~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr,
             family = "binomial", data = mydat, na.action = "na.fail")
-
-fit5 <- glm(pcA$scores[,1]~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr,
+fit5 <- glm(eig~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr,
             family = "gaussian", data = mydat, na.action = "na.fail")
+fit5.1 <- glm(eig~sp.id+n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr,
+            family = "gaussian", data = mydat, na.action = "na.fail")
+
+fit6 <- glm(cbind(ceiling(pers*100), (100-ceiling(pers*100)))~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr+sp.id,
+            family = "binomial", data = mydat, na.action = "na.fail")
+fit6.1 <- glm(mydat$delta.biom~pcB$scores[,1], family = "gaussian", data = mydat, na.action = "na.fail")
+
 
 d1.fit <- dredge(fit1)
 d2.fit <- dredge(fit2)
 d3.fit <- dredge(fit3)
 d4.fit <- dredge(fit4)
 d5.fit <- dredge(fit5)
+d6.fit <- dredge(fit6)
 
 head(d1.fit)
 head(d2.fit)
 head(d3.fit)
 head(d4.fit)
 head(d5.fit)
+head(d6.fit)
 
-dmat1 <- matrix(c(colMeans(d1.fit[d1.fit$delta < 2,]),colMeans(d2.fit[d2.fit$delta < 2,]),colMeans(d3.fit[d3.fit$delta < 2,]),colMeans(d4.fit[d4.fit$delta < 2,])), nrow = 4, byrow = T)
+dmat1 <- matrix(c(colMeans(d1.fit[d1.fit$delta < 2,], na.rm = T),colMeans(d2.fit[d2.fit$delta < 2,], na.rm = T),colMeans(d3.fit[d3.fit$delta < 2,], na.rm = T),colMeans(d4.fit[d4.fit$delta < 2,], na.rm = T),colMeans(d5.fit[d5.fit$delta < 2,], na.rm = T)), nrow = 5, byrow = T)
 colnames(dmat1) <- names(colMeans(d4.fit[d4.fit$delta < 2,]))
-rownames(dmat1) <- c("biomass", "meanvary", "initvary", "persist")
+rownames(dmat1) <- c("biomass", "meanvary", "initvary", "persist", "eigen")
 dmat1
+
+
+plot(pcA$scores[,1:2], col = factor(mydat$sp.id), pch = 20)
