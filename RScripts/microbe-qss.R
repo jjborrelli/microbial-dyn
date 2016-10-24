@@ -30,18 +30,22 @@ efun <- function(x, mats, iter = 1000){
 }
 
 
-N = sample(10:50, 1000, replace = T)
-C = sample(seq(.1, .8, .1), 1000, replace = T)
+N = sample(10:50, 10000, replace = T)
+C = sample(seq(.1, .8, .1), 10000, replace = T)
 
-g <- lapply(1:1000, function(x) erdos.renyi.game(N, C, "gnp", directed = T))
+
+g <- lapply(1:10000, function(x) erdos.renyi.game(N, C, "gnp", directed = T))
 a1 <- lapply(g, get.adjacency, sparse = F)
 a2 <- lapply(a1, function(x){x[x != 0] <- sample(c(-1,1), sum(x), replace = T);return(x)})
 
 ity <- t(sapply(a2, itypes))
 
 eigs <- lapply(1:length(a2), function(x) efun(x, a2, 1000))
-qss <- sapply(eigs, function(x) c(sum(x) > 0, sum(x <= 0)))
+qss <- sapply(eigs, function(x) c(sum(x > 0), sum(x <= 0)))
 
-summary(glm(qss~ity[,1], family = "quasibinomial"))
-summary(glm(qss~ity[,2], family = "quasibinomial"))
-summary(glm(qss~ity[,3], family = "quasibinomial"))
+summary(glm(t(qss)~ity[,1], family = "binomial"))
+summary(glm(t(qss)~ity[,2], family = "binomial"))
+summary(glm(t(qss)~ity[,3], family = "binomial"))
+
+summary(glm(t(qss)~N+C+ity, family = "binomial"))
+summary(glm(t(qss)~ity, family = "binomial"))
