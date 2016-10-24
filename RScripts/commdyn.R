@@ -13,6 +13,7 @@ library(igraph)
 library(NetIndices)
 library(deSolve)
 library(ggplot2)
+library(MuMIn)
 
 
 ###
@@ -250,9 +251,17 @@ summary(lm(unlist(eigkey)~do.call(rbind, istrSP)))                  # relationsh
 allg <- lapply(matuse, getgraph)                                    # get the network for each local eq comm
 plot(unlist(eigkey)~unlist(sapply(allg, degree)))                   # look at relationship between degree and eig
 
+betw <- lapply(allg, betweenness)                                   # get betweenness of each node
+clocent <- lapply(allg, closeness)                                  # get closeness centrality
+# get neighborhood of each spp going out 2 links
+g.neighbors2 <- lapply(1:length(allg), function(x){sapply(graph.neighborhood(allg[[x]], 2), function(y) length(V(y)))})
+ecent <- lapply(allg, function(x) eigen_centrality(x)$vector)       # get eigenvector centrality
+hscore <- lapply(allg, function(x) hub_score(x)$vector)             # get hub score
+p.rank <- lapply(allg, function(x) page_rank(x)$vector)             # get page rank algo
+
+
+
 t.simend <- Sys.time()                                              # note time initial comm sim ends
-
-
 
 ###
 ### CHECK FOR KEYSTONE SPECIES
@@ -297,6 +306,14 @@ itySP2 <- do.call(rbind, itySP)                                     # get specie
 istrSP2 <- do.call(rbind, istrSP)                                   # get species level interaction type strengths
 allks <- do.call(rbind, lapply(ks1, function(x) x[,1:4]))           # all biomass, variation, and persistence
 
+# put all data together in single matrix
+allks <- cbind(allks, sp.id = unlist(eqcomm), n.comp = itySP2[,1], n.mut = itySP2[,2], n.pred = itySP2[,3], 
+               s.comp = istrSP2[,1], s.mut = istrSP2[,2], s.pred = istrSP2[,3], bet = unlist(betw), close = unlist(clocent),
+               neigh = unlist(g.neighbors2),  ec = unlist(ecent), hub = unlist(hscore), pr = unlist(p.rank))
+ccak <- complete.cases(allks)                                       # only use complete cases
+
+dim(allks[ccak,])
+
 ## Correlations among different stability measures
 stabi <- data.frame(allks[complete.cases(allks),], eigen = unlist(eigkey)[complete.cases(allks)])
 stabi2 <- data.frame(allks[complete.cases(allks),][allks[complete.cases(allks),4] > 0,], eigen = unlist(eigkey)[complete.cases(allks)][allks[complete.cases(allks),4] > 0])
@@ -322,3 +339,43 @@ table(allkeys)
 cdist[which(as.character(allkeys) %in% names(which.max(table(allkeys))))]
 mean(cdist)
 hist(cdist)
+
+pcdat <- allks[ccak,1:4]                                            # pull out stability data for PCA
+pcdat.norm <- apply(pcdat, 2, function(x) (x-mean(x))/sd(x))        # normalize data
+pcA <- princomp(pcdat.norm)                                         # PCA on normalized stability data
+summary(pcA)                                                        # summary, how much variation explained per axis
+loadings(pcA)                                                       # what is on each axis
+plot(pcA$scores[,1:2])                                              # PCA scores for first two axes of variation
+
+
+## Modeling
+#### with MuMIn package
+
+?dredge
+mydat <- as.data.frame(allks[ccak,])
+fit1 <- glm(delta.biom~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr, family = "gaussian", data = mydat, na.action = "na.fail")
+fit2 <- glm(mean.vary~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr, family = "gaussian", data = mydat, na.action = "na.fail")
+fit3 <- glm(m.init.vary~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr, 
+            family = "gaussian", data = mydat, na.action = "na.fail")
+fit4 <- glm(cbind(ceiling(pers*100), (100-ceiling(pers*100)))~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr,
+            family = "binomial", data = mydat, na.action = "na.fail")
+
+fit5 <- glm(pcA$scores[,1]~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr,
+            family = "gaussian", data = mydat, na.action = "na.fail")
+
+d1.fit <- dredge(fit1)
+d2.fit <- dredge(fit2)
+d3.fit <- dredge(fit3)
+d4.fit <- dredge(fit4)
+d5.fit <- dredge(fit5)
+
+head(d1.fit)
+head(d2.fit)
+head(d3.fit)
+head(d4.fit)
+head(d5.fit)
+
+dmat1 <- matrix(c(colMeans(d1.fit[d1.fit$delta < 2,]),colMeans(d2.fit[d2.fit$delta < 2,]),colMeans(d3.fit[d3.fit$delta < 2,]),colMeans(d4.fit[d4.fit$delta < 2,])), nrow = 4, byrow = T)
+colnames(dmat1) <- names(colMeans(d4.fit[d4.fit$delta < 2,]))
+rownames(dmat1) <- c("biomass", "meanvary", "initvary", "persist")
+dmat1
