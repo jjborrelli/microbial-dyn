@@ -148,10 +148,12 @@ keystone <- function(x, dyn, eqcomm, mats, growth){
   
   # initial abundances for the removal sim
   init.biom <- dyna[1000,-1][dyna[1000,-1] > 0]
-  # change in mean abundance following each removal
-  delta.biom <- sapply(rem, function(x) if(nrow(x) == 1000){mean(x[1000,-1] - mean(init.biom))}else{NA})
+  
   # change in equilibrium abundance following removal for each species
   delta.eq <- sapply(1:length(rem), function(x) if(nrow(rem[[x]]) == 1000){rem[[x]][1000,-1] - init.biom[-x]}else{rep(NA, length(init.biom[-1]))})
+  # change in mean abundance following each removal
+  #delta.biom <- sapply(rem, function(x) if(nrow(x) == 1000){mean(x[1000,-1] - mean(init.biom))}else{NA})
+  delta.biom <- colMeans(delta.eq)
   
   # get coefficient of variation for each species following each removal (last 200 timesteps)
   vary <- lapply(rem, function(x) if(nrow(x) == 1000){apply(x[800:1000,-1], 2, function(y) sd(y)/mean(y))}else{NA})
@@ -306,8 +308,11 @@ itySP2 <- do.call(rbind, itySP)                                     # get specie
 istrSP2 <- do.call(rbind, istrSP)                                   # get species level interaction type strengths
 allks <- do.call(rbind, lapply(ks1, function(x) x[,1:4]))           # all biomass, variation, and persistence
 
+itySP3 <- t(apply(itySP2, 1, function(x) x/sum(x)))
+itySP3[is.nan(itySP3)] <- 0
+
 # put all data together in single matrix
-allks <- cbind(allks, eig = unlist(eigkey), sp.id = unlist(eqcomm), n.comp = itySP2[,1], n.mut = itySP2[,2], n.pred = itySP2[,3], 
+allks <- cbind(allks, eig = unlist(eigkey), sp.id = unlist(eqcomm), n.comp = itySP3[,1], n.mut = itySP3[,2], n.pred = itySP3[,3], 
                s.comp = istrSP2[,1], s.mut = istrSP2[,2], s.pred = istrSP2[,3], bet = unlist(betw), close = unlist(clocent),
                neigh = unlist(g.neighbors2),  ec = unlist(ecent), hub = unlist(hscore), pr = unlist(p.rank))
 ccak <- complete.cases(allks)                                       # only use complete cases
@@ -363,6 +368,7 @@ loadings(pcB)
 
 ?dredge
 mydat <- as.data.frame(allks[ccak,])
+
 fit1 <- glm(delta.biom~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr, family = "gaussian", data = mydat, na.action = "na.fail")
 fit2 <- glm(mean.vary~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr, family = "gaussian", data = mydat, na.action = "na.fail")
 fit3 <- glm(m.init.vary~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr, 
@@ -397,6 +403,10 @@ dmat1 <- matrix(c(colMeans(d1.fit[d1.fit$delta < 2,], na.rm = T),colMeans(d2.fit
 colnames(dmat1) <- names(colMeans(d4.fit[d4.fit$delta < 2,]))
 rownames(dmat1) <- c("biomass", "meanvary", "initvary", "persist", "eigen")
 dmat1
+dmat1 <- matrix(c((d1.fit[1,]),(d2.fit[1,]),(d3.fit[1,]),(d4.fit[1,]),(d5.fit[1,])), nrow = 5, byrow = T)
 
 
-plot(pcA$scores[,1:2], col = factor(mydat$sp.id), pch = 20)
+
+########################
+# 
+# maybe do something like ranking each species in each comm by impact measure (e.g., SpA is 1 in biomass change, 2 in eigenvalue) and comparing ranks across impact measures and whether spp have similar ranks in similar communities
