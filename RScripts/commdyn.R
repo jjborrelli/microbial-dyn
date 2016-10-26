@@ -479,7 +479,7 @@ plot(allks[allks[,"sp.id"] == 27,5]~mdist[which(sapply(eqcomm, function(x) 27 %i
 
 resmat <- matrix(ncol = 3, nrow = 70)
 for(i in 1:70){
-  mdist <- dist(eqmat[which(sapply(eqcomm, function(x) i %in% x))])
+  mdist <- dist(eqmat[which(sapply(eqcomm, function(x) i %in% x)),])
   d1 <- dist(allks[allks[,"sp.id"] == i,])
   mcor <- vegan::mantel(d1, mdist)
   resmat[i,] <- c(stat = mcor$statistic, pval = mcor$signif, numcom = sum(sapply(eqcomm, function(x) i %in% x)))
