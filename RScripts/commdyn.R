@@ -1,5 +1,11 @@
+### Notes to self
+# need to fix eigenvalue function to use jacobian, not interaction matrix
+# re ran simulation using parametric bootstrapped data from Stein et al. 
+
+
 ### SAVED WORK
-# save.image("~/Desktop/simul-example.Rdata")
+# last saved 10-25-16
+# save.image("~/Desktop/simul-example.Rdata") 
 # load("~/Desktop/simul-example.Rdata")
 
 
@@ -14,6 +20,7 @@ library(NetIndices)
 library(deSolve)
 library(ggplot2)
 library(MuMIn)
+library(rootSolve)
 
 
 ###
@@ -64,7 +71,7 @@ itypes <- function(x){
 
 # compute frequency of different interaction types each spp participates in
 itypes.sp <- function(x){
-  mm1 <- matrix(nrow = nrow(x), ncol = 3)
+  mm1 <- matrix(nrow = nrow(x), ncol = 5)
   for(i in 1:nrow(x)){
     i1 <- x[i, -i]
     i2 <- x[-i, i]
@@ -75,7 +82,7 @@ itypes.sp <- function(x){
     amens <- sum(i1 < 0 & i2  == 0 | i1 == 0 & i2 < 0)
     comm <- sum(i1 > 0 & i2  == 0 | i1 == 0 & i2 > 0)
     
-    mm1[i,] <- c(comp = comp, mut = mut, pred = pred)
+    mm1[i,] <- c(comp = comp, mut = mut, pred = pred, amens = amens, comm = comm)
   }
   return(mm1)
 }
@@ -100,12 +107,18 @@ istr.sp <- function(x){
 }
 
 # function describes how species removal affects the local stability (magnitude of Max(Re(Lambda))) of the equilibrium comm
-eigenkey <- function(mat){
-  ev.init <- max(Re(eigen(mat)$values))                             # initial eigenvalue for the community
+eigenkey <- function(mat, growth, isp, dyna){
+  eq.biom <- dyna[1000,-1][dyna[1000,-1] > 0]
+  j1 <- jacobian.full(eq.biom, lvmod, parms = list(alpha = growth[isp], m = mat[isp,isp]))
+  
+  ev.init <- max(Re(eigen(j1)$values))                              # initial eigenvalue for the community
   ev.key <- c()
-  for(i in 1:nrow(mat)){
-    newmat <- mat[-i,-i]                                            # species removed from comm
-    ev.key[i] <- max(Re(eigen(newmat)$values))                      # eigenvalue of perturbed community
+  for(i in 1:length(isp)){
+    ispR <- isp[-i]                                                 # species removed from comm
+    
+    j2 <- jacobian.full(eq.biom[-i], lvmod, parms = list(alpha = growth[ispR], m = mat[ispR,ispR]))
+    
+    ev.key[i] <- max(Re(eigen(j2)$values))                          # eigenvalue of perturbed community
   }
   return(ev.key)                                                    # return new eigenvalue (should this be the difference?)
 }
@@ -185,14 +198,19 @@ t.start <- Sys.time()                                               # begin timi
 S <- 200                                                            # total number of species in the pool 
 growth <- runif(S, .01, 1)                                          # growth rate for each spp in the pool
 K <- quantile(1:100, rbeta(S, 1, 2))                                # carrying capacities (not used)
-mats <- get.adjacency(erdos.renyi.game(S, .1, "gnp"), sparse = F)   # create interaction matrix of all spp in pool
+mats <- get.adjacency(erdos.renyi.game(S, .2, "gnp", directed = T), sparse = F)   # create interaction matrix of all spp in pool
+# note: altered to directed net, .15 = C
 nINT <- sum(mats)                                                   # total number of interactions 
 
-INTstr <- runif(nINT, -1, 1)                                        # sample interaction strengths 
+# using stein data
+SteinInt <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/ecomod-ints.csv", row.names = 1)
+INTs <- c(SteinInt[upper.tri(SteinInt)],SteinInt[lower.tri(SteinInt)])
+INTstr <- rnorm(nINT, mean(INTs), sd(INTs))
+#INTstr <- runif(nINT, -1, 1)                                        # sample interaction strengths 
 
 mats[mats != 0] <- INTstr                                           # fill in interaction strengths 
-diag(mats) <- -1                                                    # self limitation set to -1
-
+#diag(mats) <- -1                                                    # self limitation set to -1
+diag(mats) <- -rbeta(nrow(mats), 1.1, 5)*5
 ## 
 ## Begin simulation of subsampled community dynamics
 
@@ -213,12 +231,14 @@ for(i in 1:1000){
 
 # which runs did not get messed up
 use <- sapply(r2, nrow) == 1000 & sapply(r2, function(x) sum(tail(x, 1)[-1] > 0) > 0)
-sapply(r2[use], function(x) sum(x[1000,-1] > 0))                    # how many spp coexisting in each local comm
+sum(use)
+hist(sapply(r2[use], function(x) sum(x[1000,-1] > 0))   )           # how many spp coexisting in each local comm
 # which species are present in equilibrial communities
 eqcomm <- sapply(1:sum(use), function(x) spp[use][[x]][which(r2[use][[x]][1000,-1] > 0)])
 
 # how equilibrial are the communities?
-cv.eq <- sapply(r2[use], function(x) apply(x[990:1000,-1], 2, sd)/colMeans(x[990:1000, -1]))
+dyn <- lapply(r2[use], function(x){x[x < 0] <- 0; x})               # get new object of dynamics list for runs that worked
+cv.eq <- sapply(dyn, function(x) apply(x[990:1000,-1], 2, sd)/(colMeans(x[990:1000, -1])))
 cv.eq[is.nan(cv.eq)] <- 0
 hist(colMeans(cv.eq))
 
@@ -231,6 +251,9 @@ for(i in 1:sum(use)){
 
 # equilibrium interaction matrices for all iterations that didn't mess up
 matuse <- lapply(1:sum(use), function(i) mats[eqcomm[[i]], eqcomm[[i]]])
+
+# histogram of resulting matrix connectances
+hist(sapply(matuse, function(x) sum(x != 0)/(nrow(x)*(nrow(x)-1))))
 
 # compute frequency of interaction types in each equilibrium matrix
 ity <- t(sapply(matuse, itypes))
@@ -245,7 +268,8 @@ istrSP <- lapply(matuse, istr.sp)
 summary(lm(unlist(lapply(1:sum(use), function(x) r2[use][[x]][1000,-1][r2[use][[x]][1000,-1] > 0]))~do.call(rbind, itySP)))
 
 
-eigkey <- lapply(matuse, eigenkey)                                  # how each spp removal affects eigenval of comm
+# how each spp removal affects eigenval of comm
+eigkey <- lapply(1:sum(use), function(x) eigenkey(mat = mats, growth = growth, isp = eqcomm[[x]], dyna = dyn[[x]]))        
 summary(lm(unlist(eigkey)~do.call(rbind, itySP)))                   # relationship btwn eig and interaction types
 summary(lm(unlist(eigkey)~do.call(rbind, istrSP)))                  # relationship btwn eig and interaction strengths
 
@@ -272,7 +296,6 @@ t.simend <- Sys.time()                                              # note time 
 t.key <- Sys.time()                                                 # note time keystone simm starts
 
 
-dyn <- r2[use]                                                      # get new object of dynamics list for runs that worked
 
 # quick test of function
 #system.time(
@@ -312,7 +335,8 @@ itySP3 <- t(apply(itySP2, 1, function(x) x/sum(x)))
 itySP3[is.nan(itySP3)] <- 0
 
 # put all data together in single matrix
-allks <- cbind(allks, eig = unlist(eigkey), sp.id = unlist(eqcomm), n.comp = itySP3[,1], n.mut = itySP3[,2], n.pred = itySP3[,3], 
+allks <- cbind(allks, eig = unlist(eigkey), sp.id = unlist(eqcomm), n.comp = itySP2[,1], n.mut = itySP2[,2], n.pred = itySP2[,3], 
+               n.amen = itySP2[,4], n.com = itySP2[,5], 
                s.comp = istrSP2[,1], s.mut = istrSP2[,2], s.pred = istrSP2[,3], bet = unlist(betw), close = unlist(clocent),
                neigh = unlist(g.neighbors2),  ec = unlist(ecent), hub = unlist(hscore), pr = unlist(p.rank))
 ccak <- complete.cases(allks)                                       # only use complete cases
@@ -366,7 +390,7 @@ loadings(pcB)
 ## Modeling
 #### with MuMIn package
 
-?dredge
+
 mydat <- as.data.frame(allks[ccak,])
 
 fit1 <- glm(delta.biom~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr, family = "gaussian", data = mydat, na.action = "na.fail")
@@ -382,8 +406,6 @@ fit5.1 <- glm(eig~sp.id+n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+
 
 fit6 <- glm(cbind(ceiling(pers*100), (100-ceiling(pers*100)))~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr+sp.id,
             family = "binomial", data = mydat, na.action = "na.fail")
-fit6.1 <- glm(mydat$delta.biom~pcB$scores[,1], family = "gaussian", data = mydat, na.action = "na.fail")
-
 
 d1.fit <- dredge(fit1)
 d2.fit <- dredge(fit2)
@@ -403,10 +425,64 @@ dmat1 <- matrix(c(colMeans(d1.fit[d1.fit$delta < 2,], na.rm = T),colMeans(d2.fit
 colnames(dmat1) <- names(colMeans(d4.fit[d4.fit$delta < 2,]))
 rownames(dmat1) <- c("biomass", "meanvary", "initvary", "persist", "eigen")
 dmat1
-dmat1 <- matrix(c((d1.fit[1,]),(d2.fit[1,]),(d3.fit[1,]),(d4.fit[1,]),(d5.fit[1,])), nrow = 5, byrow = T)
+dmat2 <- matrix(c((d1.fit[1,]),(d2.fit[1,]),(d3.fit[1,]),(d4.fit[1,]),(d5.fit[1,])), nrow = 5, byrow = T)
+colnames(dmat2) <- names(colMeans(d4.fit[d4.fit$delta < 2,]))
+rownames(dmat2) <- c("biomass", "meanvary", "initvary", "persist", "eigen")
+dmat2
+
+#####################################
+#####################################
+fit1 <- glm(delta.biom~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
+fit2 <- glm(mean.vary~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
+fit3 <- glm(m.init.vary~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, 
+            family = "gaussian", data = mydat, na.action = "na.fail")
+fit4 <- glm(cbind(ceiling(pers*100), (100-ceiling(pers*100)))~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred,
+            family = "binomial", data = mydat, na.action = "na.fail")
+fit5 <- glm(eig~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
+
+
+d1.fit <- dredge(fit1)
+d2.fit <- dredge(fit2)
+d3.fit <- dredge(fit3)
+d4.fit <- dredge(fit4)
+d5.fit <- dredge(fit5)
+
+
+head(d1.fit)
+head(d2.fit)
+head(d3.fit)
+head(d4.fit)
+head(d5.fit)
+
+dmat1 <- matrix(c(colMeans(d1.fit[d1.fit$delta < 2,], na.rm = T),colMeans(d2.fit[d2.fit$delta < 2,], na.rm = T),colMeans(d3.fit[d3.fit$delta < 2,], na.rm = T),colMeans(d4.fit[d4.fit$delta < 2,], na.rm = T),colMeans(d5.fit[d5.fit$delta < 2,], na.rm = T)), nrow = 5, byrow = T)
+colnames(dmat1) <- names(colMeans(d4.fit[d4.fit$delta < 2,]))
+rownames(dmat1) <- c("biomass", "meanvary", "initvary", "persist", "eigen")
+dmat1
+dmat2 <- matrix(c((d1.fit[1,]),(d2.fit[1,]),(d3.fit[1,]),(d4.fit[1,]),(d5.fit[1,])), nrow = 5, byrow = T)
+colnames(dmat2) <- names(colMeans(d4.fit[d4.fit$delta < 2,]))
+rownames(dmat2) <- c("biomass", "meanvary", "initvary", "persist", "eigen")
+dmat2
 
 
 
 ########################
 # 
 # maybe do something like ranking each species in each comm by impact measure (e.g., SpA is 1 in biomass change, 2 in eigenvalue) and comparing ranks across impact measures and whether spp have similar ranks in similar communities
+
+ks1
+
+impactrank <- lapply(ks1, function(x) apply(x, 2, function(y) order(abs(y), decreasing = T)))
+mdist <- dist(eqmat[which(sapply(eqcomm, function(x) 27 %in% x))])
+
+plot(allks[allks[,"sp.id"] == 27,5]~mdist[which(sapply(eqcomm, function(x) 27 %in% x)),which(sapply(eqcomm, function(x) 27 %in% x))])
+
+
+resmat <- matrix(ncol = 3, nrow = 70)
+for(i in 1:70){
+  mdist <- dist(eqmat[which(sapply(eqcomm, function(x) i %in% x))])
+  d1 <- dist(allks[allks[,"sp.id"] == i,])
+  mcor <- vegan::mantel(d1, mdist)
+  resmat[i,] <- c(stat = mcor$statistic, pval = mcor$signif, numcom = sum(sapply(eqcomm, function(x) i %in% x)))
+}
+
+resmat
