@@ -5,7 +5,8 @@
 
 ### SAVED WORK
 # last saved 10-25-16
-# save.image("~/Desktop/simul-example.Rdata") 
+# alt save 10-26-16
+# save.image("~/Desktop/simul-example2.Rdata") 
 # load("~/Desktop/simul-example.Rdata")
 
 
@@ -150,7 +151,7 @@ keystone <- function(x, dyn, eqcomm, mats, growth){
     matplot(rem[[i]][,-1], typ = "l")                               # plot dynamics
     
     if(nrow(rem[[i]]) == 1000){                                     # if statement to determine if the run worked or crapped out
-      pers[i] <- sum(rem[[i]][1000,-1] > 0)/(nrow(initial1) -1)     # what fraction of species have positive abundance
+      pers[i] <- sum(rem[[i]][1000,-1] > 0)                         # what fraction of species have positive abundance
     }else{
       pers[i] <- NA                                                 # if run crashed gives NA
     }
@@ -232,15 +233,16 @@ for(i in 1:1000){
 # which runs did not get messed up
 use <- sapply(r2, nrow) == 1000 & sapply(r2, function(x) sum(tail(x, 1)[-1] > 0) > 0)
 sum(use)
-hist(sapply(r2[use], function(x) sum(x[1000,-1] > 0))   )           # how many spp coexisting in each local comm
+median(sapply(r2[use], function(x) sum(x[1000,-1] > 0))   )           # how many spp coexisting in each local comm
 # which species are present in equilibrial communities
 eqcomm <- sapply(1:sum(use), function(x) spp[use][[x]][which(r2[use][[x]][1000,-1] > 0)])
 
 # how equilibrial are the communities?
 dyn <- lapply(r2[use], function(x){x[x < 0] <- 0; x})               # get new object of dynamics list for runs that worked
-cv.eq <- sapply(dyn, function(x) apply(x[990:1000,-1], 2, sd)/(colMeans(x[990:1000, -1])))
-cv.eq[is.nan(cv.eq)] <- 0
-hist(colMeans(cv.eq))
+cv.eq <- sapply(dyn, function(x) apply(x[990:1000,-1][,x[1000,-1] > 0], 2, sd)/(colMeans(x[990:1000, -1][,x[1000,-1] > 0])))
+#cv.eq[is.nan(cv.eq)] <- 0
+#range(colMeans(cv.eq))
+hist(unlist(cv.eq))
 
 # matrix of species found in each local equilibrium community
 # can be used to determine compositional similarity of communities
@@ -253,7 +255,7 @@ for(i in 1:sum(use)){
 matuse <- lapply(1:sum(use), function(i) mats[eqcomm[[i]], eqcomm[[i]]])
 
 # histogram of resulting matrix connectances
-hist(sapply(matuse, function(x) sum(x != 0)/(nrow(x)*(nrow(x)-1))))
+range(sapply(matuse, function(x) sum(x != 0)/(nrow(x)*(nrow(x)-1))))
 
 # compute frequency of interaction types in each equilibrium matrix
 ity <- t(sapply(matuse, itypes))
@@ -397,7 +399,8 @@ fit1 <- glm(delta.biom~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+e
 fit2 <- glm(mean.vary~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr, family = "gaussian", data = mydat, na.action = "na.fail")
 fit3 <- glm(m.init.vary~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr, 
             family = "gaussian", data = mydat, na.action = "na.fail")
-fit4 <- glm(cbind(ceiling(pers*100), (100-ceiling(pers*100)))~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr,
+fit4 <- glm(cbind(pers,rep(sapply(eqcomm, length), sapply(eqcomm, length))[ccak])~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+
+              bet+close+neigh+ec+hub+pr,
             family = "binomial", data = mydat, na.action = "na.fail")
 fit5 <- glm(eig~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr,
             family = "gaussian", data = mydat, na.action = "na.fail")
@@ -436,7 +439,7 @@ fit1 <- glm(delta.biom~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, fam
 fit2 <- glm(mean.vary~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
 fit3 <- glm(m.init.vary~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, 
             family = "gaussian", data = mydat, na.action = "na.fail")
-fit4 <- glm(cbind(ceiling(pers*100), (100-ceiling(pers*100)))~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred,
+fit4 <- glm(cbind(pers,rep(sapply(eqcomm, length), sapply(eqcomm, length))[ccak])~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred,
             family = "binomial", data = mydat, na.action = "na.fail")
 fit5 <- glm(eig~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
 
@@ -486,3 +489,58 @@ for(i in 1:70){
 }
 
 resmat
+
+
+########################
+# 
+# Co-occurs? 
+curve_ball<-function(m){
+  RC=dim(m)
+  R=RC[1]
+  C=RC[2]
+  hp=list()
+  for (row in 1:dim(m)[1]) {hp[[row]]=(which(m[row,]==1))}
+  l_hp=length(hp)
+  for (rep in 1:5*l_hp){
+    AB=sample(1:l_hp,2)
+    a=hp[[AB[1]]]
+    b=hp[[AB[2]]]
+    ab=intersect(a,b)
+    l_ab=length(ab)
+    l_a=length(a)
+    l_b=length(b)
+    if ((l_ab %in% c(l_a,l_b))==F){
+      tot=setdiff(c(a,b),ab)
+      l_tot=length(tot)
+      tot=sample(tot, l_tot, replace = FALSE, prob = NULL)
+      L=l_a-l_ab
+      hp[[AB[1]]] = c(ab,tot[1:L])
+      hp[[AB[2]]] = c(ab,tot[(L+1):l_tot])}
+    
+  }
+  rm=matrix(0,R,C)
+  for (row in 1:R){rm[row,hp[[row]]]=1}
+  rm
+}
+curving <- function(adjmat, n){
+  newmat <- adjmat
+  
+  d.all <- matrix(nrow = length(dist(adjmat)), ncol = n)
+  
+  for(i in 1:n){
+    newmat <- curve_ball(newmat)
+    d.all[,i] <- dist(newmat)
+  }
+  return(d.all)
+}
+
+d1 <- dist((eqmat))
+
+allD <- curving((eqmat), 500)
+
+sig1 <- sapply(1:nrow(allD), function(x) sum(allD[x,] < d1[x])/500)
+sum(sig1 < 0.05)/(371*370)
+which(sig1 <= 0.05)
+
+m1 <- matrix(0,nrow = 371, ncol = 371)
+m1[lower.tri(m1)][which(sig1 <= 0.05)] <- 1
