@@ -435,13 +435,13 @@ dmat2
 
 #####################################
 #####################################
-fit1 <- glm(delta.biom~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
-fit2 <- glm(mean.vary~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
-fit3 <- glm(m.init.vary~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, 
+fit1 <- glm(delta.biom~eq.abund+n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
+fit2 <- glm(mean.vary~eq.abund+n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
+fit3 <- glm(m.init.vary~eq.abund+n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, 
             family = "gaussian", data = mydat, na.action = "na.fail")
-fit4 <- glm(cbind(pers,rep(sapply(eqcomm, length), sapply(eqcomm, length))[ccak])~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred,
+fit4 <- glm(cbind(pers,rep(sapply(eqcomm, length), sapply(eqcomm, length))[ccak])~eq.abund+n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred,
             family = "binomial", data = mydat, na.action = "na.fail")
-fit5 <- glm(eig~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
+fit5 <- glm(eig~eq.abund+n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
 
 
 d1.fit <- dredge(fit1)
@@ -467,6 +467,9 @@ rownames(dmat2) <- c("biomass", "meanvary", "initvary", "persist", "eigen")
 dmat2
 
 
+eq.abund <- unlist(lapply(dyn, function(x) x[1000,-1][x[1000,-1] > 0]))[ccak]
+
+plot(lm(mydat$delta.biom~eq.abund)$residuals~eq.abund)
 
 ########################
 # 
