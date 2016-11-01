@@ -11,6 +11,8 @@ In the human gut there is a thriving microbial community with as many as 500 spe
 
 Microbes can compete with one another directly for limited resources in the gut (both food and space). Alternatively they may interact via the production of metabolites. These compounds can be either beneficial or detrimental to the growth of other microbial populations. Thus, in microbial communities we may expect to see all five major interaction types: competition (-,-), mutualism (+,+), parasitism/predation (+,-), amensalism (-,0), and commensalism (+,0).  
 
+An understanding of how microbes interact may allow us to 
+
 - Talk about microbial community stability  
 
 
@@ -21,7 +23,7 @@ Keystone species are those that have a disproportional impact on the communtiy r
 
 Most studies involving keystone species are focused on a single interaction type, predator-prey. For example, Paine (1980) highlights that _Pisaster_ is effective at reducing competition among mussels because it is a generalist that consumes prey at a range of sizes. The impact that different species may have on their community, however, may be mediated by different types of interaction including competition and mutualism. Moreover, keystone interactions of different types may be variable in the form of the impact to the community. 
 
-Typically our understanding of keystone species' impacts have come from species removal experiments. 
+Typically our understanding of keystone species' impacts have come from species removal experiments. In this paper we describe an _in silico_ species removal experiment. We determine the impact that each species has on a simulated community  
 
 
 ## Methods
