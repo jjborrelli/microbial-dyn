@@ -107,6 +107,34 @@ istr.sp <- function(x){
   return(mm1)
 }
 
+spints <- function(x){
+  mm1 <- matrix(nrow = nrow(x), ncol = 10)
+  for(i in 1:nrow(x)){
+    i1 <- x[i, -i] # effect on self
+    i2 <- x[-i, i] # effect on others
+    
+    pos1 <- sum(i1 > 0)
+    neg1 <- sum(i1 < 0)
+    non1 <- sum(i1 == 0)
+    
+    spos1 <- mean(i1[i1 > 0])
+    sneg1 <- mean(i1[i1 < 0])
+    
+    
+    pos2 <- sum(i2 > 0)
+    neg2 <- sum(i2 < 0)
+    non2 <- sum(i2 == 0)
+    
+    spos2 <- mean(i2[i2 > 0])
+    sneg2 <- mean(i2[i2 < 0])
+    
+    
+    mm1[i,] <- c(pos1, neg1, non1, spos1, sneg1, pos2, neg2, non2, spos2, sneg2)
+  }
+  mm1[is.nan(mm1)] <- 0
+  return(mm1)
+}
+
 # function describes how species removal affects the local stability (magnitude of Max(Re(Lambda))) of the equilibrium comm
 eigenkey <- function(mat, growth, isp, dyna){
   eq.biom <- dyna[1000,-1][dyna[1000,-1] > 0]
@@ -179,7 +207,10 @@ keystone <- function(x, dyn, eqcomm, mats, growth){
   m.init.vary <- sapply(init.vary, mean)
   
   # does each species have positive abundance at equilibrium following each removal
-  is.eq <- t(sapply(rem, function(x) if(nrow(x) == 1000){(x[1000,-1] > 0)*1}else{NA}))
+  # is.eq <- t(sapply(rem, function(x) if(nrow(x) == 1000){(x[1000,-1] > 0)*1}else{NA}))
+  is.eq <- matrix(NA, length(spp1), length(spp1))
+  for(i in 1:length(spp1)){if(nrow(rem[[i]] == 1000)){is.eq[i, -i] <- rem[[i]][1000, -1] > 0}else{is.eq[i,-i] <- rep(NA, length(spp1)[-1])}}
+  
   
   # get data matrix for abundance change, variability, and persistence
   dat <- cbind(delta.biom, mean.vary, m.init.vary, pers)  
@@ -199,7 +230,7 @@ t.start <- Sys.time()                                               # begin timi
 S <- 200                                                            # total number of species in the pool 
 growth <- runif(S, .01, 1)                                          # growth rate for each spp in the pool
 K <- quantile(1:100, rbeta(S, 1, 2))                                # carrying capacities (not used)
-mats <- get.adjacency(erdos.renyi.game(S, .2, "gnp", directed = T), sparse = F)   # create interaction matrix of all spp in pool
+mats <- get.adjacency(erdos.renyi.game(S, .2, "gnp", directed = F), sparse = F)   # create interaction matrix of all spp in pool
 # note: altered to directed net, .15 = C
 nINT <- sum(mats)                                                   # total number of interactions 
 
@@ -251,6 +282,8 @@ for(i in 1:sum(use)){
   eqmat[i,eqcomm[[i]]] <- 1                                         # if the species is present in local comm i it gets a one, 0 otherwise
 }
 
+# initial interaction matrices
+inmatuse <- lapply(1:sum(use), function(x) mats[spp[use][[x]],spp[use][[x]]])
 # equilibrium interaction matrices for all iterations that didn't mess up
 matuse <- lapply(1:sum(use), function(i) mats[eqcomm[[i]], eqcomm[[i]]])
 
@@ -260,6 +293,18 @@ range(sapply(matuse, function(x) sum(x != 0)/(nrow(x)*(nrow(x)-1))))
 # compute frequency of interaction types in each equilibrium matrix
 ity <- t(sapply(matuse, itypes))
 plot(ity[,1]/ity[,2])                                               # plot ratio of competition:mutualism
+iity <- t(sapply(inmatuse, itypes))
+
+ity2 <- t(apply(ity, 1, function(x) x/sum(x)))
+iity2 <- t(apply(iity, 1, function(x) x/sum(x)))
+
+plot(iity2[,1], ity2[,1])
+
+spi <- lapply(matuse, spints)
+
+ityinsp <- lapply(inmatuse, itypes.sp)
+ityinsp2 <- do.call(rbind, ityinsp)
+summary(glm(unlist(lapply(r2[use], function(x) x[1000, -1] > 0))~ityinsp2, family = "quasibinomial"))
 
 # get frequency of interaction types for each species in each equilibrial comm
 itySP <- lapply(matuse, itypes.sp)
@@ -435,13 +480,13 @@ dmat2
 
 #####################################
 #####################################
-fit1 <- glm(delta.biom~eq.abund+n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
-fit2 <- glm(mean.vary~eq.abund+n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
-fit3 <- glm(m.init.vary~eq.abund+n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, 
+fit1 <- glm(delta.biom~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
+fit2 <- glm(mean.vary~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
+fit3 <- glm(m.init.vary~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, 
             family = "gaussian", data = mydat, na.action = "na.fail")
-fit4 <- glm(cbind(pers,rep(sapply(eqcomm, length), sapply(eqcomm, length))[ccak])~eq.abund+n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred,
+fit4 <- glm(cbind(pers,rep(sapply(eqcomm, length), sapply(eqcomm, length))[ccak])~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred,
             family = "binomial", data = mydat, na.action = "na.fail")
-fit5 <- glm(eig~eq.abund+n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
+fit5 <- glm(eig~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
 
 
 d1.fit <- dredge(fit1)
@@ -471,6 +516,9 @@ eq.abund <- unlist(lapply(dyn, function(x) x[1000,-1][x[1000,-1] > 0]))[ccak]
 
 plot(lm(mydat$delta.biom~eq.abund)$residuals~eq.abund)
 
+
+spi2 <- do.call(rbind, spi)
+fit1 <- glm(mydat$delta.biom~spi2[ccak,1]+spi2[ccak,2]+spi2[ccak,3]+spi2[ccak,4]+spi2[ccak,5]+spi2[ccak,6]+spi2[ccak,7]+spi2[ccak,8]+spi2[ccak,9]+spi2[ccak,10], family = "gaussian", data = mydat, na.action = "na.fail")
 ########################
 # 
 # maybe do something like ranking each species in each comm by impact measure (e.g., SpA is 1 in biomass change, 2 in eigenvalue) and comparing ranks across impact measures and whether spp have similar ranks in similar communities
@@ -547,3 +595,38 @@ which(sig1 <= 0.05)
 
 m1 <- matrix(0,nrow = 371, ncol = 371)
 m1[lower.tri(m1)][which(sig1 <= 0.05)] <- 1
+
+
+
+################################
+################################
+
+eqsp <- rep(sapply(eqcomm, length), sapply(eqcomm, length))
+
+
+eqs1 <- lapply(1:sum(use), function(x) cbind(sp = spp[[x]], eq = r2[use][[x]][1000,-1], x))
+eqs2 <- do.call(rbind, eqs1)
+
+cors <- matrix(nrow = 200, ncol = 3)
+dis1 <- list()
+dis2 <- list()
+for(i in 1:200){
+  dat <- eqs2[eqs2[,"sp"] == i,]
+  c1 <- combn(1:nrow(dat), 2)
+  d1 <- c()
+  d2 <- c()
+  for(j in 1:ncol(c1)){
+    temp <- dat[c1[,j],]
+    d1[j] <- vegan::vegdist(temp[1:2,2], method = "euclidean")
+    d2[j] <- sum(colSums(eqmat[temp[1:2,3],]) == 2)/sum(colSums(eqmat[temp[1:2,3],]) > 0)
+  }
+  dis1[[i]] <- d1
+  dis2[[i]] <- d2
+  
+  ctest <- cor.test(d1, d2)
+  cors[i,] <- c(ctest$estimate, ctest$p.value, nrow(dat)) 
+}
+
+cors
+
+plot(cors[,1], cors[,3], pch = 20, col = factor(cors[,2] < 0.05))
