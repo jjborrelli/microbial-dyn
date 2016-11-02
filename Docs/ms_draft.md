@@ -4,20 +4,14 @@
 ## Introduction
 
   
-
-- Talk about the microbiome and microbial community ecology  
-
 In the human gut there is a thriving microbial community with as many as 500 species coexisting. Recent advances in metagenomic sequencing have allowed us to catalogue these species and describe the variation in community structure and composition across individuals and within individuals over time. Several factors likely impact the composition of the community. Variation in diet has been shown to influence microbial community composition. This is likely because different microbes are able to more efficiently use different resources (macronutrients). Addtionally, either by hitchhiking on food or other means of transfer, new microbes may invade the community. For example, _Eschericha coli_ may be introduced to the gut via ingestion of contaminated or undercooked foods. The host enviroment can also influence which species are able to coexist in the gut community either through an immune response or mediated through some kind of niche-selection. Finally, the interactions among microbes may both set the boundaries for community composition and drive the response of the community to the other external impacts. 
-
-Microbes can compete with one another directly for limited resources in the gut (both food and space). Alternatively they may interact via the production of metabolites. These compounds can be either beneficial or detrimental to the growth of other microbial populations. Thus, in microbial communities we may expect to see all five major interaction types: competition (-,-), mutualism (+,+), parasitism/predation (+,-), amensalism (-,0), and commensalism (+,0).  
 
 An understanding of how microbes interact may allow us to understand why the human gut microbiome is able to remain stable over long periods of time. 
 
-- Talk about microbial community stability  
+Microbes can compete with one another directly for limited resources in the gut (both food and space). Alternatively they may interact via the production of metabolites. These compounds can be either beneficial or detrimental to the growth of other microbial populations. Thus, in microbial communities we may expect to see all five major interaction types: competition (-,-), mutualism (+,+), parasitism/predation (+,-), amensalism (-,0), and commensalism (+,0). While prevailing wisdom on microbial communties suggested that their stability and function resulted from mutually beneficial relationships among taxa, recent evidence suggests the opposite. Coyte et al. (2015) found that increasing the number of competitive interactions increased the stability of simulated microbial communities and the opposite for mutualistic interactions.      
 
+Recent efforts to infer microbial interaction from time series data have further demonstrated that competition is indeed more common than mutualism (Stein et al. 2013; Marino et al 2014). Coyte et al. (2015) further demonstrated that their results for simulated microbial communities held true for the empirical result of Stein et al. (2013). Inferring interactions is challenging, however, and limitations in the methods meant that the communities in these studies were reduced from several hundred species to either 11 (Stein) or 17 (Marino). Each study focused on the most abundant taxa throughout the course of the time series and lumped the less abundant taxa into a single category ("Other").   
 
-
-- Talk about identifying keystone species in microbial communities  
 
 Keystone species are those that have a disproportional impact on the communtiy relative to thier abundance. The textbook case of a keystone species is the sea star _Pisaster_ in tidal communities of the Pacific Northwest. _Pisaster_ feeds on highly competitive mussels, clearing precious real-estate in the inter-tidal zone for multiple sedentary species to colonize. Removing _Pisaster_ from these communities leads to the competitive exclusion of most of these species, and the domination of the community by a single mussel. Other examples of keystone species include otters, whose predatory interaction with sea urchins helps stabilize the kelp forest, and [daphnia?].
 
