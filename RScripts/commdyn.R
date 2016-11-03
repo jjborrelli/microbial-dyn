@@ -728,5 +728,76 @@ fitLDA
 fitLDAvalues <- predict(fitLDA)
 ldahist(fitLDAvalues$x[,1], g = G1[testcase])
 
+fitCI <- glm(G~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = (newd), family = "binomial", na.action = "na.fail")
+summary(fitCI)
+dCI <- dredge(fitCI)
+head(dCI)
+
+
+
+
+####################################
+####################################
+##  Universal Interactions
+
+
+
+eqsp <- rep(sapply(eqcomm, length), sapply(eqcomm, length))
+
+
+eqs1 <- lapply(1:sum(use), function(x) cbind(sp = spp[use][[x]], eq = r2[use][[x]][1000,-1], x))
+eqs2 <- do.call(rbind, eqs1)
+
+cors <- matrix(nrow = 200, ncol = 3)
+dis1 <- list()
+dis2 <- list()
+for(i in 1:200){
+  dat <- eqs2[eqs2[,"sp"] == i,]
+  c1 <- combn(1:nrow(dat), 2)
+  d1 <- c()
+  d2 <- c()
+  for(j in 1:ncol(c1)){
+    temp <- dat[c1[,j],]
+    d1[j] <- vegan::vegdist(temp[1:2,2], method = "euclidean")
+    d2[j] <- sum(colSums(eqmat[temp[1:2,3],]) == 2)/sum(colSums(eqmat[temp[1:2,3],]) > 0)
+  }
+  dis1[[i]] <- d1
+  dis2[[i]] <- d2
+  
+  ctest <- cor.test(d1, d2)
+  cors[i,] <- c(ctest$estimate, ctest$p.value, nrow(dat)) 
+}
+
+c1 <- combn(1:181, 2)
+nshare <- c()
+d1 <- c()
+d2 <- c()
+d3 <- c()
+d4 <- c()
+for(i in 1:ncol(c1)){
+  nshare[i] <- sum(colSums(eqmat[c1[,i],]) == 2)/sum(colSums(eqmat[c1[,i],]) != 0)
+  shsp <- which(colSums(eqmat[c1[,i],]) == 2)
+  l1 <- eqs1[c1[,i]]
+  e1 <- l1[[1]][l1[[1]][,"sp"] %in% shsp, "eq"]
+  e2 <- l1[[2]][l1[[2]][,"sp"] %in% shsp, "eq"]
+
+  d1[i] <- dist(rbind(e1, e2))
+  d2[i] <- dist(rbind(e1/sum(e1), e2/sum(e2)))
+  
+  l2 <- lapply(l1, function(x) x[,2] <- x[,2]/sum(x[,2]))
+  e1 <- l2[[1]][l1[[1]][,"sp"] %in% shsp]
+  e2 <- l2[[2]][l1[[2]][,"sp"] %in% shsp]
+  
+  
+  d3[i] <- dist(rbind(e1, e2))
+  d4[i] <- dist(rbind(e1/sum(e1), e2/sum(e2)))
+}
+range(nshare)
+hist(nshare)
+par(mfrow = c(2,2))
+plot(d1~nshare, main = "Abs Abund")
+plot(d2~nshare, main = "Scaled Abs Abund")
+plot(d3~nshare, main = "Rel Abund")
+plot(d4~nshare, main = "Scaled Rel Abund")
 
 
