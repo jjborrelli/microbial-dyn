@@ -301,6 +301,9 @@ iity2 <- t(apply(iity, 1, function(x) x/sum(x)))
 plot(iity2[,1], ity2[,1])
 
 spi <- lapply(matuse, spints)
+spi2 <- do.call(rbind, spi)
+es <- spi2[,5] + spi2[,4]
+eo <- spi2[,10] + spi2[,9]
 
 ityinsp <- lapply(inmatuse, itypes.sp)
 ityinsp2 <- do.call(rbind, ityinsp)
@@ -449,11 +452,11 @@ fit4 <- glm(cbind(pers,rep(sapply(eqcomm, length), sapply(eqcomm, length))[ccak]
             family = "binomial", data = mydat, na.action = "na.fail")
 fit5 <- glm(eig~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr,
             family = "gaussian", data = mydat, na.action = "na.fail")
-fit5.1 <- glm(eig~sp.id+n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr,
-            family = "gaussian", data = mydat, na.action = "na.fail")
+#fit5.1 <- glm(eig~sp.id+n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr,
+#            family = "gaussian", data = mydat, na.action = "na.fail")
 
-fit6 <- glm(cbind(ceiling(pers*100), (100-ceiling(pers*100)))~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr+sp.id,
-            family = "binomial", data = mydat, na.action = "na.fail")
+#fit6 <- glm(cbind(ceiling(pers*100), (100-ceiling(pers*100)))~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+hub+pr+sp.id,
+#            family = "binomial", data = mydat, na.action = "na.fail")
 
 d1.fit <- dredge(fit1)
 d2.fit <- dredge(fit2)
@@ -513,12 +516,63 @@ dmat2
 
 
 eq.abund <- unlist(lapply(dyn, function(x) x[1000,-1][x[1000,-1] > 0]))[ccak]
+eq.abund2 <- (lapply(dyn, function(x) x[1000,-1][x[1000,-1] > 0]))
 
 plot(lm(mydat$delta.biom~eq.abund)$residuals~eq.abund)
 
 
 spi2 <- do.call(rbind, spi)
 fit1 <- glm(mydat$delta.biom~spi2[ccak,1]+spi2[ccak,2]+spi2[ccak,3]+spi2[ccak,4]+spi2[ccak,5]+spi2[ccak,6]+spi2[ccak,7]+spi2[ccak,8]+spi2[ccak,9]+spi2[ccak,10], family = "gaussian", data = mydat, na.action = "na.fail")
+
+dat2 <- cbind(rowMeans(spi2[,c(4,5)]),rowMeans(spi2[,c(9,10)]))[ccak,]
+fit1 <- glm(mydat$delta.biom~dat2[,1]+dat2[,2], family = "gaussian", na.action = "na.fail")
+summary(fit1)
+
+########################
+# 
+ev.init <- c()
+for(i in 1:sum(use)){
+  dyna <- r2[use][[i]]
+  isp <- eqcomm[[i]]
+  eq.biom <- dyna[1000,-1][dyna[1000,-1] > 0]
+  j1 <- jacobian.full(eq.biom, lvmod, parms = list(alpha = growth[isp], m = mats[isp,isp]))
+  
+  ev.init[i] <- max(Re(eigen(j1)$values))
+}
+
+
+
+eab <- unlist(lapply(eq.abund2, function(x) x/sum(x)))[ccak]
+icv <- rep(sapply(cv.eq, mean), sapply(eqcomm, length))[ccak]
+neq <- rep(sapply(eqcomm, length), sapply(eqcomm, length))[ccak]
+evi <- rep(ev.init, sapply(eqcomm, length))[ccak]
+
+CI.abund <- (mydat$delta.biom/rep(sapply(eq.abund2, mean), sapply(eqcomm, length))[ccak]) * (1/eab)
+CI.ivary <- ((icv - mydat$m.init.vary)/icv) * (1/eab) 
+CI.pers <- ((neq - mydat$pers)/neq) * (1/eab)
+CI.eig <- ((evi - mydat$eig)/evi) * (1/eab)
+
+
+fit1 <- glm(CI.abund~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
+
+fit3 <- glm(CI.ivary~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, 
+            family = "gaussian", data = mydat, na.action = "na.fail")
+fit4 <- glm(CI.pers~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred,
+            family = "gaussian", data = mydat, na.action = "na.fail")
+fit5 <- glm(CI.eig~n.comp+n.mut+n.pred+n.amen+n.com+s.comp+s.mut+s.pred, family = "gaussian", data = mydat, na.action = "na.fail")
+
+
+d1.fit <- dredge(fit1)
+d3.fit <- dredge(fit3)
+d4.fit <- dredge(fit4)
+d5.fit <- dredge(fit5)
+
+
+head(d1.fit)
+head(d3.fit)
+head(d4.fit)
+head(d5.fit)
+
 ########################
 # 
 # maybe do something like ranking each species in each comm by impact measure (e.g., SpA is 1 in biomass change, 2 in eigenvalue) and comparing ranks across impact measures and whether spp have similar ranks in similar communities
@@ -630,3 +684,49 @@ for(i in 1:200){
 cors
 
 plot(cors[,1], cors[,3], pch = 20, col = factor(cors[,2] < 0.05))
+
+
+
+################################################
+## LDA ? 
+library(MASS)
+library(dplyr)
+
+G1 <- (abs(CI.pers) > 10 & abs(CI.abund) > 10 & abs(CI.eig) > 10 & abs(CI.ivary) > 10)*1
+G1 <- (abs(CI.abund) > 20)*1
+G1 <- ((CI.pers) > 1 & (CI.abund) > 1 & (CI.eig) > 1 & (CI.ivary) > 1)*1
+G1[((CI.pers) > 1 & (CI.abund) < -1 & (CI.eig) < -1 & (CI.ivary) < -1)] <- 2
+length(which(G1 == 0))
+length(which(G1 == 1))
+
+newd <- select(mydat[-which(mydat$pers == 0),], n.comp:ec, pr)
+newd <- (sapply(newd, function(x) (x-mean(x))/sd(x)))
+
+newd<- as.data.frame(cbind(newd, G = G1[-which(mydat$pers == 0)]))
+neval <- 250+(287-150)
+
+errlin <- c()
+for(i in 1:100){
+  s1 <- sample(which(G1 == 0), 4000)
+  s2 <- sample(which(G1 == 1), 150)
+  testcase <- c(s1, s2)
+  
+  fitLDA <- lda(G~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd[testcase,])
+  
+  pLDA <- predict(fitLDA, newdata = newd[-testcase,])
+  tabl <- table(newd$G[-testcase], pLDA$class)
+  errlin[i]=(neval-sum(diag(tabl)))/neval
+}
+mean(errlin)
+
+
+
+
+fitLDA <- lda(G~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred, data = (newd))
+fitLDA
+
+fitLDAvalues <- predict(fitLDA)
+ldahist(fitLDAvalues$x[,1], g = G1[testcase])
+
+
+
