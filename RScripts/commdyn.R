@@ -499,11 +499,11 @@ d4.fit <- dredge(fit4)
 d5.fit <- dredge(fit5)
 
 
-head(d1.fit)
-head(d2.fit)
-head(d3.fit)
-head(d4.fit)
-head(d5.fit)
+model.avg(d1.fit, subset = delta < 5)
+model.avg(d2.fit, subset = delta < 5)
+model.avg(d3.fit, subset = delta < 5)
+model.avg(d4.fit, subset = delta < 5)
+model.avg(d5.fit, subset = delta < 5)
 
 dmat1 <- matrix(c(colMeans(d1.fit[d1.fit$delta < 2,], na.rm = T),colMeans(d2.fit[d2.fit$delta < 2,], na.rm = T),colMeans(d3.fit[d3.fit$delta < 2,], na.rm = T),colMeans(d4.fit[d4.fit$delta < 2,], na.rm = T),colMeans(d5.fit[d5.fit$delta < 2,], na.rm = T)), nrow = 5, byrow = T)
 colnames(dmat1) <- names(colMeans(d4.fit[d4.fit$delta < 2,]))
@@ -694,8 +694,14 @@ library(dplyr)
 
 G1 <- (abs(CI.pers) > 10 & abs(CI.abund) > 10 & abs(CI.eig) > 10 & abs(CI.ivary) > 10)*1
 G1 <- (abs(CI.abund) > 20)*1
-G1 <- ((CI.pers) > 1 & (CI.abund) > 1 & (CI.eig) > 1 & (CI.ivary) > 1)*1
+G1 <- ((CI.pers) > 10 & (CI.abund) < 10 & (CI.eig) < 10 & (CI.ivary) < 10)*1
 G1[((CI.pers) > 1 & (CI.abund) < -1 & (CI.eig) < -1 & (CI.ivary) < -1)] <- 2
+
+
+quant1 <- .5
+G1 <- (abs(CI.pers) > quantile(abs(CI.pers), probs = quant1) & abs(CI.abund) > quantile(abs(CI.abund), probs = quant1) & abs(CI.eig) > quantile(abs(CI.eig), probs = quant1) & abs(CI.ivary) > quantile(abs(CI.ivary), probs = quant1))*1
+sum(G1)
+
 length(which(G1 == 0))
 length(which(G1 == 1))
 
@@ -728,12 +734,29 @@ fitLDA
 fitLDAvalues <- predict(fitLDA)
 ldahist(fitLDAvalues$x[,1], g = G1[testcase])
 
+co.id <- rep(1:sum(use), sapply(eqcomm, length))
+newd$co.id <- co.id
+
+
+quant1 <- .75
+G1 <- (abs(CI.pers) > quantile(abs(CI.pers), probs = quant1) & abs(CI.abund) > quantile(abs(CI.abund), probs = quant1) & abs(CI.eig) > quantile(abs(CI.eig), probs = quant1) & abs(CI.ivary) > quantile(abs(CI.ivary), probs = quant1))*1
+sum(G1)
+
+length(which(G1 == 0))
+length(which(G1 == 1))
+
+newd <- select(mydat[-which(mydat$pers == 0),], n.comp:ec, pr)
+newd <- (sapply(newd, function(x) (x-mean(x))/sd(x)))
+
+newd<- as.data.frame(cbind(newd, G = G1[-which(mydat$pers == 0)]))
+
 fitCI <- glm(G~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = (newd), family = "binomial", na.action = "na.fail")
 summary(fitCI)
 dCI <- dredge(fitCI)
 head(dCI)
+model.avg(dCI, subset = delta < 2)
 
-
+dim(newd[!newd$co.id %in% unique(co.id[!ccak]),])
 
 
 ####################################
@@ -781,16 +804,16 @@ for(i in 1:ncol(c1)){
   e1 <- l1[[1]][l1[[1]][,"sp"] %in% shsp, "eq"]
   e2 <- l1[[2]][l1[[2]][,"sp"] %in% shsp, "eq"]
 
-  d1[i] <- dist(rbind(e1, e2))
-  d2[i] <- dist(rbind(e1/sum(e1), e2/sum(e2)))
+  d1[i] <- vegan::vegdist(rbind(e1, e2), method = "bray")
+  d2[i] <- vegan::vegdist(rbind(e1/sum(e1), e2/sum(e2)), method = "bray")
   
   l2 <- lapply(l1, function(x) x[,2] <- x[,2]/sum(x[,2]))
   e1 <- l2[[1]][l1[[1]][,"sp"] %in% shsp]
   e2 <- l2[[2]][l1[[2]][,"sp"] %in% shsp]
   
   
-  d3[i] <- dist(rbind(e1, e2))
-  d4[i] <- dist(rbind(e1/sum(e1), e2/sum(e2)))
+  d3[i] <- vegan::vegdist(rbind(e1, e2), method = "bray")
+  d4[i] <- vegan::vegdist(rbind(e1/sum(e1), e2/sum(e2)), method = "bray")
 }
 range(nshare)
 hist(nshare)
