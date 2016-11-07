@@ -739,8 +739,17 @@ newd$co.id <- co.id
 
 
 quant1 <- .75
-G1 <- (abs(CI.pers) > quantile(abs(CI.pers), probs = quant1) & abs(CI.abund) > quantile(abs(CI.abund), probs = quant1) & abs(CI.eig) > quantile(abs(CI.eig), probs = quant1) & abs(CI.ivary) > quantile(abs(CI.ivary), probs = quant1))*1
+G1 <- (abs(CI.pers) > quantile(abs(CI.pers), probs = quant1) & abs(CI.abund) > quantile(abs(CI.abund), probs = quant1) & (CI.eig) > quantile((CI.eig), probs = quant1) & abs(CI.ivary) > quantile(abs(CI.ivary), probs = quant1))*1
 sum(G1)
+G2 <- (abs(CI.pers) > quantile(abs(CI.pers), probs = quant1))*1
+sum(G2)
+G3 <- (abs(CI.abund) > quantile(abs(CI.abund), probs = quant1))*1
+sum(G3)
+G4 <- ((CI.eig) > quantile((CI.eig), probs = quant1))*1
+sum(G4)
+G5 <- (abs(CI.ivary) > quantile(abs(CI.ivary), probs = quant1))*1
+sum(G5)
+
 
 length(which(G1 == 0))
 length(which(G1 == 1))
@@ -750,13 +759,32 @@ newd <- (sapply(newd, function(x) (x-mean(x))/sd(x)))
 
 newd<- as.data.frame(cbind(newd, G = G1[-which(mydat$pers == 0)]))
 
-fitCI <- glm(G~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = (newd), family = "binomial", na.action = "na.fail")
-summary(fitCI)
-dCI <- dredge(fitCI)
-head(dCI)
-model.avg(dCI, subset = delta < 2)
+newd2 <- mydat
+newd2$G <- G1
+newd2$G2 <- G2
+newd2$G3 <- G3
+newd2$G4 <- G4
+newd2$G5 <- G5
 
-dim(newd[!newd$co.id %in% unique(co.id[!ccak]),])
+test <- sample(1:4537, 4000)
+
+fitCI <- glm(G~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
+fitCI2 <- glm(G2~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
+fitCI3 <- glm(G3~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
+fitCI4 <- glm(G4~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
+fitCI5 <- glm(G5~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
+
+dCI <- dredge(fitCI)
+dCI2 <- dredge(fitCI2)
+dCI3 <- dredge(fitCI3)
+dCI4 <- dredge(fitCI4)
+dCI5 <- dredge(fitCI5)
+
+model.avg(dCI, subset = delta < 2)$coefficients
+model.avg(dCI2, subset = delta < 2)$coefficients
+model.avg(dCI3, subset = delta < 2)$coefficients
+model.avg(dCI4, subset = delta < 2)$coefficients
+model.avg(dCI5, subset = delta < 2)$coefficients
 
 
 ####################################
@@ -817,4 +845,4 @@ plot(d2~nshare2, main = "Scaled Abs Abund")
 plot(d3~nshare2, main = "Rel Abund")
 plot(d4~nshare2, main = "Scaled Rel Abund")
 
-
+ggplot(data.frame(nshare2, d5), aes(x = nshare2, y = d5)) + geom_point(alpha = 0.1) + geom_smooth()
