@@ -2,7 +2,6 @@
 **J. J. Borrelli**
 
 ## Introduction
-
   
 In the human gut there is a thriving microbial community with as many as 500 species coexisting. Recent advances in metagenomic sequencing have allowed us to catalogue these species and describe the variation in community structure and composition across individuals and within individuals over time. Several factors likely impact the composition of the community. Variation in diet has been shown to influence microbial community composition. This is likely because different microbes are able to more efficiently use different resources (macronutrients). Addtionally, either by hitchhiking on food or other means of transfer, new microbes may invade the community. For example, _Eschericha coli_ may be introduced to the gut via ingestion of contaminated or undercooked foods. The host enviroment can also influence which species are able to coexist in the gut community either through an immune response or mediated through some kind of niche-selection. Finally, the interactions among microbes may both set the boundaries for community composition and drive the response of the community to the other external impacts. 
 
@@ -36,19 +35,31 @@ A species was considered to be keystone based on its level of community importan
 
 CI_i = ((t_N - t_D)/t_N) (1/p_i)  eq(2),
 
-where _t_N_ is the quantity of interest in the initial community, _t_D_ is the quantity of interest following the removal of the species _i_, and _p_i_ is the relative abundance of species _i_. Keystone species were those whose community importance was in the top 25th percentile for all four metrics.   
+where _t_N_ is the quantity of interest in the initial community, _t_D_ is the quantity of interest following the removal of the species _i_, and _p_i_ is the relative abundance of species _i_. Keystone species were those whose community importance was in the top 10th percentile for all four metrics.   
 
-The types and strengths of the interactions each species participated in were identified for every community. In addition we identified the structural roles of each species in every community. The structural properties we measured were the betweenness, closeness, eigenvector centrality, hub score, page rank, and the number of species within 2 links of the target species. Betweenness is the number of shortest paths along which the target species lies. Closeness is the number of steps required to access every other species in the interaction network. The eigenvector centrality, hub score, and page rank are three methods to compute the importance of species in the network. 
+The types and strengths of the interactions each species participated in were identified for every community. In addition we identified the structural roles of each species in every community. The structural properties we measured were the betweenness, closeness, eigenvector centrality, hub score, page rank, and the number of species within 2 links of the target species (neighborhood size). Betweenness is the number of shortest paths along which the target species lies. Closeness is the number of steps required to access every other species in the interaction network. The eigenvector centrality, hub score, and page rank are three methods to compute the importance of species in the network. 
 
-To determine what makes a species a keystone in the community, we used a generalized linear model to identify the effect of the measured species properties on keystone status. Keystoneness was modeled as a binomial variable. All combinations of predictor variables were assessed using the _dredge_ function of the __MuMIn__ R package, and ranked according to AIC. All models with deltaAIC < 5 were averaged together. 
+To determine what makes a species a keystone in the community, we used a generalized linear model to identify the effect of the measured species properties on keystone status. Keystoneness was modeled as a binomial variable. All combinations of predictor variables were assessed using the _dredge_ function of the __MuMIn__ R package, and ranked according to AIC. All models with deltaAIC < 2 were averaged together. In addition to defining keystone species as those in the top 10% of community importance for all four metrics (K_full), we created additional generalized linear models for keystone species defined as the top 10% in each community metric (K_persist, K_abund, K_eigen, K_var).  
   
 
 ## Results 
 
-Equilibrium local communities ranged from 16 to 34 species (median = 24), with connectances between 0.18 and 0.3 (median = 0.23).      
+Equilibrium local communities ranged from 16 to 34 species (median = 24), with connectances between 0.18 and 0.3 (median = 0.23). 
+
+The K_full model response variable inlcuded 92 instances of a keystone species out of 4537. In each individual metric model there were 454 instances. In the K_full averaged model all predictor variables were included. The strongest effects on keystoneness were the types and strengths of the target species' interactions. In particular a species was more likely to be identified as keystone if it participated in more competition links and fewer mutualistic links. The effect of the strengths of those interactions, however, is the opposite. Mutualism strength had a positive effect on keystoneness while competition strength had a negative effect. These results indicate that keystone species are those that compete weakly with many species but are also strongly mutualistic with few. The number of predator/parasitic links had a weak positive effect on keystoneness and the strength of those interactions had a large negative effect. Topological predictor variables had relatively small effects on keystoneness. However, eigenvalue centrality and Page Rank (two measures of a species topological importance) had a positive and negative effect on keystoneness respectively. 
+     
+By examining the effects of each predictor variable on each individual metric of keystoneness, we are able to parse out why each predictor may be influencing keystoneness in the full model. The averaged K_persist model included all predictor variables except Page Rank. The largest negative effects on keystoneness based on persistence were the strengths of competition and predation. The number of competitive links had a positive effect in this model as well, although that effect was smaller than in K_full. For mutualism both the number and strength of the interactions had a negative effect on keystoneness. Both closeness centrality and eigenvector centrality had positive effects on keystoneness in K_persist as well. This suggests that keystone species identified by persistence are generalist weak competitors. 
+
+In the K_abund average model all predictor variables were included except the number of competitive links and the neighborhood size. The strongest positive effects on keystoneness defined as change in abundance were by the topological measures of closeness and Page Rank. Keystoneness was also positively related to the strength of mutualistic interactions. The number of mutualistic and predator/parasitic interactions and the strength of competition and predation/parasitism were negatively related to keystoneness. These results indicate that keystone species influencing abundance are those that are specialized mutualists that interact with species who interact with many species. 
+
+All predictor variables were included in the averaged K_eigen model. The largest effects on keystoneness defined by having a positive effect on the eigenvalue of the Jacobian matrix were competition and predation/parasitism strength (negative), and eigenvalue centrality (positive). We found a weak positive effect of the number of competitive and predation/parasitic links as well. These results suggest that keystone species defined by their effect on local stability are those that compete weakly with many species, or with species that interact with many species. 
+
+The K_var model, where keystone species were defined by the coefficient of variation in species abundances following removal, included all predictor variables. The largest positive effects on keystoneness were closeness centrality and Page Rank. Mutualistic interaction strength had a positive effect on keystoneness but the number of mutualistic interactions had a negative effect. Competitive and predation/parasitic interaction strength had negative effects as well. Thus species that have a large impact on the variation in abundance are those that are specialized mutualists interacting with species that interact with many species. 
+
+       
 
 
 ## Discussion
 
 
-
+Our results also suggest that more than a species' position in the network may be required to identify them as a keystone species. 
