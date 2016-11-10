@@ -6,7 +6,8 @@
 ### SAVED WORK
 # last saved 10-25-16
 # alt save 10-26-16
-# save.image("~/Desktop/simul-example2.Rdata") 
+# ms save 11-8-16 == example3
+# save.image("~/Desktop/simul-example3.Rdata") 
 # load("~/Desktop/simul-example.Rdata")
 
 
@@ -218,7 +219,9 @@ keystone <- function(x, dyn, eqcomm, mats, growth){
   return(list(dat, t(delta.eq), is.eq))
 }
 
-
+newfunc <- function(x){
+  x
+}
 
 ###
 ### SIMULATION
@@ -738,7 +741,7 @@ co.id <- rep(1:sum(use), sapply(eqcomm, length))
 newd$co.id <- co.id
 
 
-quant1 <- .75
+quant1 <- .9
 G1 <- (abs(CI.pers) > quantile(abs(CI.pers), probs = quant1) & abs(CI.abund) > quantile(abs(CI.abund), probs = quant1) & (CI.eig) > quantile((CI.eig), probs = quant1) & abs(CI.ivary) > quantile(abs(CI.ivary), probs = quant1))*1
 sum(G1)
 G2 <- (abs(CI.pers) > quantile(abs(CI.pers), probs = quant1))*1
