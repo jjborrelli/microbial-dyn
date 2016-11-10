@@ -8,7 +8,7 @@
 # alt save 10-26-16
 # ms save 11-8-16 == example3
 # save.image("~/Desktop/simul-example3.Rdata") 
-# load("~/Desktop/simul-example.Rdata")
+# load("~/Desktop/simul-example3.Rdata")
 
 
 
