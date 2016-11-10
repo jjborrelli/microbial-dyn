@@ -5,7 +5,7 @@
   
 In the human gut there is a thriving microbial community with as many as 500 species coexisting. Recent advances in metagenomic sequencing have allowed us to catalogue these species and describe the variation in community structure and composition across individuals and within individuals over time. Several factors likely impact the composition of the community. Variation in diet has been shown to influence microbial community composition. This is likely because different microbes are able to more efficiently use different resources (macronutrients). Addtionally, either by hitchhiking on food or other means of transfer, new microbes may invade the community. For example, _Eschericha coli_ may be introduced to the gut via ingestion of contaminated or undercooked foods. The host enviroment can also influence which species are able to coexist in the gut community either through an immune response or mediated through some kind of niche-selection. Finally, the interactions among microbes may both set the boundaries for community composition and drive the response of the community to the other external impacts. 
 
-Despite the many ways the gut microbiome may be affected, longitudinal studies have revealed that their composition tends to be stable. An understanding of how microbes interact may allow us to understand why the human gut microbiome is able to remain stable over long periods of time. It is also likely that the interactions among microbes are universal.  
+Despite the many ways the gut microbiome may be affected, longitudinal studies have revealed that their composition tends to be stable over long periods of time. An understanding of how microbes interact may allow us to understand why the human gut microbiome is able to remain stable over long periods of time. It is also likely that the interactions among microbes are universal.  
 
 Microbes can compete with one another directly for limited resources in the gut (both food and space). Alternatively they may interact via the production of metabolites. These compounds can be either beneficial or detrimental to the growth of other microbial populations. Thus, in microbial communities we may expect to see all five major interaction types: competition (-,-), mutualism (+,+), parasitism/predation (+,-), amensalism (-,0), and commensalism (+,0). While prevailing wisdom on microbial communties suggested that their stability and function resulted from mutually beneficial relationships among taxa, recent evidence suggests the opposite. Coyte et al. (2015) found that increasing the number of competitive interactions increased the stability of simulated microbial communities and the opposite for mutualistic interactions.      
 
@@ -31,20 +31,21 @@ where _r_ is the species specific growth rate, _aij_ is the effect of species _j
 
 In order to identify which species were important to the stability of the community we systematically removed each species (one at a time) and measured the changes in the community. The starting point for species removals were the equilibrial/steady-state communities. Following the removal of a species, the resulting community dynamics were simulated for 1000 time steps using the same model and parameters as the initial community. At the end of each simulation, the impact on the community was measured using four metrics: (1) the mean change in abundance, (2) mean coefficient of variation in the first 50 time steps following removal, (3) persistence (the fraction of species with positive abundance), and (4) eigenvalue of the resulting Jacobian matrix with the largest real part.
 
+
+The types and strengths of the interactions each species participated in were identified for every community. In addition we identified the structural roles of each species in every community. The structural properties we measured were the betweenness, closeness, eigenvector centrality, hub score, page rank, and the number of species within 2 links of the target species (neighborhood size). Betweenness is the number of shortest paths along which the target species lies. Closeness is the number of steps required to access every other species in the interaction network. The eigenvector centrality, hub score, and page rank are three methods to compute the importance of species in the network. 
+
 A species was considered to be keystone based on its level of community importance (Power et al. 1996) with respece to four measures of impact on the community following species removal. Community importance is measured as
 
 CI_i = ((t_N - t_D)/t_N) (1/p_i)  eq(2),
 
 where _t_N_ is the quantity of interest in the initial community, _t_D_ is the quantity of interest following the removal of the species _i_, and _p_i_ is the relative abundance of species _i_. Keystone species were those whose community importance was in the top 10th percentile for all four metrics.   
 
-The types and strengths of the interactions each species participated in were identified for every community. In addition we identified the structural roles of each species in every community. The structural properties we measured were the betweenness, closeness, eigenvector centrality, hub score, page rank, and the number of species within 2 links of the target species (neighborhood size). Betweenness is the number of shortest paths along which the target species lies. Closeness is the number of steps required to access every other species in the interaction network. The eigenvector centrality, hub score, and page rank are three methods to compute the importance of species in the network. 
-
 To determine what makes a species a keystone in the community, we used a generalized linear model to identify the effect of the measured species properties on keystone status. Keystoneness was modeled as a binomial variable. All combinations of predictor variables were assessed using the _dredge_ function of the __MuMIn__ R package, and ranked according to AIC. All models with deltaAIC < 2 were averaged together. In addition to defining keystone species as those in the top 10% of community importance for all four metrics (K_full), we created additional generalized linear models for keystone species defined as the top 10% in each community metric (K_persist, K_abund, K_eigen, K_var).  
   
 
 ## Results 
 
-Equilibrium local communities ranged from 16 to 34 species (median = 24), with connectances between 0.18 and 0.3 (median = 0.23). 
+Equilibrium local communities ranged from 16 to 34 species (median = 25), with connectances between 0.15 and 0.3 (median = 0.215). 
 
 The K_full model response variable inlcuded 92 instances of a keystone species out of 4537. In each individual metric model there were 454 instances. In the K_full averaged model all predictor variables were included. The strongest effects on keystoneness were the types and strengths of the target species' interactions. In particular a species was more likely to be identified as keystone if it participated in more competition links and fewer mutualistic links. The effect of the strengths of those interactions, however, is the opposite. Mutualism strength had a positive effect on keystoneness while competition strength had a negative effect. These results indicate that keystone species are those that compete weakly with many species but are also strongly mutualistic with few. The number of predator/parasitic links had a weak positive effect on keystoneness and the strength of those interactions had a large negative effect. Topological predictor variables had relatively small effects on keystoneness. However, eigenvalue centrality and Page Rank (two measures of a species topological importance) had a positive and negative effect on keystoneness respectively. 
      
@@ -60,6 +61,7 @@ The K_var model, where keystone species were defined by the coefficient of varia
 
 
 ## Discussion
+
 
 
 Our results also suggest that more than a species' position in the network may be required to identify them as a keystone species. 
