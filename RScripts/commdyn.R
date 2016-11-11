@@ -783,12 +783,47 @@ dCI3 <- dredge(fitCI3)
 dCI4 <- dredge(fitCI4)
 dCI5 <- dredge(fitCI5)
 
-model.avg(dCI, subset = delta < 2)$coefficients
+model.avg(dCI, subset = delta < 2)$coefficients[1,]
 model.avg(dCI2, subset = delta < 2)$coefficients
 model.avg(dCI3, subset = delta < 2)$coefficients
 model.avg(dCI4, subset = delta < 2)$coefficients
 model.avg(dCI5, subset = delta < 2)$coefficients
 
+ma.boot <- lapply(1:5, function(x){m <- matrix(0, nrow = 200, ncol = 12); colnames(m) <- c("(Intercept)","n.comp","n.mut","n.pred","s.comp","s.mut","s.pred","bet","close","neigh","ec","pr");return(m)})
+for(i in 1:200){
+  resamp <- sample(1:nrow(newd2), nrow(newd2), replace = T)
+  newd3 <- newd2[resamp, ]
+  
+  fitCI <- glm(G~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd3, 
+               family = "binomial", na.action = "na.fail")
+  fitCI2 <- glm(G2~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd3, 
+                family = "binomial", na.action = "na.fail")
+  fitCI3 <- glm(G3~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd3, 
+                family = "binomial", na.action = "na.fail")
+  fitCI4 <- glm(G4~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd3, 
+                family = "binomial", na.action = "na.fail")
+  fitCI5 <- glm(G5~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd3, 
+                family = "binomial", na.action = "na.fail")
+  
+  dCI <- dredge(fitCI)
+  dCI2 <- dredge(fitCI2)
+  dCI3 <- dredge(fitCI3)
+  dCI4 <- dredge(fitCI4)
+  dCI5 <- dredge(fitCI5)
+  
+  ma1 <- model.avg(dCI, subset = delta < 2)$coefficients[1,]
+  ma.boot[[1]][i,names(ma1)] <- ma1
+  ma2 <- model.avg(dCI2, subset = delta < 2)$coefficients[1,]
+  ma.boot[[2]][i,names(ma2)] <- ma2
+  ma3 <-  model.avg(dCI3, subset = delta < 2)$coefficients[1,]
+  ma.boot[[3]][i,names(ma3)] <- ma3
+  ma4 <- model.avg(dCI4, subset = delta < 2)$coefficients[1,]
+  ma.boot[[4]][i,names(ma4)] <- ma4
+  ma5 <- model.avg(dCI5, subset = delta < 2)$coefficients[1,]
+  ma.boot[[5]][i,names(ma5)] <- ma5
+  
+  print(i)
+}
 
 ####################################
 ####################################
