@@ -62,6 +62,10 @@ The K_var model, where keystone species were defined by the coefficient of varia
 
 ## Discussion
 
+A species is more likely to be a keystone, important for the stability of the community, if it is a weak generalist competitor and a strong specialized mutualist. Each of these interaction types is allowing the prospective keystone species to be influencing the community in different ways. When it comes to the persistence and local stability of the community, removing species that have many weak competitive interactions has a large effect. Removing strong specialized mutualists leads to large impacts on equilibrium abundances and variability in the community. 
 
+It is clear then, that our definition of keystone species depends on how we define "large impact on the commmunity relative to their abundance." 
 
-Our results also suggest that more than a species' position in the network may be required to identify them as a keystone species. 
+Our results corroborate the recent result of Coyte et al. (2015). Coyte and colleagues demonstrated that competition increases the stability of microbial networks, while mutualism decreases it. The number of competitive links a species participated in was positively related to keystoneness in all models, while the number of mutualistic links was negative in all models. Interaction strength, however, is also important to consider when assessing the stability of a community. While Coyte et al. (2015) focused only on the number of interactions, we found that the strength of competition is negatively related to keystoneness, but mutualistic interaction strength can positively influence keystoneness. Therefore it may not just be the number of competitive interactions that increase stability, but rather the number of weak competitive interactions.  
+
+The position of a species in the network tended to have less of an effect, although it was dependent on the measure used. Metrics like closeness (how many steps it takes to get to every other node) and Page Rank (measure of importance) Had strong positive relationships with keystoneness as measured by change in abundance and initial variation. These effects disappeared, however, when keystoneness was defined by all impact metrics.    
