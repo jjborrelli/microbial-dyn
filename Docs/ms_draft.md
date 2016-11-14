@@ -1,22 +1,24 @@
-# Interactions and impacts of keystone species   
+I# Interactions and impacts of keystone species   
 **J. J. Borrelli**
 
 ## Introduction
-  
+
+Keystone species are those that have a disproportional impact on the communtiy relative to thier abundance. The textbook case of a keystone species is the sea star _Pisaster_ in tidal communities of the Pacific Northwest (Paine 1966, 1969). _Pisaster_ feeds on highly competitive mussels, clearing precious real-estate in the inter-tidal zone for multiple sedentary species to colonize. Removing _Pisaster_ from these communities leads to the competitive exclusion of most of these species, and the domination of the community by a single mussel. Other examples of keystone species include otters, whose predatory interaction with sea urchins helps stabilize the kelp forest, and [daphnia?].
+
+Most studies involving keystone species are focused on a single interaction type, predator-prey. For example, Paine (1980) highlights that _Pisaster_ is effective at reducing competition among mussels because it is a generalist that consumes prey at a range of sizes. The impact that different species may have on their community, however, may be mediated by different types of interaction including competition and mutualism. Moreover, keystone interactions of different types may be variable in the form of the impact to the community.   
+
+Microbial communities offer an exciting avenue for research into the effects of keystone species. With their short generation times, long term community dynamics may be observed over comparatively short human time scales. Advances in metagenomics also allow us to identify microbial taxa and quantify their abundance over time _in vivo_. 
+
 In the human gut there is a thriving microbial community with as many as 500 species coexisting. Recent advances in metagenomic sequencing have allowed us to catalogue these species and describe the variation in community structure and composition across individuals and within individuals over time. Several factors likely impact the composition of the community. Variation in diet has been shown to influence microbial community composition. This is likely because different microbes are able to more efficiently use different resources (macronutrients). Addtionally, either by hitchhiking on food or other means of transfer, new microbes may invade the community. For example, _Eschericha coli_ may be introduced to the gut via ingestion of contaminated or undercooked foods. The host enviroment can also influence which species are able to coexist in the gut community either through an immune response or mediated through some kind of niche-selection. Finally, the interactions among microbes may both set the boundaries for community composition and drive the response of the community to the other external impacts. 
 
-Despite the many ways the gut microbiome may be affected, longitudinal studies have revealed that their composition tends to be stable over long periods of time. An understanding of how microbes interact may allow us to understand why the human gut microbiome is able to remain stable. Specifically wemay want to know whether the role species' play in the community can tell us about how important they are for the stability of the system. Becasue it is also likely that the interactions among microbes are universal (REF) being able to identify the impact species with different roles have may be generalizable to the larger population.  
+Despite the many ways the gut microbiome may be affected, longitudinal studies have revealed that their composition tends to be stable over long periods of time. An understanding of how microbes interact may allow us to understand why the human gut microbiome is able to remain stable. Specifically we may want to know whether the role a species plays in the community can tell us about how important they are for the stability of the system. Becasue it is also likely that the interactions among microbes are universal (REF) being able to identify the impact species with different roles have may be generalizable to the larger population.  
 
 Microbes can compete with one another directly for limited resources in the gut (both food and space). Alternatively they may interact via the production of metabolites. These compounds can be either beneficial or detrimental to the growth of other microbial populations. Thus, in microbial communities we may expect to see all five major interaction types: competition (-,-), mutualism (+,+), parasitism/predation (+,-), amensalism (-,0), and commensalism (+,0). While prevailing wisdom on microbial communties suggested that their stability and function resulted from mutually beneficial relationships among taxa, recent evidence suggests the opposite. Coyte et al. (2015) found that increasing the number of competitive interactions increased the stability of simulated microbial communities and the opposite for mutualistic interactions.      
 
 Recent efforts to infer microbial interaction from time series data have further demonstrated that competition is indeed more common than mutualism (Stein et al. 2013; Marino et al 2014). Coyte et al. (2015) further demonstrated that their results for simulated microbial communities held true for the empirical result of Stein et al. (2013). Inferring interactions is challenging, however, and limitations in the methods meant that the communities in these studies were reduced from several hundred species to either 11 (Stein) or 17 (Marino). Each study focused on the most abundant taxa throughout the course of the time series and lumped the less abundant taxa into a single category ("Other").   
 
 
-Keystone species are those that have a disproportional impact on the communtiy relative to thier abundance. The textbook case of a keystone species is the sea star _Pisaster_ in tidal communities of the Pacific Northwest. _Pisaster_ feeds on highly competitive mussels, clearing precious real-estate in the inter-tidal zone for multiple sedentary species to colonize. Removing _Pisaster_ from these communities leads to the competitive exclusion of most of these species, and the domination of the community by a single mussel. Other examples of keystone species include otters, whose predatory interaction with sea urchins helps stabilize the kelp forest, and [daphnia?].
-
-Most studies involving keystone species are focused on a single interaction type, predator-prey. For example, Paine (1980) highlights that _Pisaster_ is effective at reducing competition among mussels because it is a generalist that consumes prey at a range of sizes. The impact that different species may have on their community, however, may be mediated by different types of interaction including competition and mutualism. Moreover, keystone interactions of different types may be variable in the form of the impact to the community. 
-
-Typically our understanding of keystone species' impacts have come from species removal experiments. In this paper we describe an _in silico_ species removal experiment. We determine the impact that each species has on a simulated community. Moreover we want to know how that impact is mediated by the different ways species interact with one another.  
+Typically our understanding of keystone species' impacts have come from species removal experiments. In this paper we describe an _in silico_ species removal experiment. We determine the impact that each species has on a simulated community and how that impact is mediated by the different ways species interact with one another.  
 
 
 ## Methods
@@ -25,7 +27,11 @@ Simulations began by generating a species pool whose interactions were known. In
 
 Each individual community was created by sampling 50 species from the pool. All interactions defined above were assumed to be universal, so individual communities represented subsets of the initial species pool. Dynamics of each community were simulated using the Lotka-Volterra model of species interactions,
 
-dN/dt = rN + \sum(a_{ij}*N_j)  eq(1)   
+$$
+\begin{equation}
+\frac{dN_i}{dt} = rN_i + \sum(a_{ij}*N_j)   
+\end{equation}
+$$
 
 where _r_ is the species specific growth rate, _aij_ is the effect of species _j_ on species _i_. The simulation was run for 1000 time steps, which was long enough for most communities to reach equilibrium (constant abundances) or steady-state (stable attractor). Note the difference is that at steady state the abundances of populations may be fluctuating, but they will remain that way unless perturbed. 
 
@@ -36,7 +42,11 @@ The types and strengths of the interactions each species participated in were id
 
 A species was considered to be keystone based on its level of community importance (Power et al. 1996) with respece to four measures of impact on the community following species removal. Community importance is measured as
 
-CI_i = ((t_N - t_D)/t_N) (1/p_i)  eq(2),
+$$
+\begin{equation}
+CI_i = \frac{(t_N - t_D)}{t_N} * \frac{1}{p_i} 
+\end{equation}
+$$
 
 where _t_N_ is the quantity of interest in the initial community, _t_D_ is the quantity of interest following the removal of the species _i_, and _p_i_ is the relative abundance of species _i_. Keystone species were those whose community importance was in the top 10th percentile for all four metrics.   
 
@@ -47,7 +57,7 @@ To determine what makes a species a keystone in the community, we used a general
 
 Equilibrium local communities ranged from 16 to 34 species (median = 25), with connectances between 0.15 and 0.3 (median = 0.215). 
 
-The K_full model response variable inlcuded 92 instances of a keystone species out of 4537. In each individual metric model there were 454 instances. In the K_full averaged model all predictor variables were included. The strongest effects on keystoneness were the types and strengths of the target species' interactions. In particular a species was more likely to be identified as keystone if it participated in more competition links and fewer mutualistic links. The effect of the strengths of those interactions, however, is the opposite. Mutualism strength had a positive effect on keystoneness while competition strength had a negative effect. These results indicate that keystone species are those that compete weakly with many species but are also strongly mutualistic with few. The number of predator/parasitic links had a weak positive effect on keystoneness and the strength of those interactions had a large negative effect. Topological predictor variables had relatively small effects on keystoneness. However, eigenvalue centrality and Page Rank (two measures of a species topological importance) had a positive and negative effect on keystoneness respectively. 
+The K_full model response variable inlcuded 42 instances of a keystone species out of 4537. In each individual metric model there were 454 instances. In the K_full averaged model all predictor variables were included. The strongest effects on keystoneness were the types and strengths of the target species' interactions. In particular a species was more likely to be identified as keystone if it participated in more competition links and fewer mutualistic links. The effect of the strengths of those interactions, however, is the opposite. Mutualism strength had a positive effect on keystoneness while competition strength had a negative effect. These results indicate that keystone species are those that compete weakly with many species but are also strongly mutualistic with few. The number of predator/parasitic links had a weak positive effect on keystoneness and the strength of those interactions had a large negative effect. Topological predictor variables had relatively small effects on keystoneness. However, eigenvalue centrality and Page Rank (two measures of a species topological importance) had a positive and negative effect on keystoneness respectively. 
      
 By examining the effects of each predictor variable on each individual metric of keystoneness, we are able to parse out why each predictor may be influencing keystoneness in the full model. The averaged K_persist model included all predictor variables except Page Rank. The largest negative effects on keystoneness based on persistence were the strengths of competition and predation. The number of competitive links had a positive effect in this model as well, although that effect was smaller than in K_full. For mutualism both the number and strength of the interactions had a negative effect on keystoneness. Both closeness centrality and eigenvector centrality had positive effects on keystoneness in K_persist as well. This suggests that keystone species identified by persistence are generalist weak competitors. 
 
@@ -68,8 +78,10 @@ Our results corroborate the recent result of Coyte et al. (2015). Coyte and coll
 
 The position of a species in the network tended to have less of an effect, although it was dependent on the measure used. Metrics like closeness (how many steps it takes to get to every other node) and Page Rank (measure of importance) Had strong positive relationships with keystoneness as measured by change in abundance and initial variation. These effects disappeared, however, when keystoneness was defined by all impact metrics. 
 
+In most macrobiological studies the species that have been identified as keystone are those that prey upon competitively dominant taxa. Here we have shown that when multiple interaction types and impact is broadly defined, keystone species are those that positively affect taxa that compete weakly with many others. Species with strong predatory/parasitic links were less likely to be keystone species, despite what we may have expected from other experimentally determined keystones like _Pisaster_. 
 
-It is clear then, that our definition of keystone species depends on how we define "large impact on the commmunity relative to their abundance." Paine (1969) suggested that the impact of a keystone species is on the stability of the community. Power et al. (1996) extended that definition to mean a change in any measurable community trait. Which community trait we pick is therefore going to determine what species are likely to be identified as keystones. We also need to consider what magnitude of impact relative to abundance makes for keystone status. In this paper we called any species whose community importance was in the top 10% a keystone. 
 
-With our quantitative definition, not all communities will have a keystone species, and some may have multiple. Our strictest definition, combining all four impact metrics, only has 94 of the possible 4550 species-community combinations were assigned keystone status. For the single impact measures, 450 species-community combinations were considered keystones.  
+It is clear that our definition of keystone species depends on how we define "large impact on the commmunity relative to their abundance." Paine (1969) suggested that the impact of a keystone species is on the stability of the community. Power et al. (1996) extended that definition to mean a change in any measurable community trait. Which community trait we pick is therefore going to determine what species are likely to be identified as keystones. We also need to consider what magnitude of impact relative to abundance makes for keystone status. In this paper we called any species whose community importance was in the top 10% a keystone. 
+
+With our quantitative definition, not all communities will have a keystone species, and some may have multiple. Our strictest definition, combining all four impact metrics, only has 42 of the possible 4537 species-community combinations were assigned keystone status. For the single impact measures, 454 species-community combinations were considered keystones.  
    
