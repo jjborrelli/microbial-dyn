@@ -23,7 +23,7 @@ library(deSolve)
 library(ggplot2)
 library(MuMIn)
 library(rootSolve)
-
+library(DAAG)
 
 ###
 ### FUNCTIONS
@@ -708,7 +708,7 @@ sum(G1)
 length(which(G1 == 0))
 length(which(G1 == 1))
 
-newd <- select(mydat[-which(mydat$pers == 0),], n.comp:ec, pr)
+newd <- select(mydat, n.comp:ec, pr)
 newd <- (sapply(newd, function(x) (x-mean(x))/sd(x)))
 
 newd<- as.data.frame(cbind(newd, G = G1[-which(mydat$pers == 0)]))
@@ -757,10 +757,10 @@ sum(G5)
 length(which(G1 == 0))
 length(which(G1 == 1))
 
-newd <- select(mydat[-which(mydat$pers == 0),], n.comp:ec, pr)
+newd <-  select(mydat, n.comp:ec, pr)# select(mydat[-which(mydat$pers == 0),], n.comp:ec, pr)
 newd <- (sapply(newd, function(x) (x-mean(x))/sd(x)))
 
-newd<- as.data.frame(cbind(newd, G = G1[-which(mydat$pers == 0)]))
+newd<- as.data.frame(cbind(newd, G = G1))# as.data.frame(cbind(newd, G = G1[-which(mydat$pers == 0)]))
 
 newd2 <- mydat
 newd2$G <- G1
@@ -811,19 +811,99 @@ for(i in 1:200){
   dCI4 <- dredge(fitCI4)
   dCI5 <- dredge(fitCI5)
   
-  ma1 <- model.avg(dCI, subset = delta < 2)$coefficients[1,]
-  ma.boot[[1]][i,names(ma1)] <- ma1
-  ma2 <- model.avg(dCI2, subset = delta < 2)$coefficients[1,]
-  ma.boot[[2]][i,names(ma2)] <- ma2
-  ma3 <-  model.avg(dCI3, subset = delta < 2)$coefficients[1,]
-  ma.boot[[3]][i,names(ma3)] <- ma3
-  ma4 <- model.avg(dCI4, subset = delta < 2)$coefficients[1,]
-  ma.boot[[4]][i,names(ma4)] <- ma4
-  ma5 <- model.avg(dCI5, subset = delta < 2)$coefficients[1,]
-  ma.boot[[5]][i,names(ma5)] <- ma5
+  #ma1 <- model.avg(dCI, subset = delta < 2)$coefficients[1,]
+  ma.boot[[1]][i,names(dCI[1,1:12])] <- unlist(dCI[1,1:12])     #[i,names(ma1)] <- ma1
+  #ma2 <- model.avg(dCI2, subset = delta < 2)$coefficients[1,]
+  ma.boot[[2]][i,names(dCI2[1,1:12])] <- unlist(dCI2[1,1:12])     #[i,names(ma2)] <- ma2
+  #ma3 <-  model.avg(dCI3, subset = delta < 2)$coefficients[1,]
+  ma.boot[[3]][i,names(dCI3[1,1:12])] <- unlist(dCI3[1,1:12])     #[i,names(ma3)] <- ma3
+  #ma4 <- model.avg(dCI4, subset = delta < 2)$coefficients[1,]
+  ma.boot[[4]][i,names(dCI4[1,1:12])] <- unlist(dCI4[1,1:12])     #[i,names(ma4)] <- ma4
+  #ma5 <- model.avg(dCI5, subset = delta < 2)$coefficients[1,]
+  ma.boot[[5]][i,names(dCI5[1,1:12])] <- unlist(dCI5[1,1:12])     #[i,names(ma5)] <- ma5
   
   print(i)
 }
+
+
+####################################
+####################################
+
+fitCI <- glm(G~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
+fitCI2 <- glm(G2~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
+fitCI3 <- glm(G3~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
+fitCI4 <- glm(G4~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
+fitCI5 <- glm(G5~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
+
+dCI <- dredge(fitCI)
+dCI2 <- dredge(fitCI2)
+dCI3 <- dredge(fitCI3)
+dCI4 <- dredge(fitCI4)
+dCI5 <- dredge(fitCI5)
+
+ma1 <- model.avg(dCI, subset = delta < 2)
+summary(ma1)
+bf1 <-  glm(G~n.comp, data = newd2, family = "binomial", na.action = "na.fail")
+cv1 <- cv.binary(bf1)
+
+# pers
+ma2 <- model.avg(dCI2, subset = delta < 2)
+summary(ma2)
+bf2 <- glm(G2~n.comp+n.mut+s.comp+s.mut+s.pred+ec, data = newd2, family = "binomial", na.action = "na.fail")
+cv2 <- cv.binary(bf2)
+
+# abund
+ma3 <- model.avg(dCI3, subset = delta < 2)
+summary(ma3)
+bf3 <- glm(G3~+n.mut+s.comp+s.mut+s.pred+close+pr, data = newd2, family = "binomial", na.action = "na.fail")
+cv3 <- cv.binary(bf3)
+
+# eig
+ma4 <- model.avg(dCI4, subset = delta < 2)
+summary(ma4)
+bf4 <- glm(G4~n.comp+n.mut+n.pred+s.comp+s.pred+ec, data = newd2, family = "binomial", na.action = "na.fail")
+cv4 <- cv.binary(bf4)
+
+# init vary
+ma5 <- model.avg(dCI5, subset = delta < 2)
+summary(ma5)
+bf5 <- glm(G5~n.comp+n.mut+s.comp+s.mut+bet+close+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
+cv5 <- cv.binary(bf5)
+
+
+length(unlist(eqcomm)[ccak][newd2$G2 == 1])
+
+df1 <- data.frame(confint(ma2, level = .95), rownames(confint(ma2)), ma2$coefficients[1,], "Persistence")
+df2 <- data.frame(confint(ma3, level = .95), rownames(confint(ma3)), ma3$coefficients[1,], "Change in Abundance")
+df3 <- data.frame(confint(ma4, level = .95), rownames(confint(ma4)), ma4$coefficients[1,], "Local Stability")
+df4 <- data.frame(confint(ma5, level = .95), rownames(confint(ma5)), ma5$coefficients[1,], "Initial Variation")
+
+colnames(df1) <- c("lower", "upper", "met", "coef", "mod")
+colnames(df2) <- c("lower", "upper", "met", "coef", "mod")
+colnames(df3) <- c("lower", "upper", "met", "coef", "mod")
+colnames(df4) <- c("lower", "upper", "met", "coef", "mod")
+
+df1$sig <- df1$lower < 0 & df1$upper < 0 | df1$lower > 0 & df1$upper > 0
+df2$sig <- df2$lower < 0 & df2$upper < 0 | df2$lower > 0 & df2$upper > 0
+df3$sig <- df3$lower < 0 & df3$upper < 0 | df3$lower > 0 & df3$upper > 0
+df4$sig <- df4$lower < 0 & df4$upper < 0 | df4$lower > 0 & df4$upper > 0
+
+df1$impt <- ma2$importance[rownames(df1)]
+df2$impt <- ma3$importance[rownames(df2)]
+df3$impt <- ma4$importance[rownames(df3)]
+df4$impt <- ma5$importance[rownames(df4)]
+
+dfall <- rbind(df1, df2, df3, df4)
+
+ggplot(dfall) + geom_segment(aes(x = lower, y = met, xend = upper, yend = met, col = sig)) + geom_vline(aes(xintercept = 0)) + 
+  geom_point(aes(x = coef, y = met, col = sig)) + facet_wrap(~mod, scales = "free_x") + 
+  scale_color_manual(name = "Significant", values = c("grey", "blue")) + xlab("Value") + ylab("Variable") + theme_bw()
+ggsave(filename = "~/Desktop/modelpar.jpeg", width = 7, height = 5)
+
+ggplot(dfall, aes(x = met, y = impt, fill = sig)) + geom_bar(stat = "identity") + scale_fill_manual(name = "Significant", values = c("grey", "blue")) + facet_wrap(~mod) + ylab("Importance") + xlab("Variable") + theme_bw()
+ggsave(filename = "~/Desktop/parimpt.jpeg", width = 7, height = 5)
+####################################
+####################################
 
 ####################################
 ####################################
