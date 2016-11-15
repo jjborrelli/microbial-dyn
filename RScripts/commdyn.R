@@ -873,10 +873,10 @@ cv5 <- cv.binary(bf5)
 
 length(unlist(eqcomm)[ccak][newd2$G2 == 1])
 
-df1 <- data.frame(confint(ma2, level = .95), rownames(confint(ma2)), ma2$coefficients[1,], "Persistence")
-df2 <- data.frame(confint(ma3, level = .95), rownames(confint(ma3)), ma3$coefficients[1,], "Change in Abundance")
-df3 <- data.frame(confint(ma4, level = .95), rownames(confint(ma4)), ma4$coefficients[1,], "Local Stability")
-df4 <- data.frame(confint(ma5, level = .95), rownames(confint(ma5)), ma5$coefficients[1,], "Initial Variation")
+df1 <- data.frame(confint(ma2, level = .9), rownames(confint(ma2)), ma2$coefficients[1,], "Persistence")
+df2 <- data.frame(confint(ma3, level = .9), rownames(confint(ma3)), ma3$coefficients[1,], "Change in Abundance")
+df3 <- data.frame(confint(ma4, level = .9), rownames(confint(ma4)), ma4$coefficients[1,], "Local Stability")
+df4 <- data.frame(confint(ma5, level = .9), rownames(confint(ma5)), ma5$coefficients[1,], "Initial Variation")
 
 colnames(df1) <- c("lower", "upper", "met", "coef", "mod")
 colnames(df2) <- c("lower", "upper", "met", "coef", "mod")
@@ -899,6 +899,13 @@ ggplot(dfall) + geom_segment(aes(x = lower, y = met, xend = upper, yend = met, c
   geom_point(aes(x = coef, y = met, col = sig)) + facet_wrap(~mod, scales = "free_x") + 
   scale_color_manual(name = "Significant", values = c("grey", "blue")) + xlab("Value") + ylab("Variable") + theme_bw()
 ggsave(filename = "~/Desktop/modelpar.jpeg", width = 7, height = 5)
+
+ggplot(dfall) + geom_segment(aes(x = lower, y = met, xend = upper, yend = met, col = sig)) + geom_vline(aes(xintercept = 0)) + 
+  geom_point(aes(x = coef, y = met, col = sig)) + facet_wrap(~mod) + 
+  scale_color_manual(name = "Significant", values = c("grey", "blue")) + scale_x_continuous(limits = c(-5, 5)) +
+  xlab("Value") + ylab("Variable") + theme_bw()
+ggsave(filename = "~/Desktop/modelparZOOM.jpeg", width = 7, height = 5)
+
 
 ggplot(dfall, aes(x = met, y = impt, fill = sig)) + geom_bar(stat = "identity") + scale_fill_manual(name = "Significant", values = c("grey", "blue")) + facet_wrap(~mod) + ylab("Importance") + xlab("Variable") + theme_bw()
 ggsave(filename = "~/Desktop/parimpt.jpeg", width = 7, height = 5)
