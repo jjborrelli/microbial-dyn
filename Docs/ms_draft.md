@@ -1,4 +1,4 @@
-I# Interactions and impacts of keystone species   
+# Interactions and impacts of keystone species   
 **J. J. Borrelli**
 
 ## Introduction
