@@ -50,7 +50,7 @@ $$
 
 where _t_N_ is the quantity of interest in the initial community, _t_D_ is the quantity of interest following the removal of the species _i_, and _p_i_ is the relative abundance of species _i_. Keystone species were those whose community importance was in the top 10th percentile for all four metrics.   
 
-To determine what makes a species a keystone in the community, we used a generalized linear model to identify the effect of the measured species properties on keystone status. Keystoneness was modeled as a binomial variable. All combinations of predictor variables were assessed using the _dredge_ function of the __MuMIn__ R package, and ranked according to AIC. All models with deltaAIC < 2 were averaged together. In addition to defining keystone species as those in the top 10% of community importance for all four metrics (K_full), we created additional generalized linear models for keystone species defined as the top 10% in each community metric (K_persist, K_abund, K_eigen, K_var).  
+To determine what makes a species a keystone in the community, we used a generalized linear model to identify the effect of the measured species properties on keystone status. Keystoneness was modeled as a binomial variable. All combinations of predictor variables were assessed using the _dredge_ function of the __MuMIn__ R package, and ranked according to AIC. All models with deltaAIC < 2 were averaged together. In addition to defining keystone species as those in the top 10% of community importance for all four metrics (K_full), we created additional generalized linear models for keystone species defined as the top 10% in each community metric (K_persist, K_abund, K_eigen, K_var). To evaluate the predictive accuracy of the models we used k-fold cross-validation on the best model (lowest AICc) in each case. Cross-validation was done using the __DAAG__ package's _cv.binary_ function.   
   
 
 ## Results 
@@ -67,7 +67,9 @@ All predictor variables were included in the averaged K_eigen model. The largest
 
 The K_var model, where keystone species were defined by the coefficient of variation in species abundances following removal, included all predictor variables. The largest positive effects on keystoneness were closeness centrality and Page Rank. Mutualistic interaction strength had a positive effect on keystoneness but the number of mutualistic interactions had a negative effect. Competitive and predation/parasitic interaction strength had negative effects as well. Thus species that have a large impact on the variation in abundance are those that are specialized mutualists interacting with species that interact with many species. 
 
-       
+![Figure 1](/Users/jjborrelli/Desktop/modelpar.jpeg "Figure 1")  
+
+**Figure 1: Model averaged parameters with 95% confidence intervals for the four individual metric based impact models. Models with delta AICc < 2 were included in the averaging. Blue points indicate significantly different from 0. Note changes to the scale of the x-axis.**     
 
 
 ## Discussion
@@ -86,3 +88,14 @@ It is clear that our definition of keystone species depends on how we define "la
 With our quantitative definition, not all communities will have a keystone species, and some may have multiple. Our strictest definition, combining all four impact metrics, only has 42 of the possible 4537 species-community combinations were assigned keystone status. For the single impact measures, 454 species-community combinations were considered keystones.  
    
 These results will help us as we move forward with new methods to infer species interactions from time series data. With this new data we will now be able to identify putatively important species. These results can also guide future studies into probiotics. When attempting to introduce new species into the human gut for the purposes of manipulating the microbiome, we need to be able to identify those taxa that will have the largest impact on the community.   
+
+Our study was nonetheless limited in its scope. The communities simulated here are orders of magnitude smaller thant those that exist in the gut. Furthermore, the species in these communities interacted through competition, mutualism, and predations/parasitism. There were no commensal or amensalistic links. 
+
+## References
+
+
+## Supplemental
+
+![SuppFig 1](/Users/jjborrelli/Desktop/parimpt.jpeg "Supplemental Figure 1")
+
+**Supplemental Figure 1: The importance (fraction of models containing that parameter) of each parameter in the averaged model for each of the four cases. All models with delta AICc < 2 were averaged. Blue bars indicate statistical significance of the parameter in the averaged model (p < 0.05).**
