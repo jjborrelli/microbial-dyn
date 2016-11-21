@@ -7,7 +7,7 @@
 # last saved 10-25-16
 # alt save 10-26-16
 # ms save 11-8-16 == example3
-# save.image("~/Desktop/simul-example3.Rdata") 
+# save.image("~/Desktop/simul-example4.Rdata") 
 # load("~/Desktop/simul-example3.Rdata")
 
 
@@ -543,7 +543,8 @@ for(i in 1:sum(use)){
   ev.init[i] <- max(Re(eigen(j1)$values))
 }
 
-
+evinit <- rep(ev.init, sapply(eqcomm, length))[ccak]
+destab <- (mydat$eig >= evinit)
 
 eab <- unlist(lapply(eq.abund2, function(x) x/sum(x)))[ccak]
 icv <- rep(sapply(cv.eq, mean), sapply(eqcomm, length))[ccak]
@@ -829,11 +830,44 @@ for(i in 1:200){
 ####################################
 ####################################
 
-fitCI <- glm(G~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
-fitCI2 <- glm(G2~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
-fitCI3 <- glm(G3~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
-fitCI4 <- glm(G4~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
-fitCI5 <- glm(G5~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
+quant1 <- .9
+G1 <- (abs(CI.pers) > quantile(abs(CI.pers), probs = quant1) & abs(CI.abund) > quantile(abs(CI.abund), probs = quant1) & (CI.eig) > quantile((CI.eig), probs = quant1) & abs(CI.ivary) > quantile(abs(CI.ivary), probs = quant1))*1
+sum(G1)
+G2 <- (abs(CI.pers) > quantile(abs(CI.pers), probs = quant1))*1
+sum(G2)
+G3 <- (abs(CI.abund) > quantile(abs(CI.abund), probs = quant1))*1
+sum(G3)
+G4 <- ((CI.eig) > quantile((CI.eig), probs = quant1))*1
+sum(G4)
+G5 <- (abs(CI.ivary) > quantile(abs(CI.ivary), probs = quant1))*1
+sum(G5)
+
+
+G1 <- (abs(CI.pers) > 100 & abs(CI.abund) > 100 & (CI.eig) > 100 & abs(CI.ivary) > 100)
+sum(G1)
+G2 <- (abs(CI.pers) > 100)*1
+sum(G2)
+G3 <- (abs(CI.abund) > 100)*1
+sum(G3)
+G4 <- ((CI.eig) > 100)*1
+sum(G4)
+G5 <- (abs(CI.ivary) > 100)*1
+sum(G5)
+
+
+
+newd2 <- mydat
+newd2$G <- G1
+newd2$G2 <- G2
+newd2$G3 <- G3
+newd2$G4 <- G4
+newd2$G5 <- G5
+
+fitCI <- gam(G~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
+fitCI2 <- mgcv::gam(G2~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
+fitCI3 <- mgcv::gam(G3~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
+fitCI4 <- mgcv::gam(G4~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
+fitCI5 <- mgcv::gam(G5~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
 
 dCI <- dredge(fitCI)
 dCI2 <- dredge(fitCI2)
@@ -861,7 +895,7 @@ cv3 <- cv.binary(bf3)
 # eig
 ma4 <- model.avg(dCI4, subset = delta < 2)
 summary(ma4)
-bf4 <- glm(G4~n.comp+n.mut+n.pred+s.comp+s.pred+ec, data = newd2, family = "binomial", na.action = "na.fail")
+bf4 <- glm(G4~n.mut+n.pred+s.comp+s.pred+ec, data = newd2, family = "binomial", na.action = "na.fail")
 cv4 <- cv.binary(bf4)
 
 # init vary
@@ -873,10 +907,10 @@ cv5 <- cv.binary(bf5)
 
 length(unlist(eqcomm)[ccak][newd2$G2 == 1])
 
-df1 <- data.frame(confint(ma2, level = .9), rownames(confint(ma2)), ma2$coefficients[1,], "Persistence")
-df2 <- data.frame(confint(ma3, level = .9), rownames(confint(ma3)), ma3$coefficients[1,], "Change in Abundance")
-df3 <- data.frame(confint(ma4, level = .9), rownames(confint(ma4)), ma4$coefficients[1,], "Local Stability")
-df4 <- data.frame(confint(ma5, level = .9), rownames(confint(ma5)), ma5$coefficients[1,], "Initial Variation")
+df1 <- data.frame(confint(ma2, level = .95), rownames(confint(ma2)), ma2$coefficients[1,], "Persistence")
+df2 <- data.frame(confint(ma3, level = .95), rownames(confint(ma3)), ma3$coefficients[1,], "Change in Abundance")
+df3 <- data.frame(confint(ma4, level = .95), rownames(confint(ma4)), ma4$coefficients[1,], "Local Stability")
+df4 <- data.frame(confint(ma5, level = .95), rownames(confint(ma5)), ma5$coefficients[1,], "Initial Variation")
 
 colnames(df1) <- c("lower", "upper", "met", "coef", "mod")
 colnames(df2) <- c("lower", "upper", "met", "coef", "mod")
@@ -907,7 +941,7 @@ ggplot(dfall) + geom_segment(aes(x = lower, y = met, xend = upper, yend = met, c
 ggsave(filename = "~/Desktop/modelparZOOM.jpeg", width = 7, height = 5)
 
 
-ggplot(dfall, aes(x = met, y = impt, fill = sig)) + geom_bar(stat = "identity") + scale_fill_manual(name = "Significant", values = c("grey", "blue")) + facet_wrap(~mod) + ylab("Importance") + xlab("Variable") + theme_bw()
+ggplot(dfall, aes(x = met, y = impt, fill = sig)) + geom_bar(stat = "identity") + scale_fill_manual(name = "Significant", values = c("grey", "blue")) + facet_wrap(~mod) + ylab("Importance") + xlab("Variable") + theme_bw() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ggsave(filename = "~/Desktop/parimpt.jpeg", width = 7, height = 5)
 ####################################
 ####################################
