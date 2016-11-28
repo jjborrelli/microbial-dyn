@@ -717,15 +717,17 @@ neval <- 250+(287-150)
 
 errlin <- c()
 for(i in 1:100){
-  s1 <- sample(which(G1 == 0), 4000)
-  s2 <- sample(which(G1 == 1), 150)
-  testcase <- c(s1, s2)
+  #s1 <- sample(which(newd2$G == 0), 4000)
+  #s2 <- sample(which(newd2$G == 1), 150)
+  testcase <- sample(1:nrow(newd2), 2000)
   
-  fitLDA <- lda(G~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd[testcase,])
+  fitLDA <- lda(G~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2)
   
   pLDA <- predict(fitLDA, newdata = newd[-testcase,])
   tabl <- table(newd$G[-testcase], pLDA$class)
   errlin[i]=(neval-sum(diag(tabl)))/neval
+  
+  print(i)
 }
 mean(errlin)
 
@@ -829,6 +831,30 @@ for(i in 1:200){
 
 ####################################
 ####################################
+ev.init <- c()
+for(i in 1:sum(use)){
+  dyna <- r2[use][[i]]
+  isp <- eqcomm[[i]]
+  eq.biom <- dyna[1000,-1][dyna[1000,-1] > 0]
+  j1 <- jacobian.full(eq.biom, lvmod, parms = list(alpha = growth[isp], m = mats[isp,isp]))
+  
+  ev.init[i] <- max(Re(eigen(j1)$values))
+}
+
+evinit <- rep(ev.init, sapply(eqcomm, length))[ccak]
+destab <- (mydat$eig >= evinit)
+
+eab <- unlist(lapply(eq.abund2, function(x) x/sum(x)))[ccak]
+icv <- rep(sapply(cv.eq, mean), sapply(eqcomm, length))[ccak]
+neq <- rep(sapply(eqcomm, length), sapply(eqcomm, length))[ccak]
+evi <- rep(ev.init, sapply(eqcomm, length))[ccak]
+
+CI.abund <- ((mydat$delta.biom/rep(sapply(eq.abund2, mean), sapply(eqcomm, length))[ccak]) * (1/eab))[eab > 10e-5]
+CI.ivary <- (((icv - mydat$m.init.vary)/icv) * (1/eab))[eab > 10e-5]
+CI.pers <- (((neq - mydat$pers)/neq) * (1/eab))[eab > 10e-5]
+CI.eig <- (((evi - mydat$eig)/evi) * (1/eab))[eab > 10e-5]
+
+
 
 quant1 <- .9
 G1 <- (abs(CI.pers) > quantile(abs(CI.pers), probs = quant1) & abs(CI.abund) > quantile(abs(CI.abund), probs = quant1) & (CI.eig) > quantile((CI.eig), probs = quant1) & abs(CI.ivary) > quantile(abs(CI.ivary), probs = quant1))*1
@@ -854,20 +880,23 @@ sum(G4)
 G5 <- (abs(CI.ivary) > 100)*1
 sum(G5)
 
+t1 <- unlist(lapply(matuse, colSums))[ccak]
+t2 <- unlist(lapply(matuse, rowSums))[ccak]
+summary(glm(G~t1+t2, data = newd2, family = "binomial", na.action = "na.fail"))
 
 
-newd2 <- mydat
-newd2$G <- G1
-newd2$G2 <- G2
-newd2$G3 <- G3
-newd2$G4 <- G4
-newd2$G5 <- G5
+newd2 <- mydat[eab > 10e-5,]
+newd2$G <- destab[eab > 10e-5]#G1
+newd2$G2 <- CI.pers#G2
+newd2$G3 <- CI.abund#G3
+newd2$G4 <- CI.eig#G4
+newd2$G5 <- CI.ivary#G5
 
-fitCI <- gam(G~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
-fitCI2 <- mgcv::gam(G2~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
-fitCI3 <- mgcv::gam(G3~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
-fitCI4 <- mgcv::gam(G4~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
-fitCI5 <- mgcv::gam(G5~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred+bet+close+neigh+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
+fitCI <- glm(G~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred, data = newd2, family = "binomial", na.action = "na.fail")
+fitCI2 <- glm(G2~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred, data = newd2, family = "gaussian", na.action = "na.fail")
+fitCI3 <- glm(G3~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred, data = newd2, family = "gaussian", na.action = "na.fail")
+fitCI4 <- glm(G4~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred, data = newd2, family = "gaussian", na.action = "na.fail")
+fitCI5 <- glm(G5~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred, data = newd2, family = "gaussian", na.action = "na.fail")
 
 dCI <- dredge(fitCI)
 dCI2 <- dredge(fitCI2)
@@ -877,36 +906,36 @@ dCI5 <- dredge(fitCI5)
 
 ma1 <- model.avg(dCI, subset = delta < 2)
 summary(ma1)
-bf1 <-  glm(G~n.comp, data = newd2, family = "binomial", na.action = "na.fail")
-cv1 <- cv.binary(bf1)
+#bf1 <-  glm(G~n.comp, data = newd2, family = "binomial", na.action = "na.fail")
+#cv1 <- cv.binary(bf1)
 
 # pers
 ma2 <- model.avg(dCI2, subset = delta < 2)
 summary(ma2)
-bf2 <- glm(G2~n.comp+n.mut+s.comp+s.mut+s.pred+ec, data = newd2, family = "binomial", na.action = "na.fail")
-cv2 <- cv.binary(bf2)
+#bf2 <- glm(G2~n.comp+n.mut+s.comp+s.mut+s.pred+ec, data = newd2, family = "binomial", na.action = "na.fail")
+#cv2 <- cv.binary(bf2)
 
 # abund
 ma3 <- model.avg(dCI3, subset = delta < 2)
 summary(ma3)
-bf3 <- glm(G3~+n.mut+s.comp+s.mut+s.pred+close+pr, data = newd2, family = "binomial", na.action = "na.fail")
-cv3 <- cv.binary(bf3)
+#bf3 <- glm(G3~+n.mut+s.comp+s.mut+s.pred+close+pr, data = newd2, family = "binomial", na.action = "na.fail")
+#cv3 <- cv.binary(bf3)
 
 # eig
 ma4 <- model.avg(dCI4, subset = delta < 2)
 summary(ma4)
-bf4 <- glm(G4~n.mut+n.pred+s.comp+s.pred+ec, data = newd2, family = "binomial", na.action = "na.fail")
-cv4 <- cv.binary(bf4)
+#bf4 <- glm(G4~n.mut+n.pred+s.comp+s.pred+ec, data = newd2, family = "binomial", na.action = "na.fail")
+#cv4 <- cv.binary(bf4)
 
 # init vary
 ma5 <- model.avg(dCI5, subset = delta < 2)
 summary(ma5)
-bf5 <- glm(G5~n.comp+n.mut+s.comp+s.mut+bet+close+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
-cv5 <- cv.binary(bf5)
+#bf5 <- glm(G5~n.comp+n.mut+s.comp+s.mut+bet+close+ec+pr, data = newd2, family = "binomial", na.action = "na.fail")
+#cv5 <- cv.binary(bf5)
 
 
 length(unlist(eqcomm)[ccak][newd2$G2 == 1])
-
+df0 <- data.frame(confint(ma1, level = .95), rownames(confint(ma1)), ma2$coefficients[1,], "Stab")
 df1 <- data.frame(confint(ma2, level = .95), rownames(confint(ma2)), ma2$coefficients[1,], "Persistence")
 df2 <- data.frame(confint(ma3, level = .95), rownames(confint(ma3)), ma3$coefficients[1,], "Change in Abundance")
 df3 <- data.frame(confint(ma4, level = .95), rownames(confint(ma4)), ma4$coefficients[1,], "Local Stability")
