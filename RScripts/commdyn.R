@@ -291,7 +291,7 @@ inmatuse <- lapply(1:sum(use), function(x) mats[spp[use][[x]],spp[use][[x]]])
 matuse <- lapply(1:sum(use), function(i) mats[eqcomm[[i]], eqcomm[[i]]])
 
 # histogram of resulting matrix connectances
-range(sapply(matuse, function(x) sum(x != 0)/(nrow(x)*(nrow(x)-1))))
+plot(sapply(matuse, function(x) sum(x != 0)/(nrow(x)*(nrow(x)-1))),sapply(inmatuse, function(x) sum(x != 0)/(nrow(x)*(nrow(x)-1))))
 
 # compute frequency of interaction types in each equilibrium matrix
 ity <- t(sapply(matuse, itypes))
@@ -849,10 +849,10 @@ icv <- rep(sapply(cv.eq, mean), sapply(eqcomm, length))[ccak]
 neq <- rep(sapply(eqcomm, length), sapply(eqcomm, length))[ccak]
 evi <- rep(ev.init, sapply(eqcomm, length))[ccak]
 
-CI.abund <- ((mydat$delta.biom/rep(sapply(eq.abund2, mean), sapply(eqcomm, length))[ccak]) * (1/eab))[eab > 10e-5]
-CI.ivary <- (((icv - mydat$m.init.vary)/icv) * (1/eab))[eab > 10e-5]
-CI.pers <- (((neq - mydat$pers)/neq) * (1/eab))[eab > 10e-5]
-CI.eig <- (((evi - mydat$eig)/evi) * (1/eab))[eab > 10e-5]
+CI.abund <- ((mydat$delta.biom/rep(sapply(eq.abund2, mean), sapply(eqcomm, length))[ccak]) * (1/eab))[(mydat$delta.biom/rep(sapply(eq.abund2, mean), sapply(eqcomm, length))[ccak]) < .1]
+CI.ivary <- (((icv - mydat$m.init.vary)/icv) * (1/eab))[((icv - mydat$m.init.vary)/icv) < .1]
+CI.pers <- (((neq - mydat$pers)/neq) * (1/eab))[((neq - mydat$pers)/neq) < .1]
+CI.eig <- (((evi - mydat$eig)/evi) * (1/eab))[((evi - mydat$eig)/evi) < .1]
 
 
 
@@ -892,11 +892,11 @@ newd2$G3 <- CI.abund#G3
 newd2$G4 <- CI.eig#G4
 newd2$G5 <- CI.ivary#G5
 
-fitCI <- glm(G~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred, data = newd2, family = "binomial", na.action = "na.fail")
-fitCI2 <- glm(G2~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred, data = newd2, family = "gaussian", na.action = "na.fail")
-fitCI3 <- glm(G3~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred, data = newd2, family = "gaussian", na.action = "na.fail")
-fitCI4 <- glm(G4~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred, data = newd2, family = "gaussian", na.action = "na.fail")
-fitCI5 <- glm(G5~n.comp+n.mut+n.pred+s.comp+s.mut+s.pred, data = newd2, family = "gaussian", na.action = "na.fail")
+fitCI <- glm(G~n.comp+abs(s.comp)+n.mut+s.mut+n.pred+s.pred, data = newd2, family = "binomial", na.action = "na.fail")
+fitCI2 <- glm(G2~n.comp+abs(s.comp)+n.mut+s.mut+n.pred+s.pred, data = newd2[((neq - mydat$pers)/neq) < .1,], family = "gaussian", na.action = "na.fail")
+fitCI3 <- glm(G3~n.comp+abs(s.comp)+n.mut+s.mut+n.pred+s.pred, data = newd2[(mydat$delta.biom/rep(sapply(eq.abund2, mean), sapply(eqcomm, length))[ccak]) < .1,], family = "gaussian", na.action = "na.fail")
+fitCI4 <- glm(G4~n.comp+abs(s.comp)+n.mut+s.mut+n.pred+s.pred, data = newd2[((evi - mydat$eig)/evi) < .1,], family = "gaussian", na.action = "na.fail")
+fitCI5 <- glm(G5~n.comp+abs(s.comp)+n.mut+s.mut+n.pred+s.pred, data = newd2[((icv - mydat$m.init.vary)/icv) < .1,], family = "gaussian", na.action = "na.fail")
 
 dCI <- dredge(fitCI)
 dCI2 <- dredge(fitCI2)
@@ -935,7 +935,7 @@ summary(ma5)
 
 
 length(unlist(eqcomm)[ccak][newd2$G2 == 1])
-df0 <- data.frame(confint(ma1, level = .95), rownames(confint(ma1)), ma2$coefficients[1,], "Stab")
+df0 <- data.frame(confint(ma1, level = .95), rownames(confint(ma1)), ma1$coefficients[1,], "Stab")
 df1 <- data.frame(confint(ma2, level = .95), rownames(confint(ma2)), ma2$coefficients[1,], "Persistence")
 df2 <- data.frame(confint(ma3, level = .95), rownames(confint(ma3)), ma3$coefficients[1,], "Change in Abundance")
 df3 <- data.frame(confint(ma4, level = .95), rownames(confint(ma4)), ma4$coefficients[1,], "Local Stability")
