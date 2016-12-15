@@ -1,5 +1,5 @@
 library(MASS)
-m3l2 <- read.csv("C:/Users/jjborrelli/Desktop/GitHub/microbial-dyn/Data/L2.csv", row.names = 1)
+m3l2 <- read.csv("Data/Data/L2.csv", row.names = 1)
 
 r.m3l2 <- t(apply(m3l2, 2, function(x) x/sum(x)))
 r.m3l2A <- t(apply(m3l2, 2, function(x) x/sum(x)))[,which(apply(r.m3l2, 2, function(x) sum(x != 0)) >300)]
