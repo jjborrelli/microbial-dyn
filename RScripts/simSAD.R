@@ -130,8 +130,8 @@ get_eq <- function(mats, times, INTs, Rmax = 1, Kval = 20, Ki = FALSE){
 ################################################################################################
 ################################################################################################
 tatoosh <- as.matrix(read.csv("~/Desktop/GitHub/rKeystone/tatoosh.csv", header = F))
-S = 500
-multityp <- lapply(1:20, function(x){
+S = 700
+multityp <- lapply(1:5, function(x){
   p1 <- runif(1,0,1)
   p2 <- runif(1, p1, 1)
   c1 <- runif(1, .05, .3)
@@ -275,7 +275,7 @@ plot(do.call(rbind, test2)[,3:4])
 
 ### Caporaso
 
-mg1 <- read.csv("~/Desktop/m3sppdat.csv")
+mg1 <- read.csv("~/Desktop/GitHub/microbial-dyn/Data/m3sppdat.csv")
 
 sum(apply(mg1, 2, function(x) median(x[x !=0]))*20)
 r1 <- rlnorm(ncol(mg1))
