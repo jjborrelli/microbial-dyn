@@ -1,4 +1,5 @@
-mg1 <- read.csv("~/Desktop/m3sppdat.csv")
+#save.image("C:/Users/jjborrelli/Desktop/GitHub/microbial-dyn/Data/sim.Rdata")
+mg1 <- read.csv("C:/Users/jjborrelli/Desktop/GitHub/microbial-dyn/Data/m3sppdat.csv")
 
 library(igraph)
 library(NetIndices)
@@ -129,9 +130,10 @@ get_eq <- function(mats, times, INTs, Rmax = 1, Kval = 20, Ki = FALSE){
 ################################################################################################
 ################################################################################################
 ################################################################################################
+#tatoosh <- as.matrix(read.csv("C:/Users/jjborrelli/Desktop/GitHub/rKeystone/tatoosh.csv", header = F))
 tatoosh <- as.matrix(read.csv("~/Desktop/GitHub/rKeystone/tatoosh.csv", header = F))
 S = 500
-multityp <- lapply(1:20, function(x){
+multityp <- lapply(1:200, function(x){
   p1 <- runif(1,0,1)
   p2 <- runif(1, p1, 1)
   c1 <- runif(1, .05, .3)
@@ -141,14 +143,14 @@ multityp <- lapply(1:20, function(x){
   return((tat))
 })
 
-multitat <- lapply(1:20, function(x){
+multitat <- lapply(1:200, function(x){
   p1 <- runif(1,0,1)
   tat <- tatoosh*sample(c(1,-1), length(tatoosh), replace = T, prob = c(p1,1-p1))
   #tat <- mats*sample(c(-1,1,0), length(mats), replace = T, prob = c(p1,p2-p1,1-(p2)))
   return((tat))
 })
 
-multihub <- lapply(1:20, function(x){
+multihub <- lapply(1:200, function(x){
   p1 <- runif(1,0,1)
   p2 <- runif(1, p1, 1)
   pow <- rbeta(1, 4, 1)
@@ -170,11 +172,12 @@ t2-t1
 ge.tat <- get_eq(multitat, times = 1000, INTs = INTs, Ki = "val")
 ge.tat2 <- get_eq(multitat, times = 1000, INTs = INTs, Ki = "rand")
 ge.tat3 <- get_eq(multitat, times = 1000, INTs = INTs, Ki = "set")
+t3 <- Sys.time()
 
 ge.hub <- get_eq(multihub, times = 1000, INTs = INTs, Ki = "val")
 ge.hub2 <- get_eq(multihub, times = 1000, INTs = INTs, Ki = "rand")
 ge.hub3 <- get_eq(multihub, times = 1000, INTs = INTs, Ki = "set")
-
+t4 <- Sys.time()
 
 ## Fit Power Law   ####
 fpl <- lapply(ge.mult$eqst, function(x) fit_power_law(x/sum(x)))
@@ -190,6 +193,18 @@ fplh <- lapply(ge.hub$eqst, function(x) fit_power_law(x/sum(x)))
 fplh2 <- lapply(ge.hub2$eqst, function(x) fit_power_law(x/sum(x)))
 fplh3 <- lapply(ge.hub3$eqst, function(x) fit_power_law(x/sum(x)))
 
+fpall <- list(fpl, fpl2, fpl3)
+fptall <- list(fplt, fplt2, fplt3)
+fphall <- list(fplh, fplh2, fplh3)
+
+a1 <- lapply(fpall, function(x) sapply(x, "[", c(2,5)))
+a2 <- lapply(fptall, function(x) sapply(x, "[", c(2,5)))
+a3 <- lapply(fphall, function(x) sapply(x, "[", c(2,5)))
+
+allpow <- do.call(rbind, list(do.call(rbind,sapply(1:3, function(x) cbind(as.matrix(t(a1[[x]])), comm = x, typ = "A"))), do.call(rbind,sapply(1:3, function(x) cbind(as.matrix(t(a2[[x]])), comm = x, typ = "B"))), do.call(rbind,sapply(1:3, function(x) cbind(as.matrix(t(a3[[x]])), comm = x, typ = "C")))))
+
+head(allpow)
+unlist(allpow[,"KS.stat"])
 
 ## Looking at fits    ####
 median(sapply(fpl, "[[", 2)) # 6.5
