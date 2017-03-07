@@ -104,18 +104,18 @@ get_bestfit <- function(avec){
   return(t.wins)
 }
 
-get_bestfit(lapply(ge.mult$eqst, get_abundvec))
-get_bestfit(lapply(ge.mult2$eqst, get_abundvec))
-get_bestfit(lapply(sapply(ge.mult3$eqst, function(x) x[x > 0] ), get_abundvec))
+gbf1m <- get_bestfit3(lapply(ge.mult$eqst, get_abundvec))
+gbf2m <- get_bestfit3(lapply(ge.mult2$eqst, get_abundvec))
+gbf3m <- get_bestfit3(lapply(sapply(ge.mult3$eqst, function(x) x[x > 0] ), get_abundvec))
 
-get_bestfit(lapply(ge.tat$eqst, get_abundvec))
-get_bestfit(lapply(ge.tat2$eqst, get_abundvec))
-get_bestfit(lapply(ge.tat3$eqst, get_abundvec))
+gbf1t <- get_bestfit3(lapply(ge.tat$eqst, get_abundvec))
+gbf2t <- get_bestfit3(lapply(ge.tat2$eqst, get_abundvec))
+gbf3t <- get_bestfit3(lapply(ge.tat3$eqst, get_abundvec))
 
 
-gbf1 <- get_bestfit(lapply(ge.hub$eqst, get_abundvec))
-gbf2 <- get_bestfit(lapply(ge.hub2$eqst, get_abundvec))
-gbf3 <- get_bestfit(lapply(ge.hub3$eqst, get_abundvec))
+gbfh1 <- get_bestfit3(lapply(ge.hub$eqst, get_abundvec))
+gbfh2 <- get_bestfit3(lapply(ge.hub2$eqst, get_abundvec))
+gbfh3 <- get_bestfit3(lapply(ge.hub3$eqst, get_abundvec))
 
 boxplot(t(apply(gbf3, 1, function(x) x-min(x))))
 allgbfA <- rbind(cbind(melt(t(apply(gbf1, 1, function(x) x-min(x)))), typ = 1),
@@ -140,3 +140,65 @@ get_bestfit(lapply(1:ncol(otu3), function(x) otu3[,x][otu3[,x] != 0]))
 
 otuAIC <- get_bestfit(lapply(1:ncol(otu3), function(x) otu3[,x][otu3[,x] != 0]))
 boxplot(t(apply(otuAIC, 1, function(x) x-min(x))))
+otuAIC[,1:2]
+
+##################################################################
+##################################################################
+##################################################################
+
+ga1 <- get_abundvec(eq1)
+fsp1  <- fitsad(ga1, "ls")
+head(dpower(ga1, fsp1@coef))
+head(ga1)
+
+
+dim(mats)
+
+emat <- matrix(0,ncol = 500, nrow = length(eqcomm))
+for(i in 1:nrow(emat)){
+  emat[i,eqcomm[[i]]] <- eqab[[i]]
+}
+colSums(emat[1:2,])[colSums(emat[1:2,])!=0]
+
+
+
+##################################################################
+##################################################################
+##################################################################
+
+mt1 <- lapply(1:length(ge.mult$wrk), function(x){multityp[[ge.mult$wrk[[x]]]][ge.mult$spp[[x]],ge.mult$spp[[x]]]})
+mt2 <- lapply(1:length(ge.tat$wrk), function(x){multitat[[ge.tat$wrk[[x]]]][ge.tat$spp[[x]],ge.tat$spp[[x]]]})
+mt3 <- lapply(1:length(ge.hub$wrk), function(x){multihub[[ge.hub$wrk[[x]]]][ge.hub$spp[[x]],ge.hub$spp[[x]]]})
+
+
+itym <- t(sapply(mt1, itypes)) # t(sapply(multityp, itypes)[,ge.mult$wrk])
+ityt <- t(sapply(mt2, itypes)) # t(sapply(multitat, itypes)[,ge.tat$wrk])
+ityh <- t(sapply(mt3, itypes)) # t(sapply(multihub, itypes)[,ge.hub$wrk])
+
+
+grpsm <- (apply(gbf1m, 1, function(x) names(which.min(x))))
+grpst <- (apply(gbf1t, 1, function(x) names(which.min(x))))
+grpsh <- (apply(gbfh1, 1, function(x) names(which.min(x))))
+
+datm <- data.frame(grpsm, itym)
+datt <- data.frame(grpst, ityt)
+dath <- data.frame(grpsh, ityh)
+
+s1m <- sample(1:nrow(datm), nrow(datm)/2)
+s1t <- sample(1:nrow(datt), nrow(datt)/2)
+s1h <- sample(1:nrow(dath), nrow(dath)/2)
+
+ldafit1 <- MASS::lda(grpsm~comp+mut+pred+amens+comm, data = datm[s1m,])
+plda1 <- predict(ldafit1, newdata = datm[-s1m,])
+tab1 <- table(pred = as.character(plda1$class), obs = grpsm[-s1m])
+sum(diag(tab1))/sum(tab1)
+
+ldafit2 <- MASS::lda(grpst~comp+mut+pred+amens+comm, data = datt[s1t,])
+plda2 <- predict(ldafit2, newdata = datt[-s1t,])
+tab2 <- table(pred = as.character(plda2$class), obs = grpst[-s1t])
+sum(diag(tab2))/sum(tab2)
+
+ldafit3 <- MASS::lda(grpsh~comp+mut+pred+amens+comm, data = dath[s1h,])
+plda3 <- predict(ldafit3, newdata = dath[-s1h,])
+tab3 <- table(pred = as.character(plda3$class), obs = grpsh[-s1h])
+sum(diag(tab3))/sum(tab3)

@@ -120,8 +120,8 @@ get_eq <- function(mats, times, INTs, Rmax = 1, Kval = 20, Ki = FALSE){
     }
   })  
   
-  #return(list(spp = spp1, eqm = eqmat, eqgr = eqgrs, eqst = eqst, eqkv = eqkv, wrk = wcomm))
-  return(list(spp = spp1, eqgr = eqgrs, eqst = eqst, eqkv = eqkv, wrk = wcomm))
+  return(list(spp = spp1, eqm = eqmat, eqgr = eqgrs, eqst = eqst, eqkv = eqkv, wrk = wcomm))
+  #return(list(spp = spp1, eqgr = eqgrs, eqst = eqst, eqkv = eqkv, wrk = wcomm))
 }
 
 
