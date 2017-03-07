@@ -147,28 +147,38 @@ otuAIC[,1:2]
 ##################################################################
 
 ga1 <- get_abundvec(eq1)
-fsp1  <- fitsad(ga1, "ls")
-head(dpower(ga1, fsp1@coef))
-head(ga1)
+fsp1  <- fitsad(ga1, "power")
+fsp2  <- fitsad(ga1, "ls")
+pred <- dpower(sort(unique(ga1)), fsp1@coef)
+pred2 <- dls(sort(unique(ga1)), 10000, alpha = fsp2@coef)
+obs <- as.vector(table(ga1))/sum(as.vector(table(ga1)))
+sum((pred-obs)^2)
+sum((pred2-obs)^2)
+AIC(fsp1)
+AIC(fsp2)
 
+ga1 <- lapply(ge.mult$eqst, get_abundvec)
+fsp1 <- lapply(ga1, fitpower)
+pred1 <- lapply(1:length(ga1), function(x) dpower(sort(unique(ga1[[x]])), fsp1[[x]]@coef))
+fsp2 <- lapply(ga1, fitls)
+pred2 <- lapply(1:length(ga1), function(x) dls(sort(unique(ga1[[x]])), 10000, fsp1[[x]]@coef))
+obs <- lapply(ga1, function(x)  as.vector(table(x))/sum(as.vector(table(x))))
 
-dim(mats)
+sse1 <- sapply(1:length(obs), function(x) sum((pred1[[x]] - obs[[x]])^2))
+sse2 <- sapply(1:length(obs), function(x) sum((pred2[[x]] - obs[[x]])^2))
 
-emat <- matrix(0,ncol = 500, nrow = length(eqcomm))
-for(i in 1:nrow(emat)){
-  emat[i,eqcomm[[i]]] <- eqab[[i]]
-}
-colSums(emat[1:2,])[colSums(emat[1:2,])!=0]
-
-
-
+plot(sse1, sapply(fsp1, AIC))
+plot(sse2, sapply(fsp2, AIC))
 ##################################################################
 ##################################################################
 ##################################################################
+x1 <- ge.mult
+x2 <- ge.tat
+x3 <- ge.hub
 
-mt1 <- lapply(1:length(ge.mult$wrk), function(x){multityp[[ge.mult$wrk[[x]]]][ge.mult$spp[[x]],ge.mult$spp[[x]]]})
-mt2 <- lapply(1:length(ge.tat$wrk), function(x){multitat[[ge.tat$wrk[[x]]]][ge.tat$spp[[x]],ge.tat$spp[[x]]]})
-mt3 <- lapply(1:length(ge.hub$wrk), function(x){multihub[[ge.hub$wrk[[x]]]][ge.hub$spp[[x]],ge.hub$spp[[x]]]})
+mt1 <- lapply(1:length(x1$wrk), function(x){multityp[[x1$wrk[[x]]]][x1$spp[[x]],x1$spp[[x]]]})
+mt2 <- lapply(1:length(x2$wrk), function(x){multitat[[x2$wrk[[x]]]][x2$spp[[x]],x2$spp[[x]]]})
+mt3 <- lapply(1:length(x3$wrk), function(x){multihub[[x3$wrk[[x]]]][x3$spp[[x]],x3$spp[[x]]]})
 
 
 itym <- t(sapply(mt1, itypes)) # t(sapply(multityp, itypes)[,ge.mult$wrk])
@@ -192,13 +202,16 @@ ldafit1 <- MASS::lda(grpsm~comp+mut+pred+amens+comm, data = datm[s1m,])
 plda1 <- predict(ldafit1, newdata = datm[-s1m,])
 tab1 <- table(pred = as.character(plda1$class), obs = grpsm[-s1m])
 sum(diag(tab1))/sum(tab1)
+plot(predict(ldafit1)$x, col = predict(ldafit1)$class, pch = 20)
 
 ldafit2 <- MASS::lda(grpst~comp+mut+pred+amens+comm, data = datt[s1t,])
 plda2 <- predict(ldafit2, newdata = datt[-s1t,])
 tab2 <- table(pred = as.character(plda2$class), obs = grpst[-s1t])
 sum(diag(tab2))/sum(tab2)
+plot(predict(ldafit2)$x, col = predict(ldafit2)$class, pch = 20)
 
 ldafit3 <- MASS::lda(grpsh~comp+mut+pred+amens+comm, data = dath[s1h,])
 plda3 <- predict(ldafit3, newdata = dath[-s1h,])
 tab3 <- table(pred = as.character(plda3$class), obs = grpsh[-s1h])
 sum(diag(tab3))/sum(tab3)
+plot(predict(ldafit3)$x, col = predict(ldafit3)$class, pch = 20)
