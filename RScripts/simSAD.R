@@ -51,12 +51,12 @@ get_eq <- function(mats, times, INTs, Rmax = 1, Kval = 20, Ki = FALSE){
   for(i in 1:length(mats)){
     t1 <- mats[[i]]
     diag(t1) <- 0  #-rbeta(length(diag(t1)), 1.1, 5)*5
-    t1[t1 == 1] <- abs(rnorm(sum(t1 == 1), 0, .5))
+    t1[t1 == 1] <- abs(rnorm(sum(t1 == 1), 0, 1))
     #abs(rnorm(sum(t1 == 1), mean(INTs), sd(INTs))) #runif(sum(t1 == 1), 0, 1) 
-    t1[t1 == -1] <- -abs(rnorm(sum(t1 == -1), 0, .5))
+    t1[t1 == -1] <- -abs(rnorm(sum(t1 == -1), 0, 1))
     #-abs(rnorm(sum(t1 == -1), mean(INTs), sd(INTs))) # runif(sum(t1 == -1), -1, 0) 
     
-    gr <- runif(nrow(t1), .1, Rmax)
+    gr <- runif(nrow(t1), -.1, Rmax)
     
    
     if(Ki == "rand"){
@@ -130,11 +130,11 @@ get_eq <- function(mats, times, INTs, Rmax = 1, Kval = 20, Ki = FALSE){
 ################################################################################################
 ################################################################################################
 tatoosh <- as.matrix(read.csv("~/Desktop/GitHub/rKeystone/tatoosh.csv", header = F))
-S = 700
+S = 800
 multityp <- lapply(1:5, function(x){
   p1 <- runif(1,0,1)
   p2 <- runif(1, p1, 1)
-  c1 <- runif(1, .05, .3)
+  c1 <- runif(1, .1, .3)
   mats <- get.adjacency(erdos.renyi.game(S, c1, "gnp", directed = F), sparse = F)
   #tat <- tatoosh*sample(c(1,-1), length(tatoosh), replace = T, prob = c(p1,1-p1))
   tat <- mats*sample(c(-1,1,0), length(mats), replace = T, prob = c(p1,p2-p1,1-(p2)))

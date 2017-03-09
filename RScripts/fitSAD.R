@@ -157,7 +157,50 @@ sum((pred2-obs)^2)
 AIC(fsp1)
 AIC(fsp2)
 
-ga1 <- lapply(ge.mult$eqst, get_abundvec)
+
+nsp <- sapply(ge.mult$eqst, length)
+
+ga1 <- lapply(ge.mult$eqst[-4], get_abundvec, N = 1000)
+obs1 <- lapply(ga1, function(x)  cbind(as.vector(table(x))/sum(as.vector(table(x))), as.numeric(names(table(x)))))
+fsp1 <- lapply(ga1, fitpoilog)
+pred1 <- lapply(1:length(ga1), function(x) dpoilog(sort(unique(ga1[[x]])), fsp1[[x]]@coef[1], fsp1[[x]]@coef[2]))
+
+par(mfrow = c(1,5))
+for(i in 1:length(ga1)){
+  plot(obs1[[i]][,2:1], typ = "o", main = nsp[-4][i])
+  points(pred1[[i]]~obs1[[i]][,2], pch = 20, col = "blue", typ = "o")
+}
+
+
+ga2 <- lapply(ge.mult$eqst, get_abundvec, N = 2000)
+obs2 <- lapply(ga2, function(x) cbind(as.vector(table(x))/sum(as.vector(table(x))), as.numeric(names(table(x)))))
+fsp2 <- lapply(ga2, fitpoilog)
+pred2 <- lapply(1:length(ga2), function(x) dpoilog(sort(unique(ga2[[x]])), fsp2[[x]]@coef[1], fsp2[[x]]@coef[2]))
+
+par(mfrow = c(1,5))
+for(i in 1:length(ga2)){
+  plot(obs2[[i]][,2:1], typ = "o", main = nsp[i])
+  points(pred2[[i]]~obs2[[i]][,2], pch = 20, col = "blue", typ = "o")
+}
+
+ga3 <- lapply(ge.mult$eqst, get_abundvec, N = 10000)
+obs3 <- lapply(ga3, function(x) cbind(as.vector(table(x))/sum(as.vector(table(x))), as.numeric(names(table(x)))))
+fsp3 <- lapply(ga3, fitpoilog)
+pred3 <- lapply(1:length(ga3), function(x) dpoilog(sort(unique(ga3[[x]])), fsp3[[x]]@coef[1], fsp3[[x]]@coef[2]))
+
+par(mfrow = c(1,5))
+for(i in 1:length(ga3)){
+  plot(obs3[[i]][,2:1], typ = "o", main = nsp[i])
+  points(pred3[[i]]~obs3[[i]][,2], pch = 20, col = "blue", typ = "o")
+}
+
+get_r2 <- function(o, p){
+  1 - sum((o-p)^2)/sum((o - mean(o))^2)
+}
+
+sapply(1:length(ga2), function(x){get_r2(obs2[[x]][,1], pred2[[x]])})
+sapply(1:length(ga2), function(x){get_r2(obs3[[x]][,1], pred3[[x]])})
+
 fsp1 <- lapply(ga1, fitpower)
 pred1 <- lapply(1:length(ga1), function(x) dpower(sort(unique(ga1[[x]])), fsp1[[x]]@coef))
 fsp2 <- lapply(ga1, fitls)
