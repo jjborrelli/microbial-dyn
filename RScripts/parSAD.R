@@ -20,7 +20,7 @@ lvmodK2 <- function(times, state, parms){
 # Function to detect extinction (prevents negative abundances)
 ext1 <- function (times, states, parms){
   with(as.list(states), {
-    states[states < 10^-5] <- 0 
+    states[states < 10^-10] <- 0 
     
     return(c(states))
   })
@@ -174,9 +174,9 @@ library(parallel)
 library(doSNOW)
 
 
-t0 <- Sys.time()
+#t0 <- Sys.time()
 
-multityp <- lapply(1:5, function(x){
+multityp <- lapply(1:10000, function(x){
   S <- sample(seq(500, 1000, 100), 1)
   p1 <- runif(1,0,1)
   p2 <- runif(1, p1, 1)
@@ -186,18 +186,18 @@ multityp <- lapply(1:5, function(x){
   return((tat))
 })
 
-test <- lapply(1:5, function(x) multityp[[1]])
-sd1 <- c(.5, .5, .5, 1, 1)
-sd2  <- c(.5, 1, 2, 1, .5)
-for(i in 1:length(test)){
-  test[[i]] <- fill_mat(test[[i]], sdevp = sd1[i], sdevn = sd2[i])
-}
+#test <- lapply(1:5, function(x) multityp[[1]])
+#sd1 <- c(.5, .5, .5, 1, 1)
+#sd2  <- c(.5, 1, 2, 1, .5)
+#for(i in 1:length(test)){
+#  test[[i]] <- fill_mat(test[[i]], sdevp = sd1[i], sdevn = sd2[i])
+#}
 multityp.fill <- fill_mats(multityp, sdevn = 2, sdevp = .5)
 
-t1 <- Sys.time()
-t1-t0
+#t1 <- Sys.time()
+#t1-t0
 
-hist(multityp.fill[[1]][multityp.fill[[1]]!=0], breaks = 10)
+#hist(multityp.fill[[1]][multityp.fill[[1]]!=0], breaks = 10)
 
 t2 <- Sys.time()
 filepath1 <- "~/Documents/Data/"
@@ -205,7 +205,7 @@ cl <- makeCluster(detectCores()-1)
 clusterExport(cl, c("filepath1", "multityp.fill", "lvmodK", "lvmodK2", "ext1", "get_eq1"))
 registerDoSNOW(cl)
 
-geq <- foreach(x = 1:5, .packages = c("deSolve")) %dopar% {
+geq <- foreach(x = 1:10000, .packages = c("deSolve")) %dopar% {
   geq1 <- get_eq1(multityp.fill[[x]], times = 1000, Ki = "val", Kval = 20, Rmax = 1)
   saveRDS(geq1, file = paste(filepath1, "ge", x, ".rds", sep = ""))
   return(geq1)
@@ -213,12 +213,7 @@ geq <- foreach(x = 1:5, .packages = c("deSolve")) %dopar% {
 
 stopCluster(cl)
 
-t3 <- Sys.time()
-t3 - t2
+#t3 <- Sys.time()
+#t3 - t2
 
-ge1 <- geq[[1]]#readRDS("~/Documents/Data/ge1.rds")
-hist(ge1$eqst)
-length(ge1$eqst)
-av1 <- get_abundvec(ge1$eqst, N = 300)
-plot(as.numeric(names(table(av1))), as.vector(table(av1)))
-length(av1)
+
