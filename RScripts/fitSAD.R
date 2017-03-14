@@ -136,6 +136,7 @@ stoolsamp <- which(metadat$HMPbodysubsite == "Stool")
 spptab <- colnames(otu2) %in% paste0("X",metadat[stoolsamp,]$SampleID)
 otu3 <- otu2[-which(rowSums(otu2[,spptab]) == 0),spptab]
 
+
 get_bestfit(lapply(1:ncol(otu3), function(x) otu3[,x][otu3[,x] != 0]))
 
 otuAIC <- get_bestfit(lapply(1:ncol(otu3), function(x) otu3[,x][otu3[,x] != 0]))
