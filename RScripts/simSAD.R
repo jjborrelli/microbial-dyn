@@ -300,13 +300,13 @@ ext2 <- function (times, states, parms){
   with(as.list(states), {
     states[states < 10^-5] <- 0 
     #states <- states + (runif(length(states), 10^-5, 10^-2)*sample(c(0,1), length(states), prob = c(.9,.1), replace = T))
-    states <- states + (rlnorm(length(states), -5, 1)*sample(c(0,1), length(states), prob = c(.9,.1), replace = T))
+    states <- states + (rlnorm(length(states), -5, 1)*sample(c(0,1), length(states), prob = c(.8,.2), replace = T))
     return(c(states))
   })
 }
 
 
-multityp <- lapply(1:5, function(x){
+multityp <- lapply(1:10, function(x){
   S <- 100# sample(seq(500, 1000, 100), 1)
   p1 <- runif(1,0,1)
   p2 <- runif(1, p1, 1)
@@ -326,13 +326,23 @@ multityp.fill <- fill_mats(multityp, sdevn = 2, sdevp = .5)
 
 dfin <- list()
 dfin2 <- list()
-for(i in 1:5){
+for(i in 1:10){
   par1 <- list(alpha = runif(100), m = multityp.fill[[i]], K = 20)
   dyn <- ode(runif(100,.01,.1), times = 1:1000, func = lvmodK, parms = par1, events = list(func = ext2, time =  1:1000))
   matplot(dyn[,-1], typ = "l")
   if(nrow(dyn) == 1000){dfin[[i]] <- dyn[1000,-1]}else{dfin[[i]] <- NA}
   if(nrow(dyn) == 1000){dfin2[[i]] <- apply(dyn[,-1], 2, mean)}else{dfin2[[i]] <- NA}
 }
+
+x <- 1
+abund <- dfin[[x]][dfin[[x]] != 0]
+plot(sort(abund, decreasing = T), ylim = c(0, .55), xlim = c(0,100), typ = "l")
+for(x in 2:10){
+  abund <- dfin[[x]][dfin[[x]] != 0]
+  points(sort(abund, decreasing = T), typ = "l")
+  print(min(abund))
+}
+
 
 hist(dyn[1000,-1])
 plot(sort(dyn[1000,-1], decreasing = T))
