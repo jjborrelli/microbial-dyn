@@ -136,6 +136,8 @@ stoolsamp <- which(metadat$HMPbodysubsite == "Stool")
 spptab <- colnames(otu2) %in% paste0("X",metadat[stoolsamp,]$SampleID)
 otu3 <- otu2[-which(rowSums(otu2[,spptab]) == 0),spptab]
 
+rad.fitted <- lapply(1:ncol(otu3), function(x) vegan::radfit(otu3[,x]))
+
 
 get_bestfit(lapply(1:ncol(otu3), function(x) otu3[,x][otu3[,x] != 0]))
 
@@ -218,11 +220,13 @@ plot(sse2, sapply(fsp2, AIC))
 ##################################################################
 
 lf1 <- list.files("~/Desktop/Data")
-for(i in 1:length(lf1)){
-  ge1 <- readRDS(paste("~/Desktop/Data/", lf1[[i]], sep = ""))
+lf2 <- grep("ge", lf1)
+#for(i in 1:length(lf1[lf2])){
+for(i in 1:399){
+  ge1 <- readRDS(paste("~/Desktop/Data/", lf1[lf2][[i]], sep = ""))
   if(any(is.na(ge1))){next}
   plot(sort(ge1$eqst, decreasing = T), main = i)
-  get_abundvec(ge1$eqst, 1000)
+  #plot(as.vector(table(get_abundvec(ge1$eqst, 1000))))
 }
 
 muchange <- sapply(seq(1000,100000,1000), function(x) fitpoilog(get_abundvec(ge1$eqst, x))@coef)

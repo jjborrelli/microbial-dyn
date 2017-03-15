@@ -315,16 +315,16 @@ plot(apply(mg1, 2, function(x) median(x[x !=0]))*20, (r1/sum(r1)*20))
 ##########################################################################################################################################
 ext2 <- function (times, states, parms){
   with(as.list(states), {
-    states[states < 10^-5] <- 0 
-    #states <- states + (runif(length(states), 10^-5, 10^-2)*sample(c(0,1), length(states), prob = c(.9,.1), replace = T))
-    states <- states + (rlnorm(length(states), -5, 1)*sample(c(0,1), length(states), prob = c(.8,.2), replace = T))
+    states[states < 10^-15] <- 0 
+    states <- states + (runif(length(states), 10^-5, 10^-1)*sample(c(0,1), length(states), prob = c(.9,.1), replace = T))
+    #states <- states + (rlnorm(length(states), -5, 1)*sample(c(0,1), length(states), prob = c(.8,.2), replace = T))
     return(c(states))
   })
 }
 
 
-multityp <- lapply(1:10, function(x){
-  S <- 100# sample(seq(500, 1000, 100), 1)
+multityp <- lapply(1:5, function(x){
+  S <- 200# sample(seq(500, 1000, 100), 1)
   p1 <- runif(1,0,1)
   p2 <- runif(1, p1, 1)
   c1 <- runif(1, .1, .3)
@@ -343,21 +343,23 @@ multityp.fill <- fill_mats(multityp, sdevn = 2, sdevp = .5)
 
 dfin <- list()
 dfin2 <- list()
-for(i in 1:10){
-  par1 <- list(alpha = runif(100), m = multityp.fill[[i]], K = 20)
-  dyn <- ode(runif(100,.01,.1), times = 1:1000, func = lvmodK, parms = par1, events = list(func = ext2, time =  1:1000))
-  matplot(dyn[,-1], typ = "l")
+for(i in 1:5){
+  par1 <- list(alpha = runif(nrow(multityp.fill[[i]])), m = multityp.fill[[i]], K = 20)
+  dyn <- ode(runif(nrow(multityp.fill[[i]]),.01,.1), times = 1:1000, func = lvmodK, parms = par1, events = list(func = ext2, time =  1:1000))
+  matplot(dyn[,-1], typ = "l", main = i)
   if(nrow(dyn) == 1000){dfin[[i]] <- dyn[1000,-1]}else{dfin[[i]] <- NA}
   if(nrow(dyn) == 1000){dfin2[[i]] <- apply(dyn[,-1], 2, mean)}else{dfin2[[i]] <- NA}
 }
 
 x <- 1
 abund <- dfin[[x]][dfin[[x]] != 0]
-plot(sort(abund, decreasing = T), ylim = c(0, .55), xlim = c(0,100), typ = "l")
-for(x in 2:10){
+#plot(sort(abund, decreasing = T), ylim = c(0, .55), xlim = c(0,100), typ = "l")
+plot(vegan::radfit(get_abundvec(abund)))
+for(x in 2:5){
   abund <- dfin[[x]][dfin[[x]] != 0]
-  points(sort(abund, decreasing = T), typ = "l")
-  print(min(abund))
+  #points(sort(abund, decreasing = T), typ = "l")
+  #print(min(abund))
+  plot(vegan::radfit(get_abundvec(abund)), main = i)
 }
 
 
