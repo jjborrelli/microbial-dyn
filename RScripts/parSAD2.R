@@ -176,7 +176,7 @@ library(doSNOW)
 
 #t0 <- Sys.time()
 
-multityp <- lapply(1:2, function(x){
+multityp <- lapply(1:400, function(x){
   S <- sample(seq(500, 1000, 100), 1)
   p1 <- runif(1,0,1)
   p2 <- runif(1, p1, 1)
@@ -185,6 +185,7 @@ multityp <- lapply(1:2, function(x){
   tat <- mats*sample(c(-1,1,0), length(mats), replace = T, prob = c(p1,p2-p1,1-(p2)))
   return((tat))
 })
+
 
 #test <- lapply(1:5, function(x) multityp[[1]])
 #sd1 <- c(.5, .5, .5, 1, 1)
@@ -201,37 +202,22 @@ multityp.fill <- fill_mats(multityp, sdevn = 2, sdevp = .5)
 
 t2 <- Sys.time()
 filepath1 <- "~/Documents/Data/"
-cl <- makeCluster(detectCores()-1)
+
+cl <- makeCluster(4)
 clusterExport(cl, c("filepath1", "multityp.fill", "lvmodK", "lvmodK2", "ext1", "get_eq1"))
 registerDoSNOW(cl)
 
-geq <- foreach(x = 1:2, .packages = c("deSolve")) %dopar% {
-  geq1 <- get_eq1(multityp.fill[[x]], times = 1000, Ki = "val", Kval = 20, Rmax = 1)
-  saveRDS(geq1, file = paste(filepath1, "ge", x, ".rds", sep = ""))
-  return(geq1)
-}
-
-stopCluster(cl)
-t3 <- Sys.time()
-t3 - t2
-
-t4 <- Sys.time()
-filepath1 <- "~/Documents/Data/"
-cl <- makeCluster(detectCores()-1)
-clusterExport(cl, c("filepath1", "multityp.fill", "lvmodK", "lvmodK2", "ext1", "get_eq1"))
-registerDoSNOW(cl)
-
-geqWTO <- foreach(x = 1:2, .packages = c("deSolve", "R.utils")) %dopar% {
-  geq1 <- evalWithTimeout(get_eq1(multityp.fill[[x]], times = 1000, Ki = "val", Kval = 20, Rmax = 1), timeout = 60, onTimeout = "warning")
+geq <- foreach(x = 1:length(multityp), .packages = c("deSolve", "R.utils")) %dopar% {
+  geq1 <- evalWithTimeout(get_eq1(multityp.fill[[x]], times = 1000, Ki = "val", Kval = 20, Rmax = 1), timeout = 120, onTimeout = "warning")
   if(is.character(geq1)){geq1 <- NA}
   saveRDS(geq1, file = paste(filepath1, "ge", x, ".rds", sep = ""))
-  return(geq1)
+  saveRDS(multityp.fill[[x]], file = paste(filepath1, "mat", x, ".rds", sep = "")) 
+  # return(geq1)
 }
 
 stopCluster(cl)
 
-t5 <- Sys.time()
-t5-t4
+#t3 <- Sys.time()
 #t3 - t2
 
 
