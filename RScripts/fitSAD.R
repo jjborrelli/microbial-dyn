@@ -1,5 +1,52 @@
 load("~/Downloads/sim.Rdata")
 
+############################################################################################################
+############################################################################################################
+############################################################################################################
+x <- fill_mat(tat)
+
+itystr <- function(x){
+  i1 <- x[upper.tri(x)]
+  i2 <- t(x)[upper.tri(x)] 
+  
+  nonI <- i1 == 0 & i2 == 0
+  
+  ints <- cbind(i1 = apply(cbind(i1, i2), 1, max), i2 = apply(cbind(i1, i2), 1, min))[!nonI,]
+  
+  inty <- vector(length = nrow(ints))
+  
+  inty[ints[,1] < 0 & ints[,2] < 0] <- "competition"
+  inty[ints[,1] > 0 & ints[,2] > 0] <- "mutualism"
+  inty[ints[,1] > 0 & ints[,2] < 0 | ints[,1] < 0 & ints[,2] > 0] <- "predation"
+  inty[ints[,1] < 0 & ints[,2]  == 0 | ints[,1] == 0 & ints[,2] < 0] <- "amensalism"
+  inty[ints[,1] > 0 & ints[,2]  == 0 | ints[,1] == 0 & ints[,2] > 0] <- "commensalism"
+  
+  df1 <- data.frame(ints, inty)
+  
+  num <- vector(length = 5, mode = "numeric")
+  umu <- vector(length = 5, mode = "numeric")
+  lmu <- vector(length = 5, mode = "numeric")
+  
+  #mean(apply(df1[df1$inty == "amensalism",1:2], 1, function(x) (x[x < 0])))
+  #mean(apply(df1[df1$inty == "commensalism",1:2], 1, function(x) (x[x < 0])))
+  #mean(apply(df1[df1$inty == "competition",1:2], 1, function(x) (x[x < 0])))
+  #mean(apply(df1[df1$inty == "mutualism",1:2], 1, function(x) (x[x < 0])))
+  #mean(apply(df1[df1$inty == "predation",1:2], 1, function(x) (x[x < 0])))
+  
+  num[iL %in% aggregate(df1$inty, list(df1$inty), length)$Group.1] <- aggregate(df1$inty, list(df1$inty), length)$x
+  umu[iL %in% aggregate(df1$inty, list(df1$inty), length)$Group.1] <- aggregate(df1$i2, list(df1$inty), mean)$x
+  lmu[iL %in% aggregate(df1$inty, list(df1$inty), length)$Group.1] <- aggregate(df1$i1, list(df1$inty), mean)$x
+  iL <- c("amensalism", "commensalism", "competition", "mutualism", "predation")
+  
+  df2 <- data.frame(typ = iL, num = num, m1 = umu, m2 = lmu)
+  
+  return(df2)
+}
+
+############################################################################################################
+############################################################################################################
+############################################################################################################
+
 
 plot(hist(sort(ge.mult2$eqst[[1]], decreasing = T), plot = F)$counts)
 
@@ -136,7 +183,24 @@ stoolsamp <- which(metadat$HMPbodysubsite == "Stool")
 spptab <- colnames(otu2) %in% paste0("X",metadat[stoolsamp,]$SampleID)
 otu3 <- otu2[-which(rowSums(otu2[,spptab]) == 0),spptab]
 
-rad.fitted <- lapply(1:ncol(otu3), function(x) vegan::radfit(otu3[,x]))
+rad.fitted <- lapply(1:ncol(otu3), function(x) vegan::radfit(otu3[,x][otu3[,x] != 0]))
+rad.fitted2 <- lapply(1:ncol(otu3), function(x) vegan::radfit(sort(otu3[,x][otu3[,x] != 0], decreasing = T)[1:50]))
+plot(rad.fitted2[[1]])
+table(sapply(rad.fitted, function(x) which.min(sapply(x$models, AIC))))
+table(sapply(rad.fitted2, function(x) which.min(sapply(x$models, AIC))))
+
+apply(otu3, 2, function(x) sum(x != 0))
+nspp <- seq(10, 170, 10)
+res1 <- list()
+for(i in 1:length(nspp)){
+  rad.fitts <- lapply(1:ncol(otu3)[-c(184,166,165)], function(x) vegan::radfit(sort(otu3[,x][otu3[,x] != 0], decreasing = T)[1:nspp[i]]))
+  res1[[i]] <- table(sapply(rad.fitts, function(x) which.min(sapply(x$models, AIC))))
+}
+
+x <- 2
+evalWithTimeout(plot(radpred(fitpoilog((sort(otu3[,x][otu3[,x] != 0], decreasing = T)))), pch = 20), timeout = 120)
+points(sort(otu3[,x][otu3[,x] != 0], decreasing = T), col = "blue", pch = 20)
+
 
 
 get_bestfit(lapply(1:ncol(otu3), function(x) otu3[,x][otu3[,x] != 0]))
