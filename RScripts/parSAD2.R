@@ -174,9 +174,9 @@ library(parallel)
 library(doSNOW)
 
 
-#t0 <- Sys.time()
+t0 <- Sys.time()
 
-multityp <- lapply(1:400, function(x){
+multityp <- lapply(1:1000, function(x){
   S <- sample(seq(500, 1000, 100), 1)
   p1 <- runif(1,0,1)
   p2 <- runif(1, p1, 1)
@@ -195,29 +195,75 @@ multityp <- lapply(1:400, function(x){
 #}
 multityp.fill <- fill_mats(multityp, sdevn = 2, sdevp = .5)
 
-#t1 <- Sys.time()
-#t1-t0
+t1 <- Sys.time()
+t1-t0
 
 #hist(multityp.fill[[1]][multityp.fill[[1]]!=0], breaks = 10)
 
 t2 <- Sys.time()
-filepath1 <- "~/Documents/Data/"
+#filepath1 <- "~/Documents/Data/"
+filepath1 <- "D:/jjborrelli/parSAD_data/"
 
-cl <- makeCluster(4)
-clusterExport(cl, c("filepath1", "multityp.fill", "lvmodK", "lvmodK2", "ext1", "get_eq1"))
+cl <- makeCluster(detectCores() - 1)
+clusterExport(cl, c("filepath1", "lvmodK", "lvmodK2", "ext1", "get_eq1", "fill_mat"))
 registerDoSNOW(cl)
 
-geq <- foreach(x = 1:length(multityp), .packages = c("deSolve", "R.utils")) %dopar% {
-  geq1 <- evalWithTimeout(get_eq1(multityp.fill[[x]], times = 1000, Ki = "val", Kval = 20, Rmax = 1), timeout = 120, onTimeout = "warning")
-  if(is.character(geq1)){geq1 <- NA}
+foreach(x = c(1181,1240,1542,1671), .packages = c("deSolve", "R.utils", "igraph")) %dopar% {
+  S <- sample(seq(500, 1000, 100), 1)
+  p1 <- runif(1,0,1)
+  p2 <- runif(1, p1, 1)
+  c1 <- runif(1, .1, .3)
+  mats <- get.adjacency(erdos.renyi.game(S, c1, "gnp", directed = F), sparse = F)
+  multityp <- mats*sample(c(-1,1,0), length(mats), replace = T, prob = c(p1,p2-p1,1-(p2)))
+  multityp.fill <- fill_mat(multityp, sdevp = .5, sdevn = 2)
+  #geq1 <- evalWithTimeout(get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = 1), timeout = 120, onTimeout = "warning")
+  geq1 <- get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = 1)
+  #if(is.character(geq1)){geq1 <- NA}
   saveRDS(geq1, file = paste(filepath1, "ge", x, ".rds", sep = ""))
-  saveRDS(multityp.fill[[x]], file = paste(filepath1, "mat", x, ".rds", sep = "")) 
+  saveRDS(multityp.fill, file = paste(filepath1, "mat", x, ".rds", sep = "")) 
   # return(geq1)
 }
 
 stopCluster(cl)
 
-#t3 <- Sys.time()
-#t3 - t2
+t3 <- Sys.time()
+t3 - t2
 
 
+
+
+t4 <- Sys.time()
+#filepath1 <- "~/Documents/Data/"
+filepath2 <- "D:/jjborrelli/parSADhub_data/"
+
+cl <- makeCluster(detectCores() - 1)
+clusterExport(cl, c("filepath2", "lvmodK", "lvmodK2", "ext1", "get_eq1", "fill_mat"))
+registerDoSNOW(cl)
+
+foreach(x = 992, .packages = c("deSolve", "R.utils", "igraph")) %dopar% {
+  S <- sample(seq(500, 1000, 100), 1)
+  p1 <- runif(1,0,1)
+  p2 <- runif(1, p1, 1)
+  pow <- rbeta(1, 4, 1)
+  c1 <- runif(1, .1, .3)
+  mats <- get.adjacency(barabasi.game(S, pow, m = S/10, directed = F), sparse = F)
+  multityp <- mats*sample(c(-1,1,0), length(mats), replace = T, prob = c(p1,p2-p1,1-(p2)))
+  multityp.fill <- fill_mat(multityp, sdevp = .5, sdevn = 2)
+  #geq1 <- evalWithTimeout(get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = 1), timeout = 120, onTimeout = "warning")
+  geq1 <- get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = 1)
+  #if(is.character(geq1)){geq1 <- NA}
+  saveRDS(geq1, file = paste(filepath2, "HUBge", x, ".rds", sep = ""))
+  saveRDS(multityp.fill, file = paste(filepath2, "HUBmat", x, ".rds", sep = "")) 
+  # return(geq1)
+}
+
+stopCluster(cl)
+
+t5 <- Sys.time()
+t5 - t4
+
+fna <- c()
+for(x in 1:1000){
+  fna[x] <- paste("HUBge", x, ".rds", sep = "")
+}
+which(!fna %in% list.files(filepath2))
