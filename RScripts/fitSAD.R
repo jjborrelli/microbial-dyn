@@ -6,12 +6,17 @@ load("~/Downloads/sim.Rdata")
 x <- fill_mat(tat)
 
 itystr <- function(x){
+  if(sum(x) == 0){
+    return(data.frame(typ = c("amensalism", "commensalism", "competition", "mutualism", "predation"), 
+                      num = c(0,0,0,0,0), m1 = c(0,0,0,0,0), m2 = c(0,0,0,0,0)))
+  }
+  
   i1 <- x[upper.tri(x)]
   i2 <- t(x)[upper.tri(x)] 
   
   nonI <- i1 == 0 & i2 == 0
   
-  ints <- cbind(i1 = apply(cbind(i1, i2), 1, max), i2 = apply(cbind(i1, i2), 1, min))[!nonI,]
+  ints <- cbind(i1 = apply(cbind(i1, i2), 1, max), i2 = apply(cbind(i1, i2), 1, min))#[!nonI,]
   
   inty <- vector(length = nrow(ints))
   
@@ -20,8 +25,9 @@ itystr <- function(x){
   inty[ints[,1] > 0 & ints[,2] < 0 | ints[,1] < 0 & ints[,2] > 0] <- "predation"
   inty[ints[,1] < 0 & ints[,2]  == 0 | ints[,1] == 0 & ints[,2] < 0] <- "amensalism"
   inty[ints[,1] > 0 & ints[,2]  == 0 | ints[,1] == 0 & ints[,2] > 0] <- "commensalism"
+  inty[ints[,1] == 0 & ints[,2] == 0] <- "none"
   
-  df1 <- data.frame(ints, inty)
+  df1 <- data.frame(ints, inty)[inty != "none",]
   
   num <- vector(length = 5, mode = "numeric")
   umu <- vector(length = 5, mode = "numeric")
@@ -291,24 +297,107 @@ get_abundvec <- function(abund, N = 10000){
 }
 
 
-lf1 <- list.files("D:/jjborrelli/parSADhub_data/")
-lf2 <- grep("HUBge", lf1)
+#lf1 <- list.files("D:/jjborrelli/parSADhub_data/")
+lf1 <- list.files("~/Documents/Data/parSAD_data/")
+lf2 <- grep("ge", lf1)
 #for(i in 1:length(lf1[lf2])){
+rads <- list()
 rads2 <- list()
-nspp2 <- c()
-for(i in 1:20){
-  ge1 <- readRDS(paste("D:/jjborrelli/parSADhub_data/", lf1[lf2][[i]], sep = ""))
+nspp <- c()
+f <- c()
+for(i in 1:length(lf2)){
+  ge1 <- readRDS(paste("~/Documents/Data/parSAD_data/", lf1[lf2][[i]], sep = ""))
   if(any(is.na(ge1))){next}
-  gav1 <- get_abundvec(ge1$eqst/sum(ge1$eqst))
-  rads2[[i]] <- radfit(gav1)
+  if(any(is.na(ge1$eqst))){next}
+  eqa1 <- ge1$eqst/sum(ge1$eqst)
+  eqa1[eqa1 < 0] <- 0
+  gav1 <- get_abundvec(eqa1, N = length(ge1$eqst)*2)
+  rads[[i]] <- radfit(gav1)
+  gav2 <- get_abundvec(eqa1, N = 2000)
+  rads2[[i]] <- radfit(gav2)
   #plot(as.vector(table(get_abundvec(ge1$eqst, 1000))))
-  #nspp2[i] <- length(ge1$eqst)
+  nspp[i] <- length(ge1$eqst)
+  f[i] <- lf1[lf2][[i]]
+  
+  gav3 <- ceiling(eqa1*5000)
+   
+  rads3[[i]] <- radfit(gav3)
+  gav4 <- get_abundvec(eqa1, N = 10000)
+  rads4[[i]] <- radfit(gav4)
+  
+  print(i)
 }
 
-hist(nspp2)
 
-AIC(rads[[4]])
-sapply(rads, AIC)
+
+raic <- sapply(rads[!sapply(rads, is.null)], AIC)
+table(apply(raic, 2, which.min))
+
+raic2 <- sapply(rads2[!sapply(rads2, is.null)], AIC)
+table(apply(raic2, 2, which.min))
+
+raic3 <- sapply(rads3[!sapply(rads3, is.null)], AIC)
+table(apply(raic3, 2, which.min))
+
+raic4 <- sapply(rads4[!sapply(rads4, is.null)], AIC)
+table(apply(raic4, 2, which.min))
+
+
+##################################################################
+##################################################################
+
+lf1 <- list.files("~/Documents/Data/parSAD_data/")
+lf2 <- grep("ge", lf1)
+lf3 <- grep("mat", lf1)
+
+eqmat <- list()
+iconn <- c()
+for(i in 1:length(lf2)){
+  ge1 <- readRDS(paste("~/Documents/Data/parSAD_data/", lf1[lf2][[i]], sep = ""))
+  if(any(is.na(ge1))){next}
+  if(any(is.na(ge1$eqst))){next}
+  mat1 <- readRDS(paste("~/Documents/Data/parSAD_data/", lf1[lf3][[i]], sep = ""))
+  
+  iconn[i] <- is.connected(graph.adjacency(abs(sign(mat1[ge1$spp, ge1$spp]))))
+  
+  eqmat[[i]] <- data.frame(itystr(mat1[ge1$spp, ge1$spp]), web = i, N = sum(ge1$spp))
+  print(i)
+}
+
+
+head(eqmat)
+
+eqabs <- matrix(0, nrow = length(lf2), ncol = 1000)
+for(i in 1:length(lf2)){
+  ge1 <- readRDS(paste("~/Documents/Data/parSAD_data/", lf1[lf2][[i]], sep = ""))
+  if(any(is.na(ge1))){eqabs[i,] <- NA; next}
+  if(any(is.na(ge1$eqst))){eqabs[i,] <- NA;next}
+  eqabs[i,1:length(ge1$eqst)] <- sort(ge1$eqst, decreasing = T)
+  print(i)
+}
+
+
+mandCoef <- sapply(rads2[which(apply(raic2, 2, which.min) == 5)][!sapply(rads2[which(apply(raic2, 2, which.min) == 5)], is.null)], function(x) x$models$Mandelbrot$coefficients)
+mandCoef[,1:200]
+plot(rads2[[1]])
+
+
+
+
+i = 1
+plot(log10(eqabs[i, eqabs[i,] != 0])~log10(1:length(eqabs[i, eqabs[i,] != 0])))
+abline(lm(log10(eqabs[i, eqabs[i,] != 0])~log10(1:length(eqabs[i, eqabs[i,] != 0]))))
+
+slp <- c()
+rsq <- c()
+for(i in 1:nrow(eqabs)){
+  if(any(is.na(eqabs[i,eqabs[i,]!=0]))){slp[i] <- NA; rsq[i] <- NA; next}
+  fit <- (lm(log10(eqabs[i, eqabs[i,] != 0])~log10(1:length(eqabs[i, eqabs[i,] != 0]))))
+  slp[i] <- fit$coefficients[2]
+  rsq[i] <- summary(fit)$r.squared
+}
+
+plot(slp~rsq)
 
 ##################################################################
 ##################################################################
