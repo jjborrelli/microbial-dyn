@@ -282,19 +282,34 @@ plot(sse2, sapply(fsp2, AIC))
 ##################################################################
 ##################################################################
 ##################################################################
-
-lf1 <- list.files("~/Desktop/Data")
-lf2 <- grep("ge", lf1)
-#for(i in 1:length(lf1[lf2])){
-for(i in 1:399){
-  ge1 <- readRDS(paste("~/Desktop/Data/", lf1[lf2][[i]], sep = ""))
-  if(any(is.na(ge1))){next}
-  plot(sort(ge1$eqst, decreasing = T), main = i)
-  #plot(as.vector(table(get_abundvec(ge1$eqst, 1000))))
+library(vegan)
+get_abundvec <- function(abund, N = 10000){
+  r.ab <- abund/sum(abund)
+  samp2 <- sample(1:length(abund), N, replace = T, prob = r.ab)
+  t1 <- table(samp2)
+  return(as.numeric(t1))
 }
 
-muchange <- sapply(seq(1000,100000,1000), function(x) fitpoilog(get_abundvec(ge1$eqst, x))@coef)
-plot(muchange[1,]~seq(1000,100000,1000), typ = "l")
+
+lf1 <- list.files("D:/jjborrelli/parSADhub_data/")
+lf2 <- grep("HUBge", lf1)
+#for(i in 1:length(lf1[lf2])){
+rads2 <- list()
+nspp2 <- c()
+for(i in 1:20){
+  ge1 <- readRDS(paste("D:/jjborrelli/parSADhub_data/", lf1[lf2][[i]], sep = ""))
+  if(any(is.na(ge1))){next}
+  gav1 <- get_abundvec(ge1$eqst/sum(ge1$eqst))
+  rads2[[i]] <- radfit(gav1)
+  #plot(as.vector(table(get_abundvec(ge1$eqst, 1000))))
+  #nspp2[i] <- length(ge1$eqst)
+}
+
+hist(nspp2)
+
+AIC(rads[[4]])
+sapply(rads, AIC)
+
 ##################################################################
 ##################################################################
 ##################################################################
