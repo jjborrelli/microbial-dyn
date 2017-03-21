@@ -322,7 +322,7 @@ for(i in 1:length(lf2)){
   gav3 <- ceiling(eqa1*5000)
    
   rads3[[i]] <- radfit(gav3)
-  gav4 <- get_abundvec(eqa1, N = 10000)
+  gav4 <- ceiling(eqa1*1000)
   rads4[[i]] <- radfit(gav4)
   
   print(i)
@@ -342,6 +342,41 @@ table(apply(raic3, 2, which.min))
 raic4 <- sapply(rads4[!sapply(rads4, is.null)], AIC)
 table(apply(raic4, 2, which.min))
 
+nspp1 <- sapply(1:nrow(eqabs), function(x){if(any(is.na(eqabs[x,]))){return(NA);next};length(eqabs[x,eqabs[x,] != 0]/sum(eqabs[x,eqabs[x,] != 0])*5000)})
+npred <- sapply(1:length(rads3), function(x){if(is.na(nspp1[x])){return(NA)};nrow(predict(rads3[[x]]))})
+
+
+SSE <- lapply(1:length(rads3), function(x) if(is.null(rads3[[x]])){return(NA)}else{apply(predict(rads3[[x]]), 2, function(z) sum((z - eqabs[x,eqabs[x,]!=0])^2))})
+
+Rsq <- lapply(1:length(rads3), function(z){
+  if(is.na(nspp1[z])){return(NA)}
+  obsAB <- ceiling(eqabs[z,eqabs[z,]!=0]/sum(eqabs[z,eqabs[z,]!=0])*5000)
+  SST <- apply(predict(rads3[[z]]), 2, function(x) sum((x - mean(obsAB))^2))
+  SSE <- apply(predict(rads3[[z]]), 2, function(x) sum((x - obsAB)^2))
+  
+  return((SST - SSE)/SST)
+})
+
+rsqmat <- do.call(rbind, Rsq[!is.na(Rsq)])
+
+rsqdat <- (do.call(rbind, Rsq[!is.na(Rsq)]))
+rsqdat <- melt(rsqdat)
+rsqdat <- cbind(rsqdat, N = rep(nspp1[!is.na(nspp1)], 5))
+domint <- sapply(eqmat, function(x){if(is.null(x)){return(NA)};x$typ[which.max(x$num)]})
+alldom <- rep(domint[!is.na(domint)],5)[rsqdat$N > 100]
+
+ggplot(rsqdat[rsqdat$N > 100,], aes(x = N, y = value)) + geom_point(col = alldom) + geom_smooth(method = "loess") + facet_grid(~Var2)
+ggplot(rsqdat[rsqdat$N > 100,], aes(x = N, y = value)) + geom_smooth(aes(N, value, colour = factor(alldom))) + facet_grid(~Var2)
+rsa1 <- c()
+for(z in 1:length(rads3)){
+  if(is.na(nspp1[z])){(NA);next}
+  obsAB <- ceiling(eqabs[z,eqabs[z,]!=0]/sum(eqabs[z,eqabs[z,]!=0])*5000)
+  SST <- apply(predict(rads3[[z]]), 2, function(x) sum((x - mean(obsAB))^2))
+  SSE <- apply(predict(rads3[[z]]), 2, function(x) sum((x - obsAB)^2))
+  warnings()
+  ((SST - SSE)/SST)
+  print(z)
+}
 
 ##################################################################
 ##################################################################
@@ -364,8 +399,31 @@ for(i in 1:length(lf2)){
   print(i)
 }
 
+int1 <- t(sapply(eqmat, function(x){if(is.null(x)){return(c(NA,NA,NA,NA,NA))};x$num}))
+lapply(head(eqmat,10), function(x){is.null(x)})
+maxRsq <- apply(rsqmat, 1, which.max)
 
-head(eqmat)
+int2 <- int1[complete.cases(int1),]
+cart1 <- (rpart::rpart(maxRsq~int2+nspp1[!is.na(nspp1)]))
+plot(cart1)
+text(cart1)
+
+istrs <- lapply(eqmat, function(x){x$m1[2] <- x$m2[2]; x$m2[2] <- 0;return(x)})
+int3 <- t(sapply(istrs, function(x){if(any(is.na(unlist(x)))){return(c(NA,NA,NA,NA,NA))};x$m1}))
+int4 <- int3[complete.cases(int3),]
+
+lnpar <- t(sapply(rads3, function(x){if(is.null(x)){return(c(NA, NA))};x$models$Lognormal$coefficients}))
+pepar <- (sapply(rads3, function(x){if(is.null(x)){return(c(NA))};x$models$Preemption$coefficients}))
+zmpar <- t(sapply(rads3, function(x){if(is.null(x)){return(c(NA, NA, NA))};x$models$Mandelbrot$coefficients}))
+isinf <- apply(zmpar, 1, function(x) is.infinite(x[1]))
+zpar <- t(sapply(rads3, function(x){if(is.null(x)){return(c(NA, NA))};x$models$Zipf$coefficients}))
+
+
+summary(lm(lnpar[complete.cases(lnpar),]~int2+int4+nspp1[!is.na(nspp)]))
+summary(lm(pepar[!is.na(pepar)]~int2+nspp1[!is.na(nspp)]))
+summary(lm(zmpar[!isinf,][complete.cases(zmpar[!isinf,]),]~int1[!isinf,][complete.cases(zmpar[!isinf,]),]+nspp1[!isinf][complete.cases(zmpar[!isinf,])]))
+summary(lm(zpar[complete.cases(zpar),]~int2+int4+nspp1[!is.na(nspp)]))
+head(eqmat, 10)
 
 eqabs <- matrix(0, nrow = length(lf2), ncol = 1000)
 for(i in 1:length(lf2)){
