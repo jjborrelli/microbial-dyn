@@ -189,7 +189,7 @@ stoolsamp <- which(metadat$HMPbodysubsite == "Stool")
 spptab <- colnames(otu2) %in% paste0("X",metadat[stoolsamp,]$SampleID)
 otu3 <- otu2[-which(rowSums(otu2[,spptab]) == 0),spptab]
 
-rad.fitted <- lapply(1:ncol(otu3), function(x) vegan::radfit(otu3[,x][otu3[,x] != 0]))
+rad.fitted <- lapply(1:ncol(otu3), function(x) vegan::radfit(otu3[,x][otu3[,x] != 0]/sum(otu3[,x][otu3[,x] != 0]), family = gaussian))
 rad.fitted2 <- lapply(1:ncol(otu3), function(x) vegan::radfit(sort(otu3[,x][otu3[,x] != 0], decreasing = T)[1:50]))
 plot(rad.fitted2[[1]])
 table(sapply(rad.fitted, function(x) which.min(sapply(x$models, AIC))))
@@ -214,6 +214,10 @@ get_bestfit(lapply(1:ncol(otu3), function(x) otu3[,x][otu3[,x] != 0]))
 otuAIC <- get_bestfit(lapply(1:ncol(otu3), function(x) otu3[,x][otu3[,x] != 0]))
 boxplot(t(apply(otuAIC, 1, function(x) x-min(x))))
 otuAIC[,1:2]
+
+
+## Fit RAD to real data
+## how does lognorm parameter (mean) change with number of reads? 
 
 ##################################################################
 ##################################################################
@@ -303,6 +307,8 @@ lf2 <- grep("ge", lf1)
 #for(i in 1:length(lf1[lf2])){
 rads <- list()
 rads2 <- list()
+rads3 <- list()
+rads4 <- list()
 nspp <- c()
 f <- c()
 for(i in 1:length(lf2)){
@@ -412,21 +418,25 @@ istrs <- lapply(eqmat, function(x){x$m1[2] <- x$m2[2]; x$m2[2] <- 0;return(x)})
 int3 <- t(sapply(istrs, function(x){if(any(is.na(unlist(x)))){return(c(NA,NA,NA,NA,NA))};x$m1}))
 int4 <- int3[complete.cases(int3),]
 
-lnpar <- t(sapply(rads3, function(x){if(is.null(x)){return(c(NA, NA))};x$models$Lognormal$coefficients}))
-pepar <- (sapply(rads3, function(x){if(is.null(x)){return(c(NA))};x$models$Preemption$coefficients}))
-zmpar <- t(sapply(rads3, function(x){if(is.null(x)){return(c(NA, NA, NA))};x$models$Mandelbrot$coefficients}))
+lnpar <- t(sapply(rads4, function(x){if(is.null(x)){return(c(NA, NA))};x$models$Lognormal$coefficients}))
+pepar <- (sapply(rads4, function(x){if(is.null(x)){return(c(NA))};x$models$Preemption$coefficients}))
+zmpar <- t(sapply(rads4, function(x){if(is.null(x)){return(c(NA, NA, NA))};x$models$Mandelbrot$coefficients}))
 isinf <- apply(zmpar, 1, function(x) is.infinite(x[1]))
-zpar <- t(sapply(rads3, function(x){if(is.null(x)){return(c(NA, NA))};x$models$Zipf$coefficients}))
+zpar <- t(sapply(rads4, function(x){if(is.null(x)){return(c(NA, NA))};x$models$Zipf$coefficients}))
 
 
-summary(lm(lnpar[complete.cases(lnpar),]~int2+int4+nspp1[!is.na(nspp)]))
-summary(lm(pepar[!is.na(pepar)]~int2+nspp1[!is.na(nspp)]))
-summary(lm(zmpar[!isinf,][complete.cases(zmpar[!isinf,]),]~int1[!isinf,][complete.cases(zmpar[!isinf,]),]+nspp1[!isinf][complete.cases(zmpar[!isinf,])]))
-summary(lm(zpar[complete.cases(zpar),]~int2+int4+nspp1[!is.na(nspp)]))
+fit.ln <- (lm(lnpar[complete.cases(lnpar),]~int2+int4+nspp1[!is.na(nspp)]))
+summary(fit.ln)
+fit.pre <-(lm(pepar[!is.na(pepar)]~int2+int4+nspp1[!is.na(nspp)]))
+summary(fit.pre)
+fit.zm <- (lm(zmpar[complete.cases(zmpar),2:3]~int1[complete.cases(zmpar),]+nspp1[complete.cases(zmpar)]))
+summary(fit.zm)
+fit.z <- (lm(zpar[complete.cases(zpar),]~int2+int4+nspp1[!is.na(nspp)]))
+summary(fit.z)
 head(eqmat, 10)
 
-eqabs <- matrix(0, nrow = length(lf2), ncol = 1000)
-for(i in 1:length(lf2)){
+eqabs <- matrix(0, nrow = 100, ncol = 1000)
+for(i in 1:100){
   ge1 <- readRDS(paste("~/Documents/Data/parSAD_data/", lf1[lf2][[i]], sep = ""))
   if(any(is.na(ge1))){eqabs[i,] <- NA; next}
   if(any(is.na(ge1$eqst))){eqabs[i,] <- NA;next}
@@ -439,7 +449,7 @@ mandCoef <- sapply(rads2[which(apply(raic2, 2, which.min) == 5)][!sapply(rads2[w
 mandCoef[,1:200]
 plot(rads2[[1]])
 
-
+radf <- lapply(1:nrow(eqabs), function(x) vegan::radfit(eqabs[x,eqabs[x,]!=0]/sum(eqabs[x,eqabs[x,]!=0]), family = gaussian))
 
 
 i = 1
