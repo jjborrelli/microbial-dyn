@@ -38,11 +38,11 @@ itystr <- function(x){
   #mean(apply(df1[df1$inty == "competition",1:2], 1, function(x) (x[x < 0])))
   #mean(apply(df1[df1$inty == "mutualism",1:2], 1, function(x) (x[x < 0])))
   #mean(apply(df1[df1$inty == "predation",1:2], 1, function(x) (x[x < 0])))
-  
+  iL <- c("amensalism", "commensalism", "competition", "mutualism", "predation")
   num[iL %in% aggregate(df1$inty, list(df1$inty), length)$Group.1] <- aggregate(df1$inty, list(df1$inty), length)$x
   umu[iL %in% aggregate(df1$inty, list(df1$inty), length)$Group.1] <- aggregate(df1$i2, list(df1$inty), mean)$x
   lmu[iL %in% aggregate(df1$inty, list(df1$inty), length)$Group.1] <- aggregate(df1$i1, list(df1$inty), mean)$x
-  iL <- c("amensalism", "commensalism", "competition", "mutualism", "predation")
+  
   
   df2 <- data.frame(typ = iL, num = num, m1 = umu, m2 = lmu)
   
@@ -188,6 +188,11 @@ metadat <- read.csv("~/Desktop/v13_map_uniquebyPSN.csv")
 stoolsamp <- which(metadat$HMPbodysubsite == "Stool")
 spptab <- colnames(otu2) %in% paste0("X",metadat[stoolsamp,]$SampleID)
 otu3 <- otu2[-which(rowSums(otu2[,spptab]) == 0),spptab]
+
+fzotu <- lapply(1:ncol(otu3), function(x) fitzipf_r(otu3[,x][otu3[,x]!=0]/sum(otu3[,x][otu3[,x]!=0])))
+plot(t(sapply(fzotu, function(x) x@fullcoef)))
+
+
 
 rad.fitted <- lapply(1:ncol(otu3), function(x) vegan::radfit(otu3[,x][otu3[,x] != 0]/sum(otu3[,x][otu3[,x] != 0]), family = gaussian))
 rad.fitted2 <- lapply(1:ncol(otu3), function(x) vegan::radfit(sort(otu3[,x][otu3[,x] != 0], decreasing = T)[1:50]))
@@ -387,21 +392,21 @@ for(z in 1:length(rads3)){
 ##################################################################
 ##################################################################
 
-lf1 <- list.files("~/Documents/Data/parSAD_data/")
+lf1 <- list.files("~/Documents/Data/parSADhub_data/")
 lf2 <- grep("ge", lf1)
 lf3 <- grep("mat", lf1)
 
-eqmat <- list()
-iconn <- c()
+eqmat2 <- list()
+iconn2 <- c()
 for(i in 1:length(lf2)){
-  ge1 <- readRDS(paste("~/Documents/Data/parSAD_data/", lf1[lf2][[i]], sep = ""))
+  ge1 <- readRDS(paste("~/Documents/Data/parSADhub_data/", lf1[lf2][[i]], sep = ""))
   if(any(is.na(ge1))){next}
   if(any(is.na(ge1$eqst))){next}
-  mat1 <- readRDS(paste("~/Documents/Data/parSAD_data/", lf1[lf3][[i]], sep = ""))
+  mat1 <- readRDS(paste("~/Documents/Data/parSADhub_data/", lf1[lf3][[i]], sep = ""))
   
-  iconn[i] <- is.connected(graph.adjacency(abs(sign(mat1[ge1$spp, ge1$spp]))))
+  iconn2[i] <- is.connected(graph.adjacency(abs(sign(mat1[ge1$spp, ge1$spp]))))
   
-  eqmat[[i]] <- data.frame(itystr(mat1[ge1$spp, ge1$spp]), web = i, N = sum(ge1$spp))
+  eqmat2[[i]] <- data.frame(itystr(mat1[ge1$spp, ge1$spp]), web = i, N = sum(ge1$spp))
   print(i)
 }
 
@@ -435,15 +440,43 @@ fit.z <- (lm(zpar[complete.cases(zpar),]~int2+int4+nspp1[!is.na(nspp)]))
 summary(fit.z)
 head(eqmat, 10)
 
-eqabs <- matrix(0, nrow = 100, ncol = 1000)
-for(i in 1:100){
-  ge1 <- readRDS(paste("~/Documents/Data/parSAD_data/", lf1[lf2][[i]], sep = ""))
-  if(any(is.na(ge1))){eqabs[i,] <- NA; next}
-  if(any(is.na(ge1$eqst))){eqabs[i,] <- NA;next}
-  eqabs[i,1:length(ge1$eqst)] <- sort(ge1$eqst, decreasing = T)
+lf1 <- list.files("~/Documents/Data/parSADhub_data/")
+lf2 <- grep("ge", lf1)
+eqabs2 <- list() #matrix(0, nrow = 100, ncol = 1000)
+for(i in 1:1000){
+  ge1 <- readRDS(paste("~/Documents/Data/parSADhub_data/", lf1[lf2][[i]], sep = ""))
+  if(any(is.na(ge1))){eqabs[[i]] <- NA; next}
+  if(any(is.na(ge1$eqst))){eqabs[[i]] <- NA;next}
+  #eqabs[i,1:length(ge1$eqst)] <- sort(ge1$eqst, decreasing = T)
+  eqabs2[[i]] <- sort(ge1$eqst, decreasing = T)
   print(i)
 }
 
+eqabsA <- eqabs[!is.na(eqabs)]
+simfz <- lapply(eqabsA, function(x){x <- x[x > 0]; fitzipf_r(x)})
+plot(t(sapply(simfz, function(x) x@fullcoef)))
+simR2 <- sapply(1:length(eqabsA), function(x) r2modified(sort(eqabsA[[x]][eqabsA[[x]] > 0],decreasing = T), radpred(simfz[[x]])$abund))
+sapply(simfz[which(simR2 > 0.9)], function(x) x@fullcoef)
+
+otuR2 <- sapply(1:ncol(otu3), function(x) r2modified(sort(otu3[,x][otu3[,x] != 0], decreasing = T), radpred(fzotu[[x]])$abund))
+
+simfzhub <- lapply(eqabs2[!sapply(eqabs2, is.null)], function(x){x <- x[x > 0]; fitzipf_r(x)})
+simR2hub <- sapply(1:length(eqabs2[!sapply(eqabs2, is.null)]), function(x) r2modified(sort(eqabs2[!sapply(eqabs2, is.null)][[x]][eqabs2[!sapply(eqabs2, is.null)][[x]] > 0],decreasing = T), radpred(simfzhub[[x]])$abund))
+hist(simR2hub)
+
+conn1 <- sapply(eqmat[!is.na(eqabs)], function(x) sum(x$num)/(x$N[1] *x$N[1]))
+conn2 <- sapply(eqmat2[!is.na(eqabs2)], function(x) sum(x$num)/(x$N[1] *x$N[1]))
+plot(conn1[!is.na(eqabs)], sapply(simfz, function(x) x@coef))
+plot(conn2, sapply(simfzhub, function(x) x@coef)[!is.na(eqabs2)])
+
+
+fitpars <- rbind(cbind(t(sapply(simfz, function(x) x@fullcoef)),typ = 1, r2 = simR2),
+                 cbind(t(sapply(simfzhub, function(x) x@fullcoef)),typ = 2, r2 = simR2hub),
+                 cbind(t(sapply(fzotu, function(x) x@fullcoef)), typ = 3, r2 = otuR2))
+fitpars[,"r2"][fitpars[,"r2"] < 0]  <- 0  
+
+plot(s~N, col = typ, data = fitpars, pch = 20)
+ggplot(data.frame(fitpars), aes(x = N, y = s, col = factor(typ), alpha = r2)) + geom_point() + geom_smooth()
 
 mandCoef <- sapply(rads2[which(apply(raic2, 2, which.min) == 5)][!sapply(rads2[which(apply(raic2, 2, which.min) == 5)], is.null)], function(x) x$models$Mandelbrot$coefficients)
 mandCoef[,1:200]
