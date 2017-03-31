@@ -13,7 +13,7 @@ library(reshape2)
 # Lotka-Volterra model with evenly distributed K
 lvmodK <- function(times, state, parms){
   with(as.list(c(state, parms)), {
-    dB <- state * parms$alpha * (1 - state/(parms$K/sum(state > 0))) + state * parms$m %*% state 
+    dB <- state * parms$alpha * (1 - state/(parms$K/sum(state > 10^-5))) + state * parms$m %*% state 
     #dB <- state * parms$alpha * (1 - state/(parms$K)) + state * parms$m %*% state 
     
     list(dB)
@@ -63,7 +63,8 @@ ext1 <- function (times, states, parms){
 ext2 <- function (times, states, parms){
   with(as.list(states), {
     states[states < 10^-5] <- 0 
-    states <- states + (runif(length(states), 10^-5, 10^-2)*sample(c(0,1), length(states), prob = c(.9,.1), replace = T))
+    #states <- states + (runif(length(states), 10^-5, 10^-2)*sample(c(0,1), length(states), prob = c(.9,.1), replace = T))
+    states <- ceiling(states)
     return(c(states))
   })
 }
@@ -123,8 +124,8 @@ dfin <- list()
 dfin2 <- list()
 for(i in 1:5){
   diag(multityp.fill[[i]]) <- (runif(nrow(multityp.fill[[i]]), -5, 0))
-  par1 <- list(alpha = runif(nrow(multityp.fill[[i]]), 0,.1), m = multityp.fill[[i]], K = 20)
-  dyn <- ode(runif(nrow(multityp.fill[[i]]),.001,.002), times = 1:100, func = lvmodN, parms = par1, events = list(func = ext1, time =  1:100))
+  par1 <- list(alpha = runif(nrow(multityp.fill[[i]]), 0,1), m = multityp.fill[[i]], K = 1000)
+  dyn <- ode(runif(nrow(multityp.fill[[i]]),1,200), times = 1:100, func = lvmodK, parms = par1, events = list(func = ext2, time =  1:100))
   matplot(dyn[,-1], typ = "l", main = i)
   if(nrow(dyn) == 1000){dfin[[i]] <- dyn[1000,-1]}else{dfin[[i]] <- NA}
   if(nrow(dyn) == 1000){dfin2[[i]] <- apply(dyn[,-1], 2, mean)}else{dfin2[[i]] <- NA}
