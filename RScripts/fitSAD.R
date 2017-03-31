@@ -115,8 +115,10 @@ fzotu <- lapply(1:ncol(otu3), function(x) fitzipf_r(otu3[,x][otu3[,x]!=0]/sum(ot
 otuR2 <- sapply(1:ncol(otu3), function(x) r2modified(sort(otu3[,x][otu3[,x] != 0], decreasing = T), radpred(fzotu[[x]])$abund))
 
 plot(t(sapply(fzotu, function(x) x@fullcoef)))
+hist(otuR2)
 
-
+## Check if sampling effort has an effect on s
+### use resampling method to standardize # of reads
 
 ##################################################################
 ##################################################################
@@ -130,6 +132,7 @@ get_dat <- function(fpath, connected = TRUE){
   
   eqmat <- list()
   iconn <- c()
+  mdstr <- c()
   for(i in 1:length(lf2)){
     ge1 <- readRDS(paste(fpath, lf1[lf2][[i]], sep = ""))
     if(any(is.na(ge1))){next}
@@ -142,54 +145,36 @@ get_dat <- function(fpath, connected = TRUE){
     eqmat[[i]] <- data.frame(itystr(mat1[ge1$spp, ge1$spp]), web = i, N = sum(ge1$spp))
     eqabs[[i]] <- sort(ge1$eqst, decreasing = T)
     
+    mdstr[i] <- mean(diag(eqmat))
+    
     cat(round(i/length(lf2)), "--:::--")
   }
   
   eqa <- eqabs[!is.na(eqabs) & !sapply(eqabs, is.null)]
   eqm <- eqmat[!is.na(eqabs) & !sapply(eqabs, is.null)]
+  mdstr <- mdstr[!is.na(eqabs) & !sapply(eqabs, is.null)]
   
   if(connected){
     eqa <- eqa[iconn[!is.na(eqabs) & !sapply(eqabs, is.null)]]
     eqm <- eqm[iconn[!is.na(eqabs) & !sapply(eqabs, is.null)]]
+    mdstr <- mdstr[iconn[!is.na(eqabs) & !sapply(eqabs, is.null)]]
   }
   
-  return(list(eqa = eqa, eqm = eqm))
+  return(list(eqa = eqa, eqm = eqm, ds = mdstr))
 }
 
 
 ## File path location of the data
 filepath1 <- "~/Documents/Data/parSAD_data2/"
-lf1 <- list.files(filepath1)
-lf2 <- grep("ge", lf1)
-lf3 <- grep("mat", lf1)
 
-
-# Get equilibrium community interaction matrices and convert into df of interaction numbers and strengths
-eqmat3 <- list()
-iconn2 <- c()
-for(i in 1:length(lf2)){
-  ge1 <- readRDS(paste(filepath1, lf1[lf2][[i]], sep = ""))
-  if(any(is.na(ge1))){next}
-  if(any(is.na(ge1$eqst))){next}
-  mat1 <- readRDS(paste(filepath1, lf1[lf3][[i]], sep = ""))
+fzmod <- function(x){
+  fz1 <- fitzipf_r(x)
+  fc1 <- fz1@fullcoef
+  nll <- fz1@minuslogl(N = fz1@fullcoef[1], s = fz1@fullcoef[2])
+  r2 <- r2modified(sort(x, decreasing = T), radpred(fz1)$abund)
   
-  iconn2[i] <- is.connected(graph.adjacency(abs(sign(mat1[ge1$spp, ge1$spp]))))
-  
-  eqmat3[[i]] <- data.frame(itystr(mat1[ge1$spp, ge1$spp]), web = i, N = sum(ge1$spp))
-  print(i)
+  return(data.frame(t(fc1), nll, r2))
 }
-
-# Get equilibrium abundances in a list
-eqabs3 <- list() #matrix(0, nrow = 100, ncol = 1000)
-for(i in 1:length(lf2)){
-  ge1 <- readRDS(paste(filepath1, lf1[lf2][[i]], sep = ""))
-  if(any(is.na(ge1))){eqabs[[i]] <- NA; next}
-  if(any(is.na(ge1$eqst))){eqabs[[i]] <- NA;next}
-  
-  eqabs3[[i]] <- sort(ge1$eqst, decreasing = T)
-  print(i)
-}
-
 
 # Fit zipf RAD to eq abundances for random communities
 ## Eliminate NAs
@@ -200,6 +185,7 @@ plot(t(sapply(simfz, function(x) x@fullcoef)))
 ## Get R squared
 simR2 <- sapply(1:length(eqabsA), function(x) r2modified(sort(eqabsA[[x]][eqabsA[[x]] > 0],decreasing = T), radpred(simfz[[x]])$abund))
 sapply(simfz[which(simR2 > 0.9)], function(x) x@fullcoef)
+
 
 # Fit zipf RAD to eq abundances for hub-like communities
 ## fitting to all non-null return communities
@@ -213,7 +199,7 @@ sim2fz <- lapply(eqabs3[!sapply(eqabs3, is.null)], function(x){x <- x[x >0]; fit
 plot(t(sapply(sim2fz, function(x) x@fullcoef)))    
 ## Get R squared
 sim2R2 <- sapply(1:length(eqabs3[!sapply(eqabs3, is.null)]), function(x){r2modified(sort(eqabs3[!sapply(eqabs3, is.null)][[x]][eqabs3[!sapply(eqabs3, is.null)][[x]] > 0],decreasing = T), radpred(sim2fz[[x]])$abund)})
-
+hist(sim2R2)
 
 # Compute connectance of equilibrium matrices
 ## Randoms
@@ -248,11 +234,14 @@ ggplot(data.frame(fitpars), aes(x = N, y = s, col = factor(typ), alpha = r2)) + 
 ##################################################################
 ### Interactions
 #testing objs
+# add self interaction mean
+
 eqa <- eqabs3[!sapply(eqabs3, is.null)]
 eqm <- eqmat3[!sapply(eqabs3, is.null)]
 prepdat <- function(eqa, eqm, svals, sr2){
   Nspp <- sapply(eqa, length)
   conn <- sapply(eqm, function(x) sum(x$num)/(x$N[1] *x$N[1]))
+  
   # pull out interaction numbers
   int1 <- t(sapply(eqm, function(x){if(is.null(x)){return(c(NA,NA,NA,NA,NA))};x$num}))
   istrs <- lapply(eqm, function(x){x$m1[2] <- x$m2[2]; x$m2[2] <- 0;return(x)}) ## move main commensal strength with others
@@ -264,18 +253,24 @@ prepdat <- function(eqa, eqm, svals, sr2){
   allint <- cbind(int1, int3, p2)
   colnames(allint) <- c("aN", "coN", "cpN", "mN", "pN", "aS", "coS", "cpS", "mS", "pSn", "pSp")
   # put ints and fitted par into one dataframe
-  dat <- data.frame(sV = svals, sR = sr2, allint, Nsp = Nspp, C = conn)
+  dat <- data.frame(sV = svals, sR = sr2, allint, Nsp = Nspp, C = conn, D = dstr)
   
   return(dat)
 }
 
+
 pdat <- prepdat(eqa = eqa, eqm = eqm, svals = s.val3, sr2 = sim2R2)
-fit.init <- (lm(sV~Nsp+C+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat[iconn2[!sapply(eqabs3, is.null)],], na.action = "na.fail"))
+subdat <- pdat[iconn2[!sapply(eqabs3, is.null)],]
+fit.init <- (lm(sV~Nsp+C+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat))
 fit.init.ints <- (lm(sV~Nsp+C+aN*aS+coN*coS+cpN*cpS+mN*mS+pN*pSn+pSp+pN:pSp, data = pdat[iconn2[!sapply(eqabs3, is.null)],], na.action = "na.fail"))
-summary(fit.init.ints)
+summary(fit.init)
+
+DAAG::cv.lm(data = subdat, form.lm = fit.init, m = 3)
+
+mse.init <- sum((fitted(fit.init) - pdat$sV[iconn2[!sapply(eqabs3, is.null)]])^2)
 
 head(MuMIn::dredge(fit.init.ints))
-predict(fit.init, newdata = pdat[iconn2[!sapply(eqabs3, is.null)],][100,])
+predict(fit.init, newdata = pdat[iconn2[!sapply(eqabs3, is.null)],][pdat[iconn2[!sapply(eqabs3, is.null)],],])
 pdat$sV[iconn2[!sapply(eqabs3, is.null)]][100]
 
 #fitlinmod <- function(pdat, r2cutoff = 0.5, boot = F){
