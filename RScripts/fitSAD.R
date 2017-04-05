@@ -98,6 +98,13 @@ r2modified <- function(x,y,log=FALSE){
   return(rm)  
 }
 
+
+get_abundvec <- function(abund, N = 10000){
+  r.ab <- abund/sum(abund)
+  samp2 <- sample(1:length(abund), N, replace = T, prob = r.ab)
+  t1 <- table(samp2)
+  return(as.numeric(t1))
+}
 ############################################################################################################
 ############################################################################################################
 ############################################################################################################
@@ -112,13 +119,120 @@ otu3 <- otu2[-which(rowSums(otu2[,spptab]) == 0),spptab]
 
 
 fzotu <- lapply(1:ncol(otu3), function(x) fitzipf_r(otu3[,x][otu3[,x]!=0]/sum(otu3[,x][otu3[,x]!=0])))
-otuR2 <- sapply(1:ncol(otu3), function(x) r2modified(sort(otu3[,x][otu3[,x] != 0], decreasing = T), radpred(fzotu[[x]])$abund))
+otuR2 <- sapply(1:ncol(otu3), function(x) r2modified(sort(otu3[,x][otu3[,x] != 0]/sum(otu3[,x][otu3[,x]!=0]), decreasing = T), radpred(fzotu[[x]])$abund))
+
+fzotu <- apply(otu3, 2, function(x) fzmod(sort(x[x>4]/sum(x[x>4]))))
+s.hmp <- (do.call(rbind, fzotu)$s)
+n.hmp <- (do.call(rbind, fzotu)$N)
 
 plot(t(sapply(fzotu, function(x) x@fullcoef)))
 hist(otuR2)
 
+gav <- apply(otu3, 2, get_abundvec, N= 400)
+gavfz <- t(sapply(gav, fzmod))
+plot(unlist(gavfz[,"N"]), unlist(gavfz[,"s"]))
+
+
+
+gav1 <- apply(otu3, 2, get_abundvec, N = 77)
+gavfz1 <- t(sapply(gav1, fzmod))
+plot(unlist(gavfz1[,"N"]),unlist(gavfz1[,"s"]))
+
 ## Check if sampling effort has an effect on s
 ### use resampling method to standardize # of reads
+
+otuT <- read.csv("Desktop/Archive/feces_M3_spp.csv")
+head(otuT)
+dim(otuT)
+
+fzT <- apply(otuT[,-1], 1, function(x) fzmod(sort(x[x!=0])))
+fzT <- do.call(rbind, fzT)
+plot(fzT$s~otuT[,1])
+plot(fzT$s~as.Date(as.character(otuT[,1]), format = "%m/%d/%y"), typ = "o")
+
+
+
+otuT2 <- read.csv("Desktop/Archive/feces_F4_spp.csv")
+fzT2 <- apply(otuT2[,-1], 1, function(x) fzmod(sort(x[x>0])))
+fzT2 <- do.call(rbind, fzT2)
+plot(fzT2$s~otuT2[,1])
+plot(fzT2$s~as.Date(as.character(otuT2[,1]), format = "%m/%d/%y"), typ = "o")
+
+
+
+dtgut1 <- read.csv("Desktop/Archive/dtgut1.csv")
+dt1 <- apply(dtgut1[complete.cases(dtgut1),-1], 1, function(x) fzmod(sort(x[x>0])))
+dt1 <- do.call(rbind, dt1)
+
+
+
+dtgut2 <- read.csv("Desktop/Archive/dtgut2.csv")
+dt2 <- apply(dtgut2[complete.cases(dtgut2),-1], 1, function(x) fzmod(sort(x[x>0])))
+dt2 <- do.call(rbind, dt2)
+
+
+##################################################################
+## Standardize reads to X
+X <- 100
+
+gav1 <- apply(otu3, 2, get_abundvec, N = X)
+gavfz1 <- t(sapply(gav1, fzmod))
+s.hmp <- unlist(gavfz1[,"s"])
+n.hmp <- unlist(gavfz1[,"N"])
+
+gavt <-  apply(otuT[,-1], 1, get_abundvec, N = X)
+fzT <- lapply(gavt, function(x) fzmod(sort(x)))
+fzT <- do.call(rbind, fzT)
+
+gavt2 <-  apply(otuT2[,-1], 1, get_abundvec, N = X)
+fzT2 <- lapply(gavt, function(x) fzmod(sort(x)))
+fzT2 <- do.call(rbind, fzT2)
+
+gavdt <-  apply(dtgut1[complete.cases(dtgut1),-1], 1, get_abundvec, N = X)
+dt1 <- lapply(gavdt, function(x) fzmod(sort(x)))
+dt1 <- do.call(rbind, dt1)
+
+gavdt2 <-  apply(dtgut2[complete.cases(dtgut2),-1], 1, get_abundvec, N = X)
+dt2 <- lapply(gavdt2, function(x) fzmod(sort(x)))
+dt2 <- do.call(rbind, dt2)
+##################################################################
+
+allfit <- data.frame(s = c(fzT$s, fzT2$s, dt1$s, dt2$s, s.hmp),
+                     N = c(fzT$N, fzT2$N, dt1$N, dt2$N, n.hmp),
+                     dat = rep(c("M3", "F4", "DT1", "DT2", "HMP"), c(length(fzT$s),length(fzT2$s), length(dt1$s), length(dt2$s), length(s.hmp))))
+
+
+ggplot(allfit, aes(x = N, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw()
+#plot(c(fzT$s, fzT2$s, s.hmp)~c(fzT$N, fzT2$N, n.hmp), col = rep(c(1,2,3), c(length(fzT$s),length(fzT2$s),length(s.hmp))))
+
+
+#########################
+gavsim <- lapply(psd2$eqa, get_abundvec, 100)
+simfz1 <- lapply(gavsim, function(x) fzmod(sort(x)))
+simfz1 <- do.call(rbind, simfz1)
+
+ggplot(simfz1, aes(x = N, y = s)) + geom_point()
+
+
+allfit <- data.frame(s = c(fzT$s, fzT2$s, dt1$s, dt2$s, s.hmp, simfz1$s),
+                     N = c(fzT$N, fzT2$N, dt1$N, dt2$N, n.hmp, simfz1$N),
+                     r2 = c(fzT$r2, fzT2$r2, dt1$r2, dt2$r2, unlist(gavfz1[,"r2"]), simfz1$r2),
+                     dat = rep(c("M3", "F4", "DT1", "DT2", "HMP", "sim"), c(length(fzT$s),length(fzT2$s),length(dt1$s),length(dt2$s),length(s.hmp),nrow(simfz1))))
+
+
+ggplot(allfit, aes(x = N, y = s, col = dat)) + geom_point(aes(alpha = r2)) + geom_smooth() + theme_bw() 
+
+rq <- matrix(nrow = nrow(simfz1), ncol = 2)
+inrange <- c()
+for(i in 1:nrow(simfz1)){
+  if(simfz1[i,]$N > 75){
+    rq[i,] <- range(allfit$s[allfit$dat != "sim" & allfit$N %in% 70:80])
+  }else{
+    rq[i,] <- range(allfit$s[allfit$dat != "sim" & allfit$N %in% (simfz1[i,]$N-2):(simfz1[i,]$N+2)])
+  }
+  inrange[i] <- simfz1[i,]$s <= rq[i,2] & simfz1[i,]$s >= rq[i,1]
+}
+sum(inrange)
 
 ##################################################################
 ##################################################################
@@ -131,8 +245,10 @@ get_dat <- function(fpath, connected = TRUE){
   lf3 <- grep("mat", lf1)
   
   eqmat <- list()
+  eqabs <- list()
   iconn <- c()
   mdstr <- c()
+  wrks <- c()
   for(i in 1:length(lf2)){
     ge1 <- readRDS(paste(fpath, lf1[lf2][[i]], sep = ""))
     if(any(is.na(ge1))){next}
@@ -145,11 +261,13 @@ get_dat <- function(fpath, connected = TRUE){
     eqmat[[i]] <- data.frame(itystr(mat1[ge1$spp, ge1$spp]), web = i, N = sum(ge1$spp))
     eqabs[[i]] <- sort(ge1$eqst, decreasing = T)
     
-    mdstr[i] <- mean(diag(eqmat))
+    mdstr[i] <- mean(diag(mat1[ge1$spp, ge1$spp]))
+    wrks[i] <- i
     
-    cat(round(i/length(lf2)), "--:::--")
+    if(i%%100 == 0){cat(round(i/length(lf2)*100), "--:::--")}
   }
   
+  wrks <- wrks[!is.na(eqabs) & !sapply(eqabs, is.null)]
   eqa <- eqabs[!is.na(eqabs) & !sapply(eqabs, is.null)]
   eqm <- eqmat[!is.na(eqabs) & !sapply(eqabs, is.null)]
   mdstr <- mdstr[!is.na(eqabs) & !sapply(eqabs, is.null)]
@@ -158,14 +276,12 @@ get_dat <- function(fpath, connected = TRUE){
     eqa <- eqa[iconn[!is.na(eqabs) & !sapply(eqabs, is.null)]]
     eqm <- eqm[iconn[!is.na(eqabs) & !sapply(eqabs, is.null)]]
     mdstr <- mdstr[iconn[!is.na(eqabs) & !sapply(eqabs, is.null)]]
+    wrks <- wrks[iconn[!is.na(eqabs) & !sapply(eqabs, is.null)]]
   }
   
-  return(list(eqa = eqa, eqm = eqm, ds = mdstr))
+  return(list(eqa = eqa, eqm = eqm, ds = mdstr, wrkd = wrks))
 }
 
-
-## File path location of the data
-filepath1 <- "~/Documents/Data/parSAD_data2/"
 
 fzmod <- function(x){
   fz1 <- fitzipf_r(x)
@@ -177,46 +293,45 @@ fzmod <- function(x){
 }
 
 # Fit zipf RAD to eq abundances for random communities
-## Eliminate NAs
-eqabsA <- eqabs[!is.na(eqabs)]
-## fitting
-simfz <- lapply(eqabsA, function(x){x <- x[x > 0]; fitzipf_r(x)})
-plot(t(sapply(simfz, function(x) x@fullcoef)))    
-## Get R squared
-simR2 <- sapply(1:length(eqabsA), function(x) r2modified(sort(eqabsA[[x]][eqabsA[[x]] > 0],decreasing = T), radpred(simfz[[x]])$abund))
-sapply(simfz[which(simR2 > 0.9)], function(x) x@fullcoef)
+filepath1 <- "~/Documents/Data/parSAD_data/"
+st1 <- Sys.time()
+psd1 <- get_dat(filepath1)
+st2 <- Sys.time()
+st2-st1
 
-
-# Fit zipf RAD to eq abundances for hub-like communities
-## fitting to all non-null return communities
-simfzhub <- lapply(eqabs2[!sapply(eqabs2, is.null)], function(x){x <- x[x > 0]; fitzipf_r(x)})
-## Get R squared
-simR2hub <- sapply(1:length(eqabs2[!sapply(eqabs2, is.null)]), function(x) r2modified(sort(eqabs2[!sapply(eqabs2, is.null)][[x]][eqabs2[!sapply(eqabs2, is.null)][[x]] > 0],decreasing = T), radpred(simfzhub[[x]])$abund))
-hist(simR2hub)
+fzd1 <- t(sapply(psd2$eqa, fzmod))
 
 # Fit zipf RAD to random communities with varying pars
-sim2fz <- lapply(eqabs3[!sapply(eqabs3, is.null)], function(x){x <- x[x >0]; fitzipf_r(x)})
-plot(t(sapply(sim2fz, function(x) x@fullcoef)))    
-## Get R squared
-sim2R2 <- sapply(1:length(eqabs3[!sapply(eqabs3, is.null)]), function(x){r2modified(sort(eqabs3[!sapply(eqabs3, is.null)][[x]][eqabs3[!sapply(eqabs3, is.null)][[x]] > 0],decreasing = T), radpred(sim2fz[[x]])$abund)})
-hist(sim2R2)
+filepath2 <- "~/Documents/Data/parSAD_data2/"
+st1 <- Sys.time()
+psd2 <- get_dat(filepath2)
+st2 <- Sys.time()
+st2-st1
+
+fzd2 <- t(sapply(psd2$eqa, fzmod))
+fzd2b <- t(sapply(psd2$eqa, function(x) fzmod(x/sum(x))))
+# Fit zipf RAD to eq abundances for hub-like communities
+
+filepath2 <- "~/Documents/Data/parSADhub_data/"
+st1 <- Sys.time()
+psd3 <- get_dat(filepath1)
+st2 <- Sys.time()
+st2-st1
+
+fzd3 <- t(sapply(psd3$eqa, fzmod))
 
 # Compute connectance of equilibrium matrices
 ## Randoms
-conn1 <- sapply(eqmat[!is.na(eqabs)], function(x) sum(x$num)/(x$N[1] *x$N[1]))
-## Hubs
-conn2 <- sapply(eqmat2[!is.na(eqabs2)], function(x) sum(x$num)/(x$N[1] *x$N[1]))
+conn1 <- sapply(psd1$eqa, function(x) sum(x$num)/(x$N[1] *x$N[1]))
 ## Randoms with diff pars
-conn3 <- sapply(eqmat3[!sapply(eqabs3, is.null)], function(x) sum(x$num)/(x$N[1] *x$N[1]))
+conn2 <- sapply(psd2$eqa, function(x) sum(x$num)/(x$N[1] *x$N[1]))
+## Hubs
+conn3 <- sapply(psd3$eqa, function(x) sum(x$num)/(x$N[1] *x$N[1]))
 ## Plotting fitted pars against connectance 
 plot(conn1[!is.na(eqabs)], sapply(simfz, function(x) x@coef))
 plot(conn2, sapply(simfzhub, function(x) x@coef)[!is.na(eqabs2)])
 
 
-# Get vector of fitted par (s) for random dat
-s.val <- sapply(simfz, function(x) x@coef)
-s.val2 <- sapply(simfzhub, function(x) x@coef)
-s.val3 <- sapply(sim2fz, function(x) x@coef)
 # Get matrix of all fitted pars for random, hub, and real comms
 fitpars <- rbind(cbind(t(sapply(simfz, function(x) x@fullcoef)),typ = 1, r2 = simR2),
                  cbind(t(sapply(simfzhub, function(x) x@fullcoef)),typ = 2, r2 = simR2hub),
@@ -238,7 +353,7 @@ ggplot(data.frame(fitpars), aes(x = N, y = s, col = factor(typ), alpha = r2)) + 
 
 eqa <- eqabs3[!sapply(eqabs3, is.null)]
 eqm <- eqmat3[!sapply(eqabs3, is.null)]
-prepdat <- function(eqa, eqm, svals, sr2){
+prepdat <- function(eqa, eqm, svals, sr2, d){
   Nspp <- sapply(eqa, length)
   conn <- sapply(eqm, function(x) sum(x$num)/(x$N[1] *x$N[1]))
   
@@ -253,21 +368,45 @@ prepdat <- function(eqa, eqm, svals, sr2){
   allint <- cbind(int1, int3, p2)
   colnames(allint) <- c("aN", "coN", "cpN", "mN", "pN", "aS", "coS", "cpS", "mS", "pSn", "pSp")
   # put ints and fitted par into one dataframe
-  dat <- data.frame(sV = svals, sR = sr2, allint, Nsp = Nspp, C = conn, D = dstr)
+  dat <- data.frame(sV = unlist(svals), sR = unlist(sr2), allint, Nsp = Nspp, C = conn, D = d)
   
   return(dat)
 }
 
 
-pdat <- prepdat(eqa = eqa, eqm = eqm, svals = s.val3, sr2 = sim2R2)
-subdat <- pdat[iconn2[!sapply(eqabs3, is.null)],]
-fit.init <- (lm(sV~Nsp+C+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat))
-fit.init.ints <- (lm(sV~Nsp+C+aN*aS+coN*coS+cpN*cpS+mN*mS+pN*pSn+pSp+pN:pSp, data = pdat[iconn2[!sapply(eqabs3, is.null)],], na.action = "na.fail"))
+pdat <- prepdat(eqa = psd2$eqa, eqm = psd2$eqm, svals = fzd2[,"s"], sr2 = fzd2[,"r2"], d = psd2$ds)
+pdat$abs <- sapply(psd2$eqa, sum)
+subdat <- apply(pdat[,-c(1,2)], 2, function(x){(x - mean(x))/sd(x)})
+subdat <- data.frame(pdat[,c(1,2)], subdat)
+fit.init <- (lm(sV~Nsp+C+D+abs+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat))
+fit.init2 <- (lm(sV~Nsp+C+D+abs+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat[psd2$wrkd > 3500 & psd2$wrkd < 4501,]))
 summary(fit.init)
+summary(fit.init2)
+
+fit.init.ints <- (lm(sV~Nsp+C+aN*aS+coN*coS+cpN*cpS+mN*mS+pN*pSn+pSp+pN:pSp, data = pdat, na.action = "na.fail"))
+fit.init.ints2 <- (lm(sV~Nsp+C+aN*aS+coN*coS+cpN*cpS+mN*mS+pN*pSn+pSp+pN:pSp, data = subdat[psd2$wrkd > 3500 & psd2$wrkd < 4501,], na.action = "na.fail"))
+summary(fit.init.ints)
+summary(fit.init.ints2)
+
+
+fit.sr <- (betareg(sR~Nsp+C+D+abs+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat[psd2$wrkd > 3500 & psd2$wrkd < 4501,]))
+fit.sr2 <- (betareg(sR~Nsp+C+D+abs+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat[psd2$wrkd > 3500 & psd2$wrkd < 4501,]))
+summary(fit.sr)
+summary(fit.sr2)
+
+head(pdat)
+df1 <- data.frame(sv = pdat$sV, r2 = pdat$sR, select(pdat, aN:pSp), select(pdat, C:D))
+head(df1)
+sam <- sample(1:nrow(df1), 100)
+fit1 <- (lm(sv~aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp+C+D, data = df1[-sam,]))
+plot(predict(fit1, df1[sam,]),df1[sam, ]$sv, ylim = c(.8,1), xlim = c(.8,1))
 
 DAAG::cv.lm(data = subdat, form.lm = fit.init, m = 3)
 
-mse.init <- sum((fitted(fit.init) - pdat$sV[iconn2[!sapply(eqabs3, is.null)]])^2)
+mse.init <- sum((fitted(fit.init) - pdat$sV)^2)
+mse.init2 <- sum((fitted(fit.init2) - subdat$sV)^2)
+mse.init3 <- sum((fitted(fit.init.ints) - pdat$sV)^2)
+mse.init4 <- sum((fitted(fit.init.ints2) - subdat$sV)^2)
 
 head(MuMIn::dredge(fit.init.ints))
 predict(fit.init, newdata = pdat[iconn2[!sapply(eqabs3, is.null)],][pdat[iconn2[!sapply(eqabs3, is.null)],],])
