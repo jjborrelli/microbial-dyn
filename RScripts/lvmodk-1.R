@@ -96,15 +96,7 @@ fill_mats <- function(mats, sdevp = .5, sdevn = 1){
 #################################################################################################
 
 
-multityp <- lapply(1:5, function(x){
-  S <- 50
-  p1 <- runif(1,0,1)
-  p2 <- runif(1, p1, 1)
-  c1 <- runif(1, .1, .3)
-  mats <- get.adjacency(erdos.renyi.game(S, c1, "gnp", directed = F), sparse = F)
-  tat <- mats*sample(c(-1,1,0), length(mats), replace = T, prob = c(p1,p2-p1,1-(p2)))
-  return((tat))
-})
+
 
 multihub <- lapply(1:5, function(x){
   S = 500
@@ -117,20 +109,41 @@ multihub <- lapply(1:5, function(x){
   return((tat))
 })
 
+
+multityp <- lapply(1:15, function(x){
+  S <- 1000
+  p1 <- runif(1,0,1)
+  p2 <- runif(1, p1, 1)
+  c1 <- runif(1, .1, .3)
+  mats <- get.adjacency(erdos.renyi.game(S, c1, "gnp", directed = F), sparse = F)
+  tat <- mats*sample(c(-1,1,0), length(mats), replace = T, prob = c(p1,p2-p1,1-(p2)))
+  return((tat))
+})
+
 multityp.fill <- fill_mats(multityp, sdevn = -2, sdevp = 1)
-multihub.fill <- fill_mats(multihub, sdevn = -2, sdevp = 1)
+#multihub.fill <- fill_mats(multihub, sdevn = -2, sdevp = 1)
 
 dfin <- list()
 dfin2 <- list()
-for(i in 1:5){
+for(i in 1:15){
   diag(multityp.fill[[i]]) <- (runif(nrow(multityp.fill[[i]]), -5, 0))
-  par1 <- list(alpha = runif(nrow(multityp.fill[[i]]), 0,1), m = multityp.fill[[i]], K = 1000)
-  dyn <- ode(runif(nrow(multityp.fill[[i]]),1,200), times = 1:100, func = lvmodK, parms = par1, events = list(func = ext2, time =  1:100))
+  par1 <- list(alpha = runif(nrow(multityp.fill[[i]]), 0,.1), m = multityp.fill[[i]], K = 20)
+  dyn <- ode(runif(nrow(multityp.fill[[i]]),.01,.05), times = 1:1000, func = lvmodK, parms = par1, events = list(func = ext1, time =  1:1000))
   matplot(dyn[,-1], typ = "l", main = i)
   if(nrow(dyn) == 1000){dfin[[i]] <- dyn[1000,-1]}else{dfin[[i]] <- NA}
   if(nrow(dyn) == 1000){dfin2[[i]] <- apply(dyn[,-1], 2, mean)}else{dfin2[[i]] <- NA}
 }
 
+eqa <- sapply(dfin[!is.na(dfin)], function(x) sort(x[x!=0], decreasing = T))
+eqm <- lapply((1:15)[!is.na(dfin)], function(x) multityp.fill[[x]][dfin[[x]] !=0, dfin[[x]]!=0])
+eqm1 <- lapply(eqm, itystr)
+eqm1 <- lapply(1:length(eqm1), function(x) data.frame(eqm1[[x]], N = nrow(eqm[[x]])))
+dstr <- sapply(eqm, function(x) mean(diag(x)))
+fzN <- t(sapply(eqa, fzmod))
+
+testdat <- data.frame(prepdat(eqa, eqm1, fzN[,"s"], fzN[,"r2"], dstr), abs = sapply(eqa, sum))
+predict(fit.init, testdat)
+testdat$sV
 
 dfinA <- list()
 dfinA2 <- list()
