@@ -138,6 +138,12 @@ gav1 <- apply(otu3, 2, get_abundvec, N = 77)
 gavfz1 <- t(sapply(gav1, fzmod))
 plot(unlist(gavfz1[,"N"]),unlist(gavfz1[,"s"]))
 
+gavfg1 <- t(sapply(gav1, fzmod2, rad = "gs"))
+
+
+gav.alt <- apply(otu3[,which(apply(otu3, 2, sum) > 20000)], 2, get_abundvec)
+sapply(gav.alt, vegan::diversity)
+plot(unlist(t(sapply(gav.alt, fzmod))[,"s"]),unlist(gavfz1[which(apply(otu3, 2, sum) > 20000), "s"]))
 ## Check if sampling effort has an effect on s
 ### use resampling method to standardize # of reads
 
@@ -173,12 +179,13 @@ dt2 <- do.call(rbind, dt2)
 
 ##################################################################
 ## Standardize reads to X
-X <- 100
+X <- 2000
 
 gav1 <- apply(otu3, 2, get_abundvec, N = X)
 gavfz1 <- t(sapply(gav1, fzmod))
-s.hmp <- unlist(gavfz1[,"s"])
-n.hmp <- unlist(gavfz1[,"N"])
+s.hmp <- unlist(gavfz1[,"s"])[which(apply(otu3, 2, sum) > X)]
+n.hmp <- unlist(gavfz1[,"N"])[which(apply(otu3, 2, sum) > X)]
+r2.hmp <- unlist(gavfz1[,"r2"])[which(apply(otu3, 2, sum) > X)]
 
 gavt <-  apply(otuT[,-1], 1, get_abundvec, N = X)
 fzT <- lapply(gavt, function(x) fzmod(sort(x)))
@@ -199,24 +206,25 @@ dt2 <- do.call(rbind, dt2)
 
 allfit <- data.frame(s = c(fzT$s, fzT2$s, dt1$s, dt2$s, s.hmp),
                      N = c(fzT$N, fzT2$N, dt1$N, dt2$N, n.hmp),
-                     r2 = c(fzT$r2, fzT2$r2, dt1$r2, dt2$r2, unlist(gavfz1[,"r2"])),
+                     r2 = c(fzT$r2, fzT2$r2, dt1$r2, dt2$r2, r2.hmp),
                      dat = rep(c("M3", "F4", "DT1", "DT2", "HMP"), c(length(fzT$s),length(fzT2$s), length(dt1$s), length(dt2$s), length(s.hmp))))
 
 
+ggplot(allfit, aes(x = N, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw()
 ggplot(allfit, aes(x = r2, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw()
 #plot(c(fzT$s, fzT2$s, s.hmp)~c(fzT$N, fzT2$N, n.hmp), col = rep(c(1,2,3), c(length(fzT$s),length(fzT2$s),length(s.hmp))))
 
 
 #########################
-gavsim <- lapply(psd2$eqa, get_abundvec, 100)
+gavsim <- lapply(psd2$eqa, get_abundvec, X)
 simfz1 <- lapply(gavsim, function(x) fzmod(sort(x)))
 simfz1 <- do.call(rbind, simfz1)
 
-gavsim2 <- lapply(psd1$eqa, function(x) get_abundvec(x[x>0],N =100))
+gavsim2 <- lapply(psd1$eqa, function(x) get_abundvec(x[x>0], N = X))
 simfz2 <- lapply(gavsim2, function(x) fzmod(sort(x)))
 simfz2 <- do.call(rbind, simfz2)
 
-gavsim3 <- lapply(psd3$eqa, function(x) get_abundvec(x[x>0],N =100))
+gavsim3 <- lapply(psd3$eqa, function(x) get_abundvec(x[x>0], N = X))
 simfz3 <- lapply(gavsim3, function(x) fzmod(sort(x)))
 simfz3 <- do.call(rbind, simfz3)
 
@@ -225,7 +233,7 @@ ggplot(simfz1[psd2$wrkd > 3500 & psd2$wrkd < 4501,], aes(x = N, y = s)) + geom_p
 
 allfit <- data.frame(s = c(fzT$s, fzT2$s, dt1$s, dt2$s, s.hmp, simfz1$s, simfz2$s, simfz3$s),
                      N = c(fzT$N, fzT2$N, dt1$N, dt2$N, n.hmp, simfz1$N, simfz2$N, simfz3$N),
-                     r2 = c(fzT$r2, fzT2$r2, dt1$r2, dt2$r2, unlist(gavfz1[,"r2"]), simfz1$r2, simfz2$r2, simfz3$r2),
+                     r2 = c(fzT$r2, fzT2$r2, dt1$r2, dt2$r2, r2.hmp, simfz1$r2, simfz2$r2, simfz3$r2),
                      dat = rep(c("M3", "F4", "DT1", "DT2", "HMP", "sim", "sim2", "sim3"),
                                c(length(fzT$s),length(fzT2$s),length(dt1$s),length(dt2$s),length(s.hmp),nrow(simfz1), nrow(simfz2), nrow(simfz3))))
 
@@ -295,17 +303,18 @@ get_dat <- function(fpath, connected = TRUE){
 }
 
 
-fzmod <- function(x, rad = "zipf"){
+fzmod2 <- function(x, rad = "zipf"){
   rad1 <- paste("fit", rad, "_r", sep = "")
   rfit <- get(rad1)
   
   fz1 <- rfit(x)
   fc1 <- fz1@fullcoef
-  nll <- fz1@minuslogl(N = fz1@fullcoef[1], s = fz1@fullcoef[2])
+  nll <- fz1@minuslogl(fz1@fullcoef[1], fz1@fullcoef[2])
   r2 <- r2modified(sort(x, decreasing = T), radpred(fz1)$abund)
   
   return(data.frame(t(fc1), nll, r2))
 }
+
 
 # Fit zipf RAD to eq abundances for random communities
 filepath1 <- "~/Documents/Data/parSAD_data/"
@@ -396,20 +405,28 @@ pdat2$abs <- sapply(psd2$eqa, max)
 
 subdat <- apply(pdat2[,-c(1,2)], 2, function(x){(x - mean(x))/sd(x)})
 subdat <- data.frame(pdat2[,c(1,2)], subdat)
-fit.init <- (lm(sV~C+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2[-78,]))
-fit.init2 <- (lm(sV~Nsp+C+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat[inrange,]))
+fit.init <- (lm(sV~C+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2))
+fit.init2 <- (lm(sV~Nsp+C+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2[inrange,]))
 summary(fit.init)
 summary(fit.init2)
 
-rem <- sample(1:nrow(pdat2[pdat2$sR > 0.8,]), 100)
+rem <- sample(1:nrow(pdat2[inrange,][pdat2$sR[inrange] > 0.8,]), 100)
 diff1 <- c()
+diff2<- c()
+
 for(i in 1:100){
   fit.init <- (lm(sV~C+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2[pdat2$sR > 0.8,][-rem[i],]))
   
   diff1[i] <- (pdat2[pdat2$sR > 0.8,][rem[i],]$sV - predict(fit.init, pdat2[pdat2$sR > 0.8,][rem[i],]))/pdat2[pdat2$sR > 0.8,][rem[i],]$sV
+  
+  fit.init2 <- (lm(sV~C+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2[inrange,][pdat2$sR[inrange] > 0.8,][-rem[i],]))
+  
+  #l1[i] <- (pdat2[inrange,][pdat2$sR[inrange] > 0.8,][-rem[i],]$sV)
+  #l2[i] <- predict(fit.init2, pdat2[inrange,][pdat2$sR[inrange] > 0.8,][-rem[i],])
+  diff2[i] <- (pdat2[inrange,][pdat2$sR[inrange] > 0.8,][rem[i],]$sV - predict(fit.init2, pdat2[inrange,][pdat2$sR[inrange] > 0.8,][rem[i],]))/pdat2[inrange,][pdat2$sR[inrange] > 0.8,][rem[i],]$sV
 }
 hist(diff1)
-
+hist(diff2)
 
 fit.init.ints <- (lm(sV~Nsp+C+aN*aS+coN*coS+cpN*cpS+mN*mS+pN*pSn+pSp+pN:pSp, data = pdat, na.action = "na.fail"))
 fit.init.ints2 <- (lm(sV~Nsp+C+aN*aS+coN*coS+cpN*cpS+mN*mS+pN*pSn+pSp+pN:pSp, data = subdat[psd2$wrkd > 3500 & psd2$wrkd < 4501,], na.action = "na.fail"))
@@ -447,15 +464,15 @@ library(MASS)
 library(rpart)
 pdat2 <- data.frame(pdat2, inrange)
 pdat2$inrange <- inrange
-s1 <-sample(1:nrow(pdat2[pdat2$sR > 0.8,]), 20)
-fitra <- glm(inrange~C+aN+aS+coN+coS+cpN+cpS+mN+mS+pN+pSn+pSp, data = pdat2, family = "binomial")
-fitra2 <- glm(inrange~C+cpN+mS+pSp, data = pdat2[pdat2$sR > 0.7,], family = "binomial")
+s1 <-sample(1:nrow(pdat2[pdat2$sR > 0.8,]), 100)
+fitra <- glm(inrange~Nsp+C+aN+aS+coN+coS+cpN+cpS+mN+mS+pN+pSn+pSp, data = pdat2, family = "binomial")
+fitra2 <- glm(inrange~Nsp+C+cpN+mS+pSp, data = pdat2[pdat2$sR > 0.7,], family = "binomial")
 summary(fitra)
-DAAG::cv.binary(fitra)
+DAAG::cv.binary(fitra2)
 
 flda <- (lda(inrange~C+aN+aS+coN+coS+cpN+cpS+mN+mS+pN+pSn+pSp, data = pdat2[pdat2$sR > 0.8,][-s1,]))
-predict(flda, pdat2[pdat2$sR > 0.8,][s1,])
-
+predict(flda, pdat2[pdat2$sR > 0.8,][s1,])$class
+pdat2[pdat2$sR > 0.8,][s1,]$inrange
 rfit <- rpart(inrange~C+aN+aS+coN+coS+cpN+cpS+mN+mS+pN+pSn+pSp, data = pdat2[-s1,], method = "class")
 plot(rfit)
 text(rfit)
