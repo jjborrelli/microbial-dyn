@@ -103,7 +103,7 @@ rad_info <- function(dfin, multityp.fill, thres = 5){
   eqm1 <- lapply(eqm, itystr)
   eqm1 <- lapply(1:length(eqm1), function(x) data.frame(eqm1[[x]], N = nrow(eqm[[x]])))
   dstr <- sapply(eqm, function(x) mean(diag(x)))
-  eqa2 <- lapply(eqa, get_abundvec, 100)
+  eqa2 <- lapply(eqa, get_abundvec, 2000)
   fzN <- t(sapply(eqa2[sapply(eqa2, length) > thres], fzmod))
   
   testdat <- data.frame(prepdat(eqa2[sapply(eqa2, length) > thres], eqm1[sapply(eqa2, length) > thres], fzN[,"s"], fzN[,"r2"], dstr[sapply(eqa2, length) > thres]), abs = sapply(eqa2, sum)[sapply(eqa2, length) > thres])
@@ -124,8 +124,8 @@ multihub <- lapply(1:5, function(x){
 })
 
 
-multityp <- lapply(1:500, function(x){
-  S <- 200
+multityp <- lapply(1:100, function(x){
+  S <- 1000
   p1 <- runif(1,0,1)
   p2 <- runif(1, p1, 1)
   c1 <- runif(1, .1, .3)
@@ -134,8 +134,8 @@ multityp <- lapply(1:500, function(x){
   return((tat))
 })
 
-multityp.fill <- fill_mats(multityp, sdevn = -2, sdevp = 2)
-multityp.fill <- append(multityp.fill, multityp.fill)
+multityp.fill <- fill_mats(multityp, sdevn = -1, sdevp = 1)
+#multityp.fill <- append(multityp.fill, multityp.fill)
 #multihub.fill <- fill_mats(multihub, sdevn = -2, sdevp = 1)
 s1 <- Sys.time()
 dfin <- list()
@@ -147,18 +147,19 @@ for(i in 1:100){
   #if(i < 501){
   #  diag(multityp.fill[[i]]) <- -2#(runif(nrow(multityp.fill[[i]]), sample(c(-1,-2,-3),1), 0))
   #}else{
-    diag(multityp.fill[[i]]) <- (runif(nrow(multityp.fill[[i]]), sample(c(-1,-2,-3),1), 0))
+    diag(multityp.fill[[i]]) <- (runif(nrow(multityp.fill[[i]]), -2, -1))
   #}
   #diag(multityp.fill[[i]]) <- (runif(nrow(multityp.fill[[i]]), sample(c(-1,-2,-3),1), 0))
-  par1 <- list(alpha = runif(nrow(multityp.fill[[i]]), 0,2), m = multityp.fill[[i]], K = 20)
-  dyn <- ode(runif(nrow(multityp.fill[[i]]),.01,.05), times = 1:2000, func = lvmodK2, parms = par1, events = list(func = ext1, time =  1:2000))
+  par1 <- list(alpha = runif(nrow(multityp.fill[[i]]), 0,.2), m = multityp.fill[[i]], K = 200)
+  dyn <-(ode(runif(nrow(multityp.fill[[i]]),1,5), times = 1:1000, func = lvmodK2, parms = par1, events = list(func = ext1, time =  1:1000)))
+  
   matplot(dyn[,-1], typ = "l", main = i)
-  if(nrow(dyn) == 2000){
-    dfin[[i]] <- dyn[2000,-1]
+  if(nrow(dyn) == 1000){
+    dfin[[i]] <- dyn[1000,-1]
     dfin2[[i]] <- dyn[10,-1]
     dfin3[[i]] <- dyn[50,-1]
     dfin4[[i]] <- dyn[100,-1]
-    cv[[i]] <- sd(apply(dyn[1900:2000,-1], 1, function(x) mean(x[x>0])))/mean(apply(dyn[1900:2000,-1], 1, function(x) mean(x[x>0])))
+    cv[[i]] <- sd(apply(dyn[900:1000,-1], 1, function(x) mean(x[x>0])))/mean(apply(dyn[900:1000,-1], 1, function(x) mean(x[x>0])))
   }else{
     dfin[[i]] <- NA
     dfin2[[i]] <- NA
