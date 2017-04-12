@@ -128,7 +128,7 @@ get_eq <- function(mats, times, INTs, Rmax = 1, Kval = 20, Ki = "val"){
 }
 
 get_eq1 <- function(mat, times, Rmax = 1, Kval = 20, Ki = "val"){
-  gr <- runif(nrow(mat), .1, Rmax)
+  gr <- runif(nrow(mat), 0, Rmax)
   
   if(Ki == "rand"){
     rK <- rlnorm(nrow(t1))
@@ -202,23 +202,24 @@ t1-t0
 
 t2 <- Sys.time()
 #filepath1 <- "~/Documents/Data/"
-filepath1 <- "D:/jjborrelli/parSAD_data/"
+filepath1 <- "D:/jjborrelli/parSAD_data2/"
 
 cl <- makeCluster(detectCores() - 1)
 clusterExport(cl, c("filepath1", "lvmodK", "lvmodK2", "ext1", "get_eq1", "fill_mat"))
 registerDoSNOW(cl)
 
-foreach(x = c(1181,1240,1542,1671), .packages = c("deSolve", "R.utils", "igraph")) %dopar% {
+foreach(x = 3501:4500, .packages = c("deSolve", "R.utils", "igraph")) %dopar% {
   S <- sample(seq(500, 1000, 100), 1)
   p1 <- runif(1,0,1)
   p2 <- runif(1, p1, 1)
   c1 <- runif(1, .1, .3)
   mats <- get.adjacency(erdos.renyi.game(S, c1, "gnp", directed = F), sparse = F)
   multityp <- mats*sample(c(-1,1,0), length(mats), replace = T, prob = c(p1,p2-p1,1-(p2)))
-  multityp.fill <- fill_mat(multityp, sdevp = .5, sdevn = 2)
-  #geq1 <- evalWithTimeout(get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = 1), timeout = 120, onTimeout = "warning")
-  geq1 <- get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = 1)
-  #if(is.character(geq1)){geq1 <- NA}
+  multityp.fill <- fill_mat(multityp, sdevp = 1, sdevn = 1)
+  diag(multityp.fill) <- runif(length(diag(multityp.fill)), -2, 0)
+  geq1 <- evalWithTimeout(get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = .1), timeout = 120, onTimeout = "warning")
+  #geq1 <- get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = 1)
+  if(is.character(geq1)){geq1 <- NA}
   saveRDS(geq1, file = paste(filepath1, "ge", x, ".rds", sep = ""))
   saveRDS(multityp.fill, file = paste(filepath1, "mat", x, ".rds", sep = "")) 
   # return(geq1)
@@ -229,7 +230,10 @@ stopCluster(cl)
 t3 <- Sys.time()
 t3 - t2
 
-
+# 1:1500, diag = -5, r = 0.1 (all), sdp = .5, sdn = 2
+# 1501:2500, diag = -5, r = 0:0.1, sdp = .5, sdn = 2
+# 2501:3500, diag = -2, r = 0:0.1, sdp = .5, sdn = 2
+# 3501:4500, diag = -2, r = 0:0.1, sdp = 1, sdn = 1
 
 
 t4 <- Sys.time()
@@ -240,7 +244,7 @@ cl <- makeCluster(detectCores() - 1)
 clusterExport(cl, c("filepath2", "lvmodK", "lvmodK2", "ext1", "get_eq1", "fill_mat"))
 registerDoSNOW(cl)
 
-foreach(x = 992, .packages = c("deSolve", "R.utils", "igraph")) %dopar% {
+foreach(x = c(1643,1776), .packages = c("deSolve", "R.utils", "igraph")) %dopar% {
   S <- sample(seq(500, 1000, 100), 1)
   p1 <- runif(1,0,1)
   p2 <- runif(1, p1, 1)
@@ -263,7 +267,7 @@ t5 <- Sys.time()
 t5 - t4
 
 fna <- c()
-for(x in 1:1000){
+for(x in 1:2000){
   fna[x] <- paste("HUBge", x, ".rds", sep = "")
 }
 which(!fna %in% list.files(filepath2))
