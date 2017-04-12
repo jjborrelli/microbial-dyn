@@ -1,17 +1,58 @@
-load("~/Downloads/sim.Rdata")
+library(vegan)
+library(sads)
 
 ############################################################################################################
 ############################################################################################################
 ############################################################################################################
-x <- fill_mat(tat)
 
+# Yingnan's modifief fitting function for the zipf dist RAD
+fitzipf_r <- function(x, N, trunc, start.value, upper = 20, ...){
+  if (any(x <= 0)) stop ("All x must be positive")
+  if(class(x)!="rad") rad.tab <- rad(x)
+  else rad.tab <- x
+  # y <- rep(rad.tab$rank, rad.tab$abund)
+  dots <- list(...)
+  if (!missing(trunc)){
+    if (min(rad.tab$rank)<=trunc) stop("truncation point should be lower than the lowest rank") #
+  }
+  if(missing(N)){
+    N <- max(rad.tab$rank) #
+  }
+  if(missing(start.value)){
+    p <- rad.tab$abund/sum(rad.tab$abund)
+    lzipf <- function(s, N) -s*log(1:N) - log(sum(1/(1:N)^s))
+    opt.f <- function(s) sum((log(p) - lzipf(s, length(p)))^2)
+    opt <- optimize(opt.f, c(0.5, length(p)))
+    sss <- opt$minimum
+  }
+  else{
+    sss <- start.value
+  }
+  if(missing(trunc)){
+    LL <- function(N, s) -sum(rad.tab$abund*dzipf(rad.tab$rank, N=N, s=s, log = TRUE)) #
+  }
+  else{
+    LL <- function(N, s) -sum(rad.tab$abund*dtrunc("zipf", x = rad.tab$rank, coef = list(N = N, s = s), trunc = trunc, log = TRUE)) #
+  }
+  result <- do.call("mle2", c(list(LL, start = list(s = sss), data = list(x = rad.tab$rank), fixed=list(N=N), method = "Brent", lower = 0, upper = upper), dots))
+  if(abs(as.numeric(result@coef) - upper) < 0.001)
+    warning("mle equal to upper bound provided. \n Try increase value for the 'upper' argument")
+  new("fitrad", result, rad="zipf", distr = "zipf of relative abundance", trunc = ifelse(missing(trunc), NaN, trunc), rad.tab=rad.tab)
+}
+
+# Function to get interaction numbers and strengths for a given community
 itystr <- function(x){
+  if(sum(x) == 0){
+    return(data.frame(typ = c("amensalism", "commensalism", "competition", "mutualism", "predation"), 
+                      num = c(0,0,0,0,0), m1 = c(0,0,0,0,0), m2 = c(0,0,0,0,0)))
+  }
+  
   i1 <- x[upper.tri(x)]
   i2 <- t(x)[upper.tri(x)] 
   
   nonI <- i1 == 0 & i2 == 0
   
-  ints <- cbind(i1 = apply(cbind(i1, i2), 1, max), i2 = apply(cbind(i1, i2), 1, min))[!nonI,]
+  ints <- cbind(i1 = apply(cbind(i1, i2), 1, max), i2 = apply(cbind(i1, i2), 1, min))#[!nonI,]
   
   inty <- vector(length = nrow(ints))
   
@@ -20,102 +61,43 @@ itystr <- function(x){
   inty[ints[,1] > 0 & ints[,2] < 0 | ints[,1] < 0 & ints[,2] > 0] <- "predation"
   inty[ints[,1] < 0 & ints[,2]  == 0 | ints[,1] == 0 & ints[,2] < 0] <- "amensalism"
   inty[ints[,1] > 0 & ints[,2]  == 0 | ints[,1] == 0 & ints[,2] > 0] <- "commensalism"
+  inty[ints[,1] == 0 & ints[,2] == 0] <- "none"
   
-  df1 <- data.frame(ints, inty)
+  df1 <- data.frame(ints, inty)[inty != "none",]
   
   num <- vector(length = 5, mode = "numeric")
   umu <- vector(length = 5, mode = "numeric")
   lmu <- vector(length = 5, mode = "numeric")
   
-  #mean(apply(df1[df1$inty == "amensalism",1:2], 1, function(x) (x[x < 0])))
-  #mean(apply(df1[df1$inty == "commensalism",1:2], 1, function(x) (x[x < 0])))
-  #mean(apply(df1[df1$inty == "competition",1:2], 1, function(x) (x[x < 0])))
-  #mean(apply(df1[df1$inty == "mutualism",1:2], 1, function(x) (x[x < 0])))
-  #mean(apply(df1[df1$inty == "predation",1:2], 1, function(x) (x[x < 0])))
-  
+
+  iL <- c("amensalism", "commensalism", "competition", "mutualism", "predation")
   num[iL %in% aggregate(df1$inty, list(df1$inty), length)$Group.1] <- aggregate(df1$inty, list(df1$inty), length)$x
   umu[iL %in% aggregate(df1$inty, list(df1$inty), length)$Group.1] <- aggregate(df1$i2, list(df1$inty), mean)$x
   lmu[iL %in% aggregate(df1$inty, list(df1$inty), length)$Group.1] <- aggregate(df1$i1, list(df1$inty), mean)$x
-  iL <- c("amensalism", "commensalism", "competition", "mutualism", "predation")
+  
   
   df2 <- data.frame(typ = iL, num = num, m1 = umu, m2 = lmu)
   
   return(df2)
 }
 
-############################################################################################################
-############################################################################################################
-############################################################################################################
 
-
-plot(hist(sort(ge.mult2$eqst[[1]], decreasing = T), plot = F)$counts)
-
-igraph::fit_power_law(hist(sort(ge.mult2$eqst[[1]], decreasing = T), plot = F)$counts)
-
-table(ge.mult2$eqst[[1]])
-
-fpl3[[1]]
-
-par(mfrow = c(5,5))
-for(i in 1:25){
-  plot(sort(ge.mult2$eqst[[i]], decreasing = T))
-  text(100,.1, label = sapply(fpl2,"[[",5))
+# My r2 function
+get_r2 <- function(o, p){
+  1 - sum((o-p)^2)/sum((o - mean(o))^2)
 }
 
-dev.off()
-
-
-plot(as.vector(table(ceiling(ge.mult2$eqst[[1]]/min(ge.mult2$eqst[[1]]))))~as.numeric(names(table(ceiling(ge.mult2$eqst[[1]]/min(ge.mult2$eqst[[1]]))))))
-hist(sort(ge.mult2$eqst[[1]], decreasing = T))
-
-
-length(ge.mult2$eqst[[]])
-p1 <- ge.mult2$eqst[[1]]/sum(ge.mult2$eqst[[1]])
-samp1 <- sample(1:327, 100000, prob = p1, replace = T)
-spp <- table(samp1)
-table(as.vector(spp))
-
-plot(as.vector(table(as.vector(table(samp1))))~as.numeric(names((table(as.vector(table(samp1)))))))
-par(mfcol = c(3,10))
-for(x in 1:10){
-  abund <- ge.mult2$eqst[[x]]#otu3[,x][otu3[,x] !=0]
-  r.ab <- signif(abund/sum(abund),6)
-  N = c(10^3, 5*10^3, 10^4, 5*10^4, 10^5)
-  t3 <- list()
-  for(i in 1:3){
-    samp2 <- sample(1:length(abund), N[i], replace = T, prob = r.ab)
-    t1 <- table(samp2)
-    t2 <- table(as.vector(t1))
-    plot(as.vector(t2)~as.numeric(names(t2)), main = N[i], xlab = "Abundance", ylab = "Freq")
+# Yingnan's modified r2 function
+r2modified <- function(x,y,log=FALSE){
+  if(log){
+    rm = 1-sum((log10(x)-log10(y))^2)/sum((log10(x)-mean(log10(x)))^2)
   }
+  else{
+    rm = 1-sum((x-y)^2)/sum((x-mean(x))^2)
+  }
+  return(rm)  
 }
 
-r.ab <- (otu3[,1][otu3[,1] !=0]/sum(otu3[,1][otu3[,1] !=0]))
-
-
-
-x <- 3
-abund <- otu3[,x][otu3[,x] !=0]
-r.ab <- abund/sum(abund)
-N = c(10^3, 5*10^3, 10^4, 5*10^4, 10^5)
-t3 <- list()
-par(mfrow = c(5,2))
-for(i in 1:10){
-  #s#amp2 <- sample(1:length(r.ab), N[i], replace = T, prob = r.ab)
-  #t1 <- table(samp2)
-  #t2 <- table(as.vector(t1))
-  t2 <- table(otu3[,i][otu3[,i] !=0])
-  plot(as.vector(t2)~as.numeric(names(t2)), main = N[i], xlab = "Abundance", ylab = "Freq", xlim = c(0,300))
-  
-  t3[[i]] <- as.numeric(t1)
-}
-
-dev.off()
-plot(r.ab[1:length(r.ab) %in% as.numeric(names(t1))], as.vector(t1)/sum(as.vector(t1)))
-  
-lapply(t3, fitsad, "pareto")
-
-## 
 
 get_abundvec <- function(abund, N = 10000){
   r.ab <- abund/sum(abund)
@@ -123,58 +105,10 @@ get_abundvec <- function(abund, N = 10000){
   t1 <- table(samp2)
   return(as.numeric(t1))
 }
-
-avec <- lapply(ge.hub3$eqst, get_abundvec)
-get_bestfit <- function(avec){
-  fits1 <- lapply(avec, fitsad, sad = "lnorm")
-  fits2 <- lapply(avec, fitsad, sad = "power")
-  fits3 <- lapply(avec, fitsad, sad = "powbend")
-  fits4 <- lapply(avec, fitsad, sad = "mzsm")
-  fits5 <- lapply(avec, fitsad, sad = "poilog")
-  fits6 <- lapply(avec, fitsad, sad = "bs")
-  fits7 <- lapply(avec, fitsad, sad = "ls")
-  fits8 <- lapply(avec, fitsad, sad = "weibull")
-  fit1 <- sapply(fits1, AIC)
-  fit2 <- sapply(fits2, AIC)
-  fit3 <- sapply(fits3, AIC)
-  fit4 <- sapply(fits4, AIC)
-  fit5 <- sapply(fits5, AIC)
-  fit6 <- sapply(fits6, AIC)
-  fit7 <- sapply(fits7, AIC)
-  fit8 <- sapply(fits8, AIC)
-  #sapply(fits5, function(x) c(coef(x), AICvol = AIC(x)))
-  t.wins <- table(apply(cbind(fit1, fit2, fit3, fit4, fit5, fit6, fit7, fit8), 1, 
-                        function(x){c("lnorm", "power", "powbend", "mzsm", "poilog", "bs", "ls", "weibull")[which.min(x)]}))
-  #tAIC <- cbind(fit1, fit2, fit3, fit4, fit5, fit6, fit7, fit8)
-  #colnames(tAIC) <- c("lnorm", "power", "powbend", "mzsm", "poilog", "bs", "ls", "weibull")
-  #return(tAIC)
-  return(t.wins)
-}
-
-gbf1m <- get_bestfit3(lapply(ge.mult$eqst, get_abundvec))
-gbf2m <- get_bestfit3(lapply(ge.mult2$eqst, get_abundvec))
-gbf3m <- get_bestfit3(lapply(sapply(ge.mult3$eqst, function(x) x[x > 0] ), get_abundvec))
-
-gbf1t <- get_bestfit3(lapply(ge.tat$eqst, get_abundvec))
-gbf2t <- get_bestfit3(lapply(ge.tat2$eqst, get_abundvec))
-gbf3t <- get_bestfit3(lapply(ge.tat3$eqst, get_abundvec))
-
-
-gbfh1 <- get_bestfit3(lapply(ge.hub$eqst, get_abundvec))
-gbfh2 <- get_bestfit3(lapply(ge.hub2$eqst, get_abundvec))
-gbfh3 <- get_bestfit3(lapply(ge.hub3$eqst, get_abundvec))
-
-boxplot(t(apply(gbf3, 1, function(x) x-min(x))))
-allgbfA <- rbind(cbind(melt(t(apply(gbf1, 1, function(x) x-min(x)))), typ = 1),
-      cbind(melt(t(apply(gbf2, 1, function(x) x-min(x)))), typ = 2),
-      cbind(melt(t(apply(gbf3, 1, function(x) x-min(x)))), typ = 3))
-ggplot(allgbfA, aes(x = Var2, y = value)) + geom_boxplot(aes(fill = factor(typ))) + facet_grid(~factor(typ))
-
-sad.mods <- c("bs","gamma","geom","lnorm","ls","mzsm","nbinom","pareto", "poilog","power", "powbend", "volkov","weibull")
-
-##################################################################
-##################################################################
-##################################################################
+############################################################################################################
+############################################################################################################
+############################################################################################################
+### Fit zipf RAD to HMP dataset
 
 otu2 <- read.csv("~/Desktop/otu_table_psn_v13.csv", row.names = 1)
 metadat <- read.csv("~/Desktop/v13_map_uniquebyPSN.csv")
@@ -183,132 +117,427 @@ stoolsamp <- which(metadat$HMPbodysubsite == "Stool")
 spptab <- colnames(otu2) %in% paste0("X",metadat[stoolsamp,]$SampleID)
 otu3 <- otu2[-which(rowSums(otu2[,spptab]) == 0),spptab]
 
-rad.fitted <- lapply(1:ncol(otu3), function(x) vegan::radfit(otu3[,x][otu3[,x] != 0]))
-rad.fitted2 <- lapply(1:ncol(otu3), function(x) vegan::radfit(sort(otu3[,x][otu3[,x] != 0], decreasing = T)[1:50]))
-plot(rad.fitted2[[1]])
-table(sapply(rad.fitted, function(x) which.min(sapply(x$models, AIC))))
-table(sapply(rad.fitted2, function(x) which.min(sapply(x$models, AIC))))
 
-apply(otu3, 2, function(x) sum(x != 0))
-nspp <- seq(10, 170, 10)
-res1 <- list()
-for(i in 1:length(nspp)){
-  rad.fitts <- lapply(1:ncol(otu3)[-c(184,166,165)], function(x) vegan::radfit(sort(otu3[,x][otu3[,x] != 0], decreasing = T)[1:nspp[i]]))
-  res1[[i]] <- table(sapply(rad.fitts, function(x) which.min(sapply(x$models, AIC))))
+fzotu <- lapply(1:ncol(otu3), function(x) fitzipf_r(otu3[,x][otu3[,x]!=0]/sum(otu3[,x][otu3[,x]!=0])))
+otuR2 <- sapply(1:ncol(otu3), function(x) r2modified(sort(otu3[,x][otu3[,x] != 0]/sum(otu3[,x][otu3[,x]!=0]), decreasing = T), radpred(fzotu[[x]])$abund))
+
+fzotu <- apply(otu3, 2, function(x) fzmod(sort(x[x>4]/sum(x[x>4]))))
+s.hmp <- (do.call(rbind, fzotu)$s)
+n.hmp <- (do.call(rbind, fzotu)$N)
+
+plot(t(sapply(fzotu, function(x) x@fullcoef)))
+hist(otuR2)
+
+gav <- apply(otu3, 2, get_abundvec, N= 400)
+gavfz <- t(sapply(gav, fzmod))
+plot(unlist(gavfz[,"N"]), unlist(gavfz[,"s"]))
+
+
+
+gav1 <- apply(otu3, 2, get_abundvec, N = 77)
+gavfz1 <- t(sapply(gav1, fzmod))
+plot(unlist(gavfz1[,"N"]),unlist(gavfz1[,"s"]))
+
+gavfg1 <- t(sapply(gav1, fzmod2, rad = "gs"))
+
+
+gav.alt <- apply(otu3[,which(apply(otu3, 2, sum) > 20000)], 2, get_abundvec)
+sapply(gav.alt, vegan::diversity)
+plot(unlist(t(sapply(gav.alt, fzmod))[,"s"]),unlist(gavfz1[which(apply(otu3, 2, sum) > 20000), "s"]))
+## Check if sampling effort has an effect on s
+### use resampling method to standardize # of reads
+
+otuT <- read.csv("Desktop/Archive/feces_M3_spp.csv")
+head(otuT)
+dim(otuT)
+
+fzT <- apply(otuT[,-1], 1, function(x) fzmod(sort(x[x!=0])))
+fzT <- do.call(rbind, fzT)
+plot(fzT$s~otuT[,1])
+plot(fzT$s~as.Date(as.character(otuT[,1]), format = "%m/%d/%y"), typ = "o")
+
+
+
+otuT2 <- read.csv("Desktop/Archive/feces_F4_spp.csv")
+fzT2 <- apply(otuT2[,-1], 1, function(x) fzmod(sort(x[x>0])))
+fzT2 <- do.call(rbind, fzT2)
+plot(fzT2$s~otuT2[,1])
+plot(fzT2$s~as.Date(as.character(otuT2[,1]), format = "%m/%d/%y"), typ = "o")
+
+
+
+dtgut1 <- read.csv("Desktop/Archive/dtgut1.csv")
+dt1 <- apply(dtgut1[complete.cases(dtgut1),-1], 1, function(x) fzmod(sort(x[x>0])))
+dt1 <- do.call(rbind, dt1)
+
+
+
+dtgut2 <- read.csv("Desktop/Archive/dtgut2.csv")
+dt2 <- apply(dtgut2[complete.cases(dtgut2),-1], 1, function(x) fzmod(sort(x[x>0])))
+dt2 <- do.call(rbind, dt2)
+
+
+##################################################################
+## Standardize reads to X
+X <- 2000
+
+gav1 <- apply(otu3, 2, get_abundvec, N = X)
+gavfz1 <- t(sapply(gav1, fzmod))
+s.hmp <- unlist(gavfz1[,"s"])[which(apply(otu3, 2, sum) > X)]
+n.hmp <- unlist(gavfz1[,"N"])[which(apply(otu3, 2, sum) > X)]
+r2.hmp <- unlist(gavfz1[,"r2"])[which(apply(otu3, 2, sum) > X)]
+
+gavt <-  apply(otuT[,-1], 1, get_abundvec, N = X)
+fzT <- lapply(gavt, function(x) fzmod(sort(x)))
+fzT <- do.call(rbind, fzT)
+
+gavt2 <-  apply(otuT2[,-1], 1, get_abundvec, N = X)
+fzT2 <- lapply(gavt, function(x) fzmod(sort(x)))
+fzT2 <- do.call(rbind, fzT2)
+
+gavdt <-  apply(dtgut1[complete.cases(dtgut1),-1], 1, get_abundvec, N = X)
+dt1 <- lapply(gavdt, function(x) fzmod(sort(x)))
+dt1 <- do.call(rbind, dt1)
+
+gavdt2 <-  apply(dtgut2[complete.cases(dtgut2),-1], 1, get_abundvec, N = X)
+dt2 <- lapply(gavdt2, function(x) fzmod(sort(x)))
+dt2 <- do.call(rbind, dt2)
+##################################################################
+
+allfit <- data.frame(s = c(fzT$s, fzT2$s, dt1$s, dt2$s, s.hmp),
+                     N = c(fzT$N, fzT2$N, dt1$N, dt2$N, n.hmp),
+                     r2 = c(fzT$r2, fzT2$r2, dt1$r2, dt2$r2, r2.hmp),
+                     dat = rep(c("M3", "F4", "DT1", "DT2", "HMP"), c(length(fzT$s),length(fzT2$s), length(dt1$s), length(dt2$s), length(s.hmp))))
+
+
+ggplot(allfit, aes(x = N, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw()
+ggplot(allfit, aes(x = r2, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw()
+#plot(c(fzT$s, fzT2$s, s.hmp)~c(fzT$N, fzT2$N, n.hmp), col = rep(c(1,2,3), c(length(fzT$s),length(fzT2$s),length(s.hmp))))
+
+
+#########################
+gavsim <- lapply(psd2$eqa, get_abundvec, X)
+simfz1 <- lapply(gavsim, function(x) fzmod(sort(x)))
+simfz1 <- do.call(rbind, simfz1)
+
+gavsim2 <- lapply(psd1$eqa, function(x) get_abundvec(x[x>0], N = X))
+simfz2 <- lapply(gavsim2, function(x) fzmod(sort(x)))
+simfz2 <- do.call(rbind, simfz2)
+
+gavsim3 <- lapply(psd3$eqa, function(x) get_abundvec(x[x>0], N = X))
+simfz3 <- lapply(gavsim3, function(x) fzmod(sort(x)))
+simfz3 <- do.call(rbind, simfz3)
+
+ggplot(simfz1[psd2$wrkd > 3500 & psd2$wrkd < 4501,], aes(x = N, y = s)) + geom_point()
+
+
+allfit <- data.frame(s = c(fzT$s, fzT2$s, dt1$s, dt2$s, s.hmp, simfz1$s, simfz2$s, simfz3$s),
+                     N = c(fzT$N, fzT2$N, dt1$N, dt2$N, n.hmp, simfz1$N, simfz2$N, simfz3$N),
+                     r2 = c(fzT$r2, fzT2$r2, dt1$r2, dt2$r2, r2.hmp, simfz1$r2, simfz2$r2, simfz3$r2),
+                     dat = rep(c("M3", "F4", "DT1", "DT2", "HMP", "sim", "sim2", "sim3"),
+                               c(length(fzT$s),length(fzT2$s),length(dt1$s),length(dt2$s),length(s.hmp),nrow(simfz1), nrow(simfz2), nrow(simfz3))))
+
+
+#ggplot(allfit, aes(x = N, y = s, col = dat)) + geom_point(aes(alpha = r2)) + geom_smooth() + theme_bw() 
+ggplot(allfit, aes(x = N, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw() 
+ggplot(allfit, aes(x = r2, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw() 
+
+rq <- matrix(nrow = nrow(simfz1), ncol = 2)
+inrange <- c()
+for(i in 1:nrow(simfz1)){
+  if(simfz1[i,]$N > 75){
+    rq[i,] <- range(allfit$s[allfit$dat != "sim" & allfit$N %in% 75:80])
+  }else{
+    rq[i,] <- range(allfit$s[allfit$dat != "sim" & allfit$N %in% (simfz1[i,]$N-5):(simfz1[i,]$N+5)])
+  }
+  inrange[i] <- simfz1[i,]$s <= rq[i,2] & simfz1[i,]$s >= rq[i,1]
 }
-
-x <- 2
-evalWithTimeout(plot(radpred(fitpoilog((sort(otu3[,x][otu3[,x] != 0], decreasing = T)))), pch = 20), timeout = 120)
-points(sort(otu3[,x][otu3[,x] != 0], decreasing = T), col = "blue", pch = 20)
-
-
-
-get_bestfit(lapply(1:ncol(otu3), function(x) otu3[,x][otu3[,x] != 0]))
-
-otuAIC <- get_bestfit(lapply(1:ncol(otu3), function(x) otu3[,x][otu3[,x] != 0]))
-boxplot(t(apply(otuAIC, 1, function(x) x-min(x))))
-otuAIC[,1:2]
+sum(inrange)
 
 ##################################################################
 ##################################################################
 ##################################################################
+### Read in data
 
-ga1 <- get_abundvec(eq1)
-fsp1  <- fitsad(ga1, "power")
-fsp2  <- fitsad(ga1, "ls")
-pred <- dpower(sort(unique(ga1)), fsp1@coef)
-pred2 <- dls(sort(unique(ga1)), 10000, alpha = fsp2@coef)
-obs <- as.vector(table(ga1))/sum(as.vector(table(ga1)))
-sum((pred-obs)^2)
-sum((pred2-obs)^2)
-AIC(fsp1)
-AIC(fsp2)
-
-
-nsp <- sapply(ge.mult$eqst, length)
-
-ga1 <- lapply(ge.mult$eqst[-4], get_abundvec, N = 1000)
-obs1 <- lapply(ga1, function(x)  cbind(as.vector(table(x))/sum(as.vector(table(x))), as.numeric(names(table(x)))))
-fsp1 <- lapply(ga1, fitpoilog)
-pred1 <- lapply(1:length(ga1), function(x) dpoilog(sort(unique(ga1[[x]])), fsp1[[x]]@coef[1], fsp1[[x]]@coef[2]))
-
-par(mfrow = c(1,5))
-for(i in 1:length(ga1)){
-  plot(obs1[[i]][,2:1], typ = "o", main = nsp[-4][i])
-  points(pred1[[i]]~obs1[[i]][,2], pch = 20, col = "blue", typ = "o")
+get_dat <- function(fpath, connected = TRUE){
+  lf1 <- list.files(fpath)
+  lf2 <- grep("ge", lf1)
+  lf3 <- grep("mat", lf1)
+  
+  eqmat <- list()
+  eqabs <- list()
+  iconn <- c()
+  mdstr <- c()
+  wrks <- c()
+  for(i in 1:length(lf2)){
+    ge1 <- readRDS(paste(fpath, lf1[lf2][[i]], sep = ""))
+    if(any(is.na(ge1))){next}
+    if(any(is.na(ge1$eqst))){next}
+    
+    mat1 <- readRDS(paste(filepath1, lf1[lf3][[i]], sep = ""))
+    
+    iconn[i] <- is.connected(graph.adjacency(abs(sign(mat1[ge1$spp, ge1$spp]))))
+    
+    eqmat[[i]] <- data.frame(itystr(mat1[ge1$spp, ge1$spp]), web = i, N = sum(ge1$spp))
+    eqabs[[i]] <- sort(ge1$eqst, decreasing = T)
+    
+    mdstr[i] <- mean(diag(mat1[ge1$spp, ge1$spp]))
+    wrks[i] <- i
+    
+    if(i%%100 == 0){cat(round(i/length(lf2)*100), "--:::--")}
+  }
+  
+  wrks <- wrks[!is.na(eqabs) & !sapply(eqabs, is.null)]
+  eqa <- eqabs[!is.na(eqabs) & !sapply(eqabs, is.null)]
+  eqm <- eqmat[!is.na(eqabs) & !sapply(eqabs, is.null)]
+  mdstr <- mdstr[!is.na(eqabs) & !sapply(eqabs, is.null)]
+  
+  if(connected){
+    eqa <- eqa[iconn[!is.na(eqabs) & !sapply(eqabs, is.null)]]
+    eqm <- eqm[iconn[!is.na(eqabs) & !sapply(eqabs, is.null)]]
+    mdstr <- mdstr[iconn[!is.na(eqabs) & !sapply(eqabs, is.null)]]
+    wrks <- wrks[iconn[!is.na(eqabs) & !sapply(eqabs, is.null)]]
+  }
+  
+  return(list(eqa = eqa, eqm = eqm, ds = mdstr, wrkd = wrks))
 }
 
 
-ga2 <- lapply(ge.mult$eqst, get_abundvec, N = 2000)
-obs2 <- lapply(ga2, function(x) cbind(as.vector(table(x))/sum(as.vector(table(x))), as.numeric(names(table(x)))))
-fsp2 <- lapply(ga2, fitpoilog)
-pred2 <- lapply(1:length(ga2), function(x) dpoilog(sort(unique(ga2[[x]])), fsp2[[x]]@coef[1], fsp2[[x]]@coef[2]))
-
-par(mfrow = c(1,5))
-for(i in 1:length(ga2)){
-  plot(obs2[[i]][,2:1], typ = "o", main = nsp[i])
-  points(pred2[[i]]~obs2[[i]][,2], pch = 20, col = "blue", typ = "o")
+fzmod2 <- function(x, rad = "zipf"){
+  rad1 <- paste("fit", rad, "_r", sep = "")
+  rfit <- get(rad1)
+  
+  fz1 <- rfit(x)
+  fc1 <- fz1@fullcoef
+  nll <- fz1@minuslogl(fz1@fullcoef[1], fz1@fullcoef[2])
+  r2 <- r2modified(sort(x, decreasing = T), radpred(fz1)$abund)
+  
+  return(data.frame(t(fc1), nll, r2))
 }
 
-ga3 <- lapply(ge.mult$eqst, get_abundvec, N = 10000)
-obs3 <- lapply(ga3, function(x) cbind(as.vector(table(x))/sum(as.vector(table(x))), as.numeric(names(table(x)))))
-fsp3 <- lapply(ga3, fitpoilog)
-pred3 <- lapply(1:length(ga3), function(x) dpoilog(sort(unique(ga3[[x]])), fsp3[[x]]@coef[1], fsp3[[x]]@coef[2]))
 
-par(mfrow = c(1,5))
-for(i in 1:length(ga3)){
-  plot(obs3[[i]][,2:1], typ = "o", main = nsp[i])
-  points(pred3[[i]]~obs3[[i]][,2], pch = 20, col = "blue", typ = "o")
-}
+# Fit zipf RAD to eq abundances for random communities
+filepath1 <- "~/Documents/Data/parSAD_data/"
+st1 <- Sys.time()
+psd1 <- get_dat(filepath1)
+st2 <- Sys.time()
+st2-st1
 
-get_r2 <- function(o, p){
-  1 - sum((o-p)^2)/sum((o - mean(o))^2)
-}
+fzd1 <- t(sapply(psd2$eqa, fzmod))
 
-sapply(1:length(ga2), function(x){get_r2(obs2[[x]][,1], pred2[[x]])})
-sapply(1:length(ga2), function(x){get_r2(obs3[[x]][,1], pred3[[x]])})
+# Fit zipf RAD to random communities with varying pars
+filepath2 <- "~/Documents/Data/parSAD_data2/"
+st1 <- Sys.time()
+psd2 <- get_dat(filepath2)
+st2 <- Sys.time()
+st2-st1
 
-fsp1 <- lapply(ga1, fitpower)
-pred1 <- lapply(1:length(ga1), function(x) dpower(sort(unique(ga1[[x]])), fsp1[[x]]@coef))
-fsp2 <- lapply(ga1, fitls)
-pred2 <- lapply(1:length(ga1), function(x) dls(sort(unique(ga1[[x]])), 10000, fsp1[[x]]@coef))
-obs <- lapply(ga1, function(x)  as.vector(table(x))/sum(as.vector(table(x))))
+fzd2 <- t(sapply(psd2$eqa, fzmod))
+fzd2b <- t(sapply(psd2$eqa, function(x) fzmod(get_abundvec(x, 100))))
+# Fit zipf RAD to eq abundances for hub-like communities
 
-sse1 <- sapply(1:length(obs), function(x) sum((pred1[[x]] - obs[[x]])^2))
-sse2 <- sapply(1:length(obs), function(x) sum((pred2[[x]] - obs[[x]])^2))
+filepath2 <- "~/Documents/Data/parSADhub_data/"
+st1 <- Sys.time()
+psd3 <- get_dat(filepath1)
+st2 <- Sys.time()
+st2-st1
 
-plot(sse1, sapply(fsp1, AIC))
-plot(sse2, sapply(fsp2, AIC))
+fzd3 <- t(sapply(psd3$eqa, fzmod))
+
+# Compute connectance of equilibrium matrices
+## Randoms
+conn1 <- sapply(psd1$eqa, function(x) sum(x$num)/(x$N[1] *x$N[1]))
+## Randoms with diff pars
+conn2 <- sapply(psd2$eqa, function(x) sum(x$num)/(x$N[1] *x$N[1]))
+## Hubs
+conn3 <- sapply(psd3$eqa, function(x) sum(x$num)/(x$N[1] *x$N[1]))
+## Plotting fitted pars against connectance 
+plot(conn1[!is.na(eqabs)], sapply(simfz, function(x) x@coef))
+plot(conn2, sapply(simfzhub, function(x) x@coef)[!is.na(eqabs2)])
+
+
+# Get matrix of all fitted pars for random, hub, and real comms
+fitpars <- rbind(cbind(t(sapply(simfz, function(x) x@fullcoef)),typ = 1, r2 = simR2),
+                 cbind(t(sapply(simfzhub, function(x) x@fullcoef)),typ = 2, r2 = simR2hub),
+                 cbind(t(sapply(fzotu, function(x) x@fullcoef)), typ = 3, r2 = otuR2),
+                 cbind(t(sapply(sim2fz, function(x) x@fullcoef)), typ = 4, r2 = sim2R2))
+fitpars[,"r2"][fitpars[,"r2"] < 0]  <- 0   ## make any negative rsquared 0
+
+# plot relationship between comm size and s
+plot(s~N, col = typ, data = fitpars, pch = 20)
+ggplot(data.frame(fitpars), aes(x = N, y = s, col = factor(typ), alpha = r2)) + geom_point() + theme_bw()
+
+
 ##################################################################
 ##################################################################
 ##################################################################
-library(vegan)
-get_abundvec <- function(abund, N = 10000){
-  r.ab <- abund/sum(abund)
-  samp2 <- sample(1:length(abund), N, replace = T, prob = r.ab)
-  t1 <- table(samp2)
-  return(as.numeric(t1))
+### Interactions
+#testing objs
+# add self interaction mean
+
+eqa <- eqabs3[!sapply(eqabs3, is.null)]
+eqm <- eqmat3[!sapply(eqabs3, is.null)]
+prepdat <- function(eqa, eqm, svals, sr2, d){
+  Nspp <- sapply(eqa, length)
+  conn <- sapply(eqm, function(x) sum(x$num)/(x$N[1] *x$N[1]))
+  
+  # pull out interaction numbers
+  int1 <- t(sapply(eqm, function(x){if(is.null(x)){return(c(NA,NA,NA,NA,NA))};x$num}))
+  istrs <- lapply(eqm, function(x){x$m1[2] <- x$m2[2]; x$m2[2] <- 0;return(x)}) ## move main commensal strength with others
+  # pull out interaction strengths
+  int3 <- t(sapply(istrs, function(x){if(any(is.na(unlist(x)))){return(c(NA,NA,NA,NA,NA))};x$m1}))
+  # get positive predation strength 
+  p2 <- sapply(istrs, function(x) x$m2[5])
+  # put interaction strengths into one matrix
+  allint <- cbind(int1, int3, p2)
+  colnames(allint) <- c("aN", "coN", "cpN", "mN", "pN", "aS", "coS", "cpS", "mS", "pSn", "pSp")
+  # put ints and fitted par into one dataframe
+  dat <- data.frame(sV = unlist(svals), sR = unlist(sr2), allint, Nsp = Nspp, C = conn, D = d)
+  
+  return(dat)
 }
 
 
-lf1 <- list.files("D:/jjborrelli/parSADhub_data/")
-lf2 <- grep("HUBge", lf1)
-#for(i in 1:length(lf1[lf2])){
-rads2 <- list()
-nspp2 <- c()
-for(i in 1:20){
-  ge1 <- readRDS(paste("D:/jjborrelli/parSADhub_data/", lf1[lf2][[i]], sep = ""))
-  if(any(is.na(ge1))){next}
-  gav1 <- get_abundvec(ge1$eqst/sum(ge1$eqst))
-  rads2[[i]] <- radfit(gav1)
-  #plot(as.vector(table(get_abundvec(ge1$eqst, 1000))))
-  #nspp2[i] <- length(ge1$eqst)
+pdat <- prepdat(eqa = psd2$eqa, eqm = psd2$eqm, svals = fzd2[,"s"], sr2 = fzd2[,"r2"], d = psd2$ds)
+pdat2 <- prepdat(eqa = gavsim, eqm = psd2$eqm, svals = simfz1$s, sr2 = simfz1$r2, d = psd2$ds)
+
+pdat2$abs <- sapply(psd2$eqa, max)
+
+subdat <- apply(pdat2[,-c(1,2)], 2, function(x){(x - mean(x))/sd(x)})
+subdat <- data.frame(pdat2[,c(1,2)], subdat)
+fit.init <- (lm(sV~C+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2))
+fit.init2 <- (lm(sV~Nsp+C+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2[inrange,]))
+summary(fit.init)
+summary(fit.init2)
+
+rem <- sample(1:nrow(pdat2[inrange,][pdat2$sR[inrange] > 0.8,]), 100)
+diff1 <- c()
+diff2<- c()
+
+for(i in 1:100){
+  fit.init <- (lm(sV~C+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2[pdat2$sR > 0.8,][-rem[i],]))
+  
+  diff1[i] <- (pdat2[pdat2$sR > 0.8,][rem[i],]$sV - predict(fit.init, pdat2[pdat2$sR > 0.8,][rem[i],]))/pdat2[pdat2$sR > 0.8,][rem[i],]$sV
+  
+  fit.init2 <- (lm(sV~C+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2[inrange,][pdat2$sR[inrange] > 0.8,][-rem[i],]))
+  
+  #l1[i] <- (pdat2[inrange,][pdat2$sR[inrange] > 0.8,][-rem[i],]$sV)
+  #l2[i] <- predict(fit.init2, pdat2[inrange,][pdat2$sR[inrange] > 0.8,][-rem[i],])
+  diff2[i] <- (pdat2[inrange,][pdat2$sR[inrange] > 0.8,][rem[i],]$sV - predict(fit.init2, pdat2[inrange,][pdat2$sR[inrange] > 0.8,][rem[i],]))/pdat2[inrange,][pdat2$sR[inrange] > 0.8,][rem[i],]$sV
 }
+hist(diff1)
+hist(diff2)
 
-hist(nspp2)
+fit.init.ints <- (lm(sV~Nsp+C+aN*aS+coN*coS+cpN*cpS+mN*mS+pN*pSn+pSp+pN:pSp, data = pdat, na.action = "na.fail"))
+fit.init.ints2 <- (lm(sV~Nsp+C+aN*aS+coN*coS+cpN*cpS+mN*mS+pN*pSn+pSp+pN:pSp, data = subdat[psd2$wrkd > 3500 & psd2$wrkd < 4501,], na.action = "na.fail"))
+summary(fit.init.ints)
+summary(fit.init.ints2)
 
-AIC(rads[[4]])
-sapply(rads, AIC)
+
+fit.sr <- (betareg(sR~Nsp+C+D+abs+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat[psd2$wrkd > 3500 & psd2$wrkd < 4501,]))
+fit.sr2 <- (betareg(sR~Nsp+C+D+abs+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat[psd2$wrkd > 3500 & psd2$wrkd < 4501,]))
+summary(fit.sr)
+summary(fit.sr2)
+
+head(pdat)
+df1 <- data.frame(sv = pdat$sV, r2 = pdat$sR, select(pdat, aN:pSp), select(pdat, C:D))
+head(df1)
+sam <- sample(1:nrow(df1), 100)
+fit1 <- (lm(sv~aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp+C+D, data = df1[-sam,]))
+plot(predict(fit1, df1[sam,]),df1[sam, ]$sv, ylim = c(.8,1), xlim = c(.8,1))
+
+DAAG::cv.lm(data = subdat, form.lm = fit.init, m = 3)
+
+mse.init <- sum((fitted(fit.init) - pdat$sV)^2)
+mse.init2 <- sum((fitted(fit.init2) - subdat$sV)^2)
+mse.init3 <- sum((fitted(fit.init.ints) - pdat$sV)^2)
+mse.init4 <- sum((fitted(fit.init.ints2) - subdat$sV)^2)
+
+head(MuMIn::dredge(fit.init.ints))
+predict(fit.init, newdata = pdat[iconn2[!sapply(eqabs3, is.null)],][pdat[iconn2[!sapply(eqabs3, is.null)],],])
+pdat$sV[iconn2[!sapply(eqabs3, is.null)]][100]
+
+
+##################################################
+##################################################
+library(MASS)
+library(rpart)
+pdat2 <- data.frame(pdat2, inrange)
+pdat2$inrange <- inrange
+s1 <-sample(1:nrow(pdat2[pdat2$sR > 0.8,]), 100)
+fitra <- glm(inrange~Nsp+C+aN+aS+coN+coS+cpN+cpS+mN+mS+pN+pSn+pSp, data = pdat2, family = "binomial")
+fitra2 <- glm(inrange~Nsp+C+cpN+mS+pSp, data = pdat2[pdat2$sR > 0.7,], family = "binomial")
+summary(fitra)
+DAAG::cv.binary(fitra2)
+
+flda <- (lda(inrange~C+aN+aS+coN+coS+cpN+cpS+mN+mS+pN+pSn+pSp, data = pdat2[pdat2$sR > 0.8,][-s1,]))
+predict(flda, pdat2[pdat2$sR > 0.8,][s1,])$class
+pdat2[pdat2$sR > 0.8,][s1,]$inrange
+rfit <- rpart(inrange~C+aN+aS+coN+coS+cpN+cpS+mN+mS+pN+pSn+pSp, data = pdat2[-s1,], method = "class")
+plot(rfit)
+text(rfit)
+cbind(predict(rfit, pdat2[s1,]), inrange[s1])
+cbind(predict(rfit, pdat2[s1,], type = "class"), inrange[s1]+1)
+##################################################
+##################################################
+
+
+
+#fitlinmod <- function(pdat, r2cutoff = 0.5, boot = F){
+#  fit.init <- (lm(sV~Nsp+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat))
+#  summary(fit.init)
+#}
+
+Nspp <- sapply(eqabs[!is.na(eqabs)], length)
+# pull out interaction numbers
+int1 <- t(sapply(eqmat[!is.na(eqabs)], function(x){if(is.null(x)){return(c(NA,NA,NA,NA,NA))};x$num}))
+istrs <- lapply(eqmat, function(x){x$m1[2] <- x$m2[2]; x$m2[2] <- 0;x$m1[4] <- x$m2[4]; x$m2[4] <- 0;return(x)}) ## move main commensal strength with others
+# pull out interaction strengths
+int3 <- t(sapply(istrs[!is.na(eqabs)], function(x){if(any(is.na(unlist(x)))){return(c(NA,NA,NA,NA,NA))};x$m1}))
+# get positive predation strength 
+p2 <- sapply(istrs[!is.na(eqabs)], function(x) x$m2[5])
+# put interaction strengths into one matrix
+allint <- cbind(int1, int3, p2)
+colnames(allint) <- c("aN", "coN", "cpN", "mN", "pN", "aS", "coS", "cpS", "mS", "pSn", "pSp")
+# put ints and fitted par into one dataframe
+dat <- data.frame(sR = simR2, allint, Nsp = Nspp)
+# rescale by column means (units of 2 standard deviations)
+dat2 <- apply(dat, 2, function(x) (x - mean(x))/(2*sd(x)))
+dat2[,1] <- dat$sR
+#dat2[,1][dat2[,1] < 0] <- 0 
+
+# fit linear models
+## to scaled data
+summary(lm(sR~Nsp+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = data.frame(dat2[dat2[,1] > 0,])))
+## to original data, but only for those where zipf has good fit
+fit.init <- (lm(sR~Nsp+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = dat[dat$sR > .5,]))
+summary(fit.init)
+
+## subset original data
+mydat <- dat[dat$sR > .5,]
+
+## bootstrapping confidence intervals for linmod coefficients
+coefs.bs <- matrix(nrow = 200, ncol = 13)
+colnames(coefs.bs) <- names(coefficients(fit.init))
+r2val.bs <- c()
+for(i in 1:200){
+  bs.rows <- sample(1:nrow(mydat), nrow(mydat), replace = T)
+  fit.bs <- lm(sR~Nsp+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = mydat[bs.rows,])
+  
+  coefs.bs[i,] <- coefficients(fit.bs)
+  r2val.bs[i] <- summary(fit.bs)$r.squared
+}
+# get intervals
+apply(coefs.bs, 2, function(x) quantile(x, probs = c(0.025, 0.975)))
+
+#MuMIn::dredge(lm(sR~aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = dat[dat$sR > .5,], na.action = "na.fail"))
+
+## Check model for how interactions affect fitting of the zipf (rsquared)
+summary(glm(as.numeric(simR2 < 0.5)~allint, family = "binomial"))
+DAAG::CVbinary(glm(sR~Nsp+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = dat, family = "binomial"))
+
+
+
 
 ##################################################################
 ##################################################################

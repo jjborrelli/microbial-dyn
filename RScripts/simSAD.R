@@ -315,9 +315,10 @@ plot(apply(mg1, 2, function(x) median(x[x !=0]))*20, (r1/sum(r1)*20))
 ##########################################################################################################################################
 ext2 <- function (times, states, parms){
   with(as.list(states), {
-    states[states < 10^-15] <- 0 
-    states <- states + (runif(length(states), 10^-5, 10^-2)*sample(c(0,1), length(states), prob = c(.9,.1), replace = T))
+    states[states < 10^-5] <- 0 
+    #states <- states + (runif(length(states), 10^-5, 10^-2)*sample(c(0,1), length(states), prob = c(.9,.1), replace = T))
     #states <- states + (rlnorm(length(states), -5, 1)*sample(c(0,1), length(states), prob = c(.8,.2), replace = T))
+    states[states > 20] <- 20
     return(c(states))
   })
 }
@@ -355,8 +356,9 @@ multihub.fill <- fill_mats(multihub, sdevn = 2, sdevp = .5)
 dfin <- list()
 dfin2 <- list()
 for(i in 1:10){
+  diag(multityp.fill[[i]]) <- -abs(rnorm(500, -10, 4))
   par1 <- list(alpha = runif(nrow(multityp.fill[[i]])), m = multityp.fill[[i]], K = 20)
-  dyn <- ode(runif(nrow(multityp.fill[[i]]),.01,.1), times = 1:1000, func = lvmodK, parms = par1, events = list(func = ext1, time =  1:1000))
+  dyn <- ode(runif(nrow(multityp.fill[[i]]),.01,.04), times = 1:1000, func = lvmodK, parms = par1, events = list(func = ext2, time =  1:1000))
   matplot(dyn[,-1], typ = "l", main = i)
   if(nrow(dyn) == 1000){dfin[[i]] <- dyn[1000,-1]}else{dfin[[i]] <- NA}
   if(nrow(dyn) == 1000){dfin2[[i]] <- apply(dyn[,-1], 2, mean)}else{dfin2[[i]] <- NA}
