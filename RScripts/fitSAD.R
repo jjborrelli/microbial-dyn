@@ -182,9 +182,13 @@ dt2 <- do.call(rbind, dt2)
 X <- 2000
 
 gav1 <- apply(otu3, 2, get_abundvec, N = X)
+gav2 <- apply(otu3, 2, function(x) get_abundvec(x[x>=5], N = X))
 gavfz1 <- t(sapply(gav1, fzmod))
+gavfz2 <- t(sapply(gav2, fzmod))
 s.hmp <- unlist(gavfz1[,"s"])[which(apply(otu3, 2, sum) > X)]
+s.hmp2 <- unlist(gavfz2[,"s"])[which(apply(otu3, 2, sum) > X)]
 n.hmp <- unlist(gavfz1[,"N"])[which(apply(otu3, 2, sum) > X)]
+n.hmp2 <- unlist(gavfz2[,"N"])[which(apply(otu3, 2, sum) > X)]
 r2.hmp <- unlist(gavfz1[,"r2"])[which(apply(otu3, 2, sum) > X)]
 
 gavt <-  apply(otuT[,-1], 1, get_abundvec, N = X)
@@ -210,7 +214,7 @@ allfit <- data.frame(s = c(fzT$s, fzT2$s, dt1$s, dt2$s, s.hmp),
                      dat = rep(c("M3", "F4", "DT1", "DT2", "HMP"), c(length(fzT$s),length(fzT2$s), length(dt1$s), length(dt2$s), length(s.hmp))))
 
 
-ggplot(allfit, aes(x = N, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw()
+ggplot(allfit[allfit$r2 > 0.9,], aes(x = N, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw()
 ggplot(allfit, aes(x = r2, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw()
 #plot(c(fzT$s, fzT2$s, s.hmp)~c(fzT$N, fzT2$N, n.hmp), col = rep(c(1,2,3), c(length(fzT$s),length(fzT2$s),length(s.hmp))))
 
@@ -242,18 +246,32 @@ allfit <- data.frame(s = c(fzT$s, fzT2$s, dt1$s, dt2$s, s.hmp, simfz1$s, simfz2$
 ggplot(allfit, aes(x = N, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw() 
 ggplot(allfit, aes(x = r2, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw() 
 
+
+# make sure allfit does not include sim dat
 rq <- matrix(nrow = nrow(simfz1), ncol = 2)
 inrange <- c()
 for(i in 1:nrow(simfz1)){
-  if(simfz1[i,]$N > 75){
-    rq[i,] <- range(allfit$s[allfit$dat != "sim" & allfit$N %in% 75:80])
+  if(simfz1[i,]$N > 450){
+    rq[i,] <- range(allfit$s[allfit$dat != "sim" & allfit$N %in% 400:600])
   }else{
     rq[i,] <- range(allfit$s[allfit$dat != "sim" & allfit$N %in% (simfz1[i,]$N-5):(simfz1[i,]$N+5)])
   }
   inrange[i] <- simfz1[i,]$s <= rq[i,2] & simfz1[i,]$s >= rq[i,1]
 }
 sum(inrange)
+length(inrange)
 
+inrange2 <- c()
+test <- c()
+for(i in 1:length(t2k$sV)){
+  if(t2k$Nsp[i] > 450){
+    rq[i,] <- range(allfit$s[allfit$dat != "sim" & allfit$N %in% 1:100])
+  }else{
+    test[i] <- sum(allfit$N %in% (t2k$Nsp[i]-5):(t2k$Nsp[i]+5))
+    rq[i,] <- range(allfit$s[allfit$dat != "sim" & allfit$N %in% (t2k$Nsp[i]-20):(t2k$Nsp[i]+20)])
+  }
+  inrange2[i] <- t2k$sV[i] <= rq[i,2] & t2k$sV[i] >= rq[i,1]
+}
 ##################################################################
 ##################################################################
 ##################################################################
@@ -406,7 +424,7 @@ pdat2$abs <- sapply(psd2$eqa, max)
 subdat <- apply(pdat2[,-c(1,2)], 2, function(x){(x - mean(x))/sd(x)})
 subdat <- data.frame(pdat2[,c(1,2)], subdat)
 fit.init <- (lm(sV~C+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2))
-fit.init2 <- (lm(sV~Nsp+C+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2[inrange,]))
+fit.init2 <- (lm(pdat2$Nsp[subdat$inrange]~C+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat[subdat$inrange,]))
 summary(fit.init)
 summary(fit.init2)
 
@@ -585,3 +603,115 @@ plda3 <- predict(ldafit3, newdata = dath[-s1h,])
 tab3 <- table(pred = as.character(plda3$class), obs = grpsh[-s1h])
 sum(diag(tab3))/sum(tab3)
 plot(predict(ldafit3)$x, col = predict(ldafit3)$class, pch = 20)
+
+
+
+
+gavsim <- lapply(psd2$eqa, get_abundvec, X)
+pdat2 <- prepdat(eqa = gavsim, eqm = psd2$eqm, svals = simfz1$s, sr2 = simfz1$r2, d = psd2$ds)
+pdat3 <- select(pdat2, aN:D)
+
+sadaic <- function(x){
+  c(poilog = AIC(fitpoilog(x)),
+    ls = AIC(fitls(x)),
+    lnrm = AIC(fitlnorm(x)),
+    power = AIC(fitpower(x)),
+    mzsm = AIC(fitmzsm(x)),
+    bs = AIC(fitbs(x)),
+    geom = AIC(fitgeom(x))
+  )
+}
+
+sadaic(gavsim2[[1]])
+
+sa1 <- t(sapply(gavsim, sadaic))
+mwin <- apply(sa1[,-c(2,3,5)], 1, which.min)
+pdat3$w <- mwin
+acc <- c()
+for(i in 1:length(mwin)){
+  sam1 <- i#sample(1:nrow(pdat3), 1)
+  #fit1 <- MASS::lda(w~aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp+Nsp+C, data = pdat3[-sam1,])
+  fit1 <- MASS::lda(w~Nsp+C+aN+coN+cpN+mN+pN, data = pdat3[-sam1,])
+  preds <- predict(fit1, pdat3[sam1,])
+  acc[i] <- preds$class == pdat3$w[sam1]
+  
+}
+sum(acc)/length(mwin)
+tab1 <- table(pred = preds$class, obs = pdat3$w[sam1])
+sum(diag(tab1))/sum(tab1)
+
+
+sa2 <- t(sapply(gav1, sadaic))
+apply(sa2, 1, which.min)
+
+
+plsim <- lapply(gavsim[which(mwin == 1)], fitpoilog)
+coefsim <- t(sapply(plsim, function(x) x@coef))
+plotu <- lapply(gav1[which(apply(otu3, 2, sum) > X)], fitpoilog)
+coefotu <- t(sapply(plotu, function(x) x@coef))
+
+##################################################
+top50 <- sapply(gav1, function(x) head(rev(sort(x)), 50))[,which(apply(otu3, 2, sum) > 2000)]
+t50 <- apply(otu3, 2, function(x) (rev(sort(x[x > 0]))))
+
+plot(apply(top50, 1, quantile, probs = 0.975), pch = 20, col = "blue", typ = "l", lty = 2)
+points(apply(top50, 1, quantile, probs = 0.025), pch = 20, col = "blue", typ = "l", lty = 2)
+points(apply(top50, 1, median), pch = 20, col = "blue", typ = "l")
+
+s.hmp3 <- apply(top50, 2, function(x) fitzipf_r(x)@coef)
+plot(s.hmp, s.hmp3)
+
+boxplot(t(top50))
+
+plot(apply(t50, 1, quantile, probs = 0.975), pch = 20)
+points(apply(t50, 1, quantile, probs = 0.025), pch = 20)
+points(apply(t50, 1, median), pch = 20, col = "blue")
+
+gav.alt <- apply(t50[,which(apply(otu3, 2, sum) > 2000)], 2, get_abundvec, N = 2000)
+s.hmp4 <- sapply(gav.alt, function(x) fitzipf_r(x)@coef)
+plot(s.hmp, s.hmp4)
+abline(a = 0, b = 1, xpd = F)
+sapply(gav.alt, function(x) fitzipf_r(x)@fullcoef)
+
+tsim50 <- sapply(gavsim[sapply(gavsim, length) > 50], function(x) head(rev(sort(x)), 50))
+
+points(apply(tsim50, 1, quantile, probs = 0.975), pch = 20, col = "darkgreen", typ = "l", lty = 2)
+points(apply(tsim50, 1, quantile, probs = 0.025), pch = 20, col = "darkgreen", typ = "l", lty = 2)
+points(apply(tsim50, 1, median), pch = 20, col = "darkgreen", typ = "l")
+
+
+test1 <- (t50[[118]])
+test2 <- (t50[[174]])
+
+
+
+
+
+len1 <- sapply(gavsim,length)[(sapply(gavsim, length) > 50)]
+hmp1 <- sapply(gav1[apply(otu3, 2, sum) > 2000], function(x) rev(sort(x)))
+ir <- c()
+q1 <- c()
+for(j in 1:length(len1)){
+  len2 <- len1[j]
+  fzmat <- matrix(nrow = length(hmp1[sapply(hmp1, length) > len2]), ncol = 2)
+  if(nrow(fzmat) < 2){next}
+  for(i in 1:nrow(fzmat)){
+    fzmat[i,] <- fitzipf_r(head(hmp1[sapply(hmp1, length) > len2][[i]], len2))@fullcoef
+  }
+  r1 <- range(fzmat[,2])
+  s.j <- fitzipf_r(gavsim[[j]])@coef 
+  
+  q1[j] <- sum(fzmat[,2] < s.j)/nrow(fzmat)
+  ir[j] <- s.j <= r1[2] & s.j >= r1[1]
+  print(j)
+} 
+
+
+
+lseq <- seq(10, 200, 10)
+mtest <- matrix(nrow = length(lseq), ncol = 2)
+mtest2 <- matrix(nrow = length(lseq), ncol = 2)
+for(i in 1:length(lseq)){
+  mtest[i, ]<- fitzipf_r(test1[1:lseq[i]])@fullcoef
+  mtest2[i, ]<- fitzipf_r(test2[1:lseq[i]])@fullcoef
+}
