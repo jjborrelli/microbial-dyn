@@ -138,7 +138,7 @@ fzmod2 <- function(x, rad = "zipf"){
 }
 
 
-prepdat <- function(eqa, eqm, svals, sr2, d){
+prepdat <- function(eqa, eqm, svals, sr2, d, r){
   Nspp <- sapply(eqa, length)
   conn <- sapply(eqm, function(x) sum(x$num)/(x$N[1] *x$N[1]))
   
@@ -153,7 +153,7 @@ prepdat <- function(eqa, eqm, svals, sr2, d){
   allint <- cbind(int1, int3, p2)
   colnames(allint) <- c("aN", "coN", "cpN", "mN", "pN", "aS", "coS", "cpS", "mS", "pSn", "pSp")
   # put ints and fitted par into one dataframe
-  dat <- data.frame(sV = unlist(svals), sR = unlist(sr2), allint, Nsp = Nspp, C = conn, D = d)
+  dat <- data.frame(sV = unlist(svals), sR = unlist(sr2), allint, Nsp = Nspp, C = conn, D = sapply(d, mean), r = sapply(r, mean))
   
   return(dat)
 }
@@ -206,6 +206,44 @@ get_dat <- function(fpath, connected = TRUE){
   return(list(eqa = eqa, eqm = eqm, ds = mdstr, rs = rs, wrkd = wrks))
 }
 
+
+get_mat <- function(fpath, nums){
+  eqmat <- list()
+  lf1 <- list.files(fpath)
+  lf2 <- grep("ge", lf1)
+  lf3 <- grep("mat", lf1)
+  for(i in 1:length(nums)){
+    ge1 <- readRDS(paste(fpath, lf1[lf2][[nums[i]]], sep = ""))
+    if(any(is.na(ge1))){next}
+    if(any(is.na(ge1$eqst))){next}
+    
+    mat1 <- readRDS(paste(fpath, lf1[lf3][[nums[i]]], sep = ""))
+    
+    eqmat[[i]] <- mat1[ge1$spp, ge1$spp]
+    
+    if(i%%100 == 0){cat(ceiling(i/length(nums)*100), "--:::--")}
+  }
+  
+  return(eqmat)
+}
+
+get_eqa <- function(fpath, nums){
+  eqmat <- list()
+  lf1 <- list.files(fpath)
+  lf2 <- grep("ge", lf1)
+  lf3 <- grep("mat", lf1)
+  for(i in 1:length(nums)){
+    ge1 <- readRDS(paste(fpath, lf1[lf2][[nums[i]]], sep = ""))
+    if(any(is.na(ge1))){next}
+    if(any(is.na(ge1$eqst))){next}
+    
+    eqmat[[i]] <- ge1$eqst
+    
+    if(i%%100 == 0){cat(ceiling(i/length(nums)*100), "--:::--")}
+  }
+  
+  return(eqmat)
+}
 ############################################################################################################
 ############################################################################################################
 ############################################################################################################
@@ -377,7 +415,7 @@ len1 <- sapply(gavsim,length)[(sapply(gavsim, length) > 50)]
 hmp1 <- sapply(gav1[apply(otu3, 2, sum) > 2000], function(x) rev(sort(x)))
 ir <- c()
 q1 <- c()
-for(j in 1:length(len1)){
+for(j in 281:length(len1)){
   len2 <- len1[j]
   fzmat <- matrix(nrow = length(hmp1[sapply(hmp1, length) > len2]), ncol = 2)
   if(nrow(fzmat) < 2){next}
@@ -385,12 +423,13 @@ for(j in 1:length(len1)){
     fzmat[i,] <- fitzipf_r(head(hmp1[sapply(hmp1, length) > len2][[i]], len2))@fullcoef
   }
   r1 <- range(fzmat[,2])
-  s.j <- fitzipf_r(head(gavsim[[j]]))@coef 
+  s.j <- fitzipf_r(gavsim[[j]])@coef 
   
   q1[j] <- sum(fzmat[,2] < s.j)/nrow(fzmat)
   ir[j] <- s.j <= r1[2] & s.j >= r1[1]
   print(j)
 } 
+
 
 
 ####################################################################################################################################
@@ -400,26 +439,62 @@ for(j in 1:length(len1)){
 #testing objs
 # add self interaction mean
 
-pdat <- prepdat(eqa = psd2$eqa, eqm = psd2$eqm, svals = fzd2[,"s"], sr2 = fzd2[,"r2"], d = psd2$ds)
-pdat2 <- prepdat(eqa = gavsim, eqm = psd2$eqm, svals = simfz1$s, sr2 = simfz1$r2, d = psd2$ds)
-
-pdat2$abs <- sapply(psd2$eqa, max)
+#pdat <- prepdat(eqa = psd2$eqa, eqm = psd2$eqm, svals = fzd2[,"s"], sr2 = fzd2[,"r2"], d = psd2$ds)
+pdat2 <- prepdat(eqa = gavsim, eqm = psd2$eqm, svals = simfz1$s, sr2 = simfz1$r2, d = psd2$ds, r = psd2$rs)
+pdat2$abs <- sapply(psd2$eqa, sum)
 
 subdat <- apply(pdat2[,-c(1,2)], 2, function(x){(x - mean(x))/sd(x)})
 subdat <- data.frame(pdat2[,c(1,2)], subdat)
 subdat2 <- subdat[pdat2$Nsp > 50,]
 subdat2$ir <- ir
-
-fit.init <- (lm(sV~C+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2))
-fit.init2 <- (lm(pdat2$Nsp[subdat$inrange]~C+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat[subdat$inrange,]))
-summary(fit.init)
-summary(fit.init2)
-
 subdat2$Nsp <- subdat$Nsp[pdat2$Nsp > 50]
 subdat2$Nsp2 <- pdat2$Nsp[pdat2$Nsp > 50]
-tfit <- (lm(Nsp2~aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat2[complete.cases(subdat2),]))
+
+
+#######################################
+# Models ##############################
+#######################################
+
+# all orig data modeling s value
+fit1 <- (lm(sV~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2))
+summary(fit1)
+# orig data (good fit) modeling s value
+fit2 <- (lm(sV~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2[pdat2$sR > 0.8,]))
+summary(fit2)
+# all orig data modeling r2
+fit3 <- (lm(sR~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2))
+summary(fit3)
+
+#######################################
+#######################################
+#######################################
+
+# all data as zscore modeling s value
+fit1.1 <- (lm(sV~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat))
+summary(fit1.1)
+# zscore data (good fit) modeling s value
+fit2.1 <- (lm(sV~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat[subdat$sR > 0.8,]))
+summary(fit2.1)
+# zscore data modeling r2
+fit3.1 <- (lm(sR~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat))
+summary(fit3.1)
+
+fit4 <- lm(cbind(sV, Nsp, abs)~r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat)
+summary(fit4)
+
+subdat3 <- data.frame(mu = t(sa2)[,1], subdat)
+fit5 <- (lm(mu~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat3))
+summary(fit5)
+data.frame(mod1 = summary(fit1.1)$coefficients[,1], mod2 = summary(fit3.1)$coefficients[,1], p1 = summary(fit1.1)$coefficients[,4] <= 0.05, p2 = summary(fit3.1)$coefficients[,4] <= 0.05)
+
+#######################################
+#######################################
+#######################################
+
+
+tfit <- (glm(ir~C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat2[complete.cases(subdat2),], family = "binomial"))
 summary(tfit)
-tfit2 <- glm(ir~pr1, data = data.frame(ir = subdat2[complete.cases(subdat2),]$ir, pr1 = predict(tfit)), family = "binomial")
+tfit2 <- glm(ir~C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat2[complete.cases(subdat2),][subdat2[complete.cases(subdat2),]$sR > 0.9,], family = "binomial")
 summary(tfit2)
 DAAG::cv.binary(tfit2)
 
@@ -431,114 +506,59 @@ DAAG::cv.binary(tfit3)
 
 ##################################################
 ##################################################
-pdat2 <- data.frame(pdat2, inrange)
-pdat2$inrange <- inrange
-s1 <-sample(1:nrow(pdat2[pdat2$sR > 0.8,]), 100)
-fitra <- glm(inrange~Nsp+C+aN+aS+coN+coS+cpN+cpS+mN+mS+pN+pSn+pSp, data = pdat2, family = "binomial")
-fitra2 <- glm(inrange~Nsp+C+cpN+mS+pSp, data = pdat2[pdat2$sR > 0.7,], family = "binomial")
-summary(fitra)
-DAAG::cv.binary(fitra2)
+pdat1 <- prepdat(eqa = gavsim2, eqm = psd1$eqm, svals = simfz2$s, sr2 = simfz2$r2, d = psd1$ds, r = psd1$rs)
+pdat3 <- prepdat(eqa = gavsim3, eqm = psd3$eqm, svals = simfz3$s, sr2 = simfz3$r2, d = psd3$ds, r = psd3$rs)
 
-flda <- (lda(inrange~C+aN+aS+coN+coS+cpN+cpS+mN+mS+pN+pSn+pSp, data = pdat2[pdat2$sR > 0.8,][-s1,]))
-predict(flda, pdat2[pdat2$sR > 0.8,][s1,])$class
-pdat2[pdat2$sR > 0.8,][s1,]$inrange
-rfit <- rpart(inrange~C+aN+aS+coN+coS+cpN+cpS+mN+mS+pN+pSn+pSp, data = pdat2[-s1,], method = "class")
-plot(rfit)
-text(rfit)
-cbind(predict(rfit, pdat2[s1,]), inrange[s1])
-cbind(predict(rfit, pdat2[s1,], type = "class"), inrange[s1]+1)
+sdat1 <- apply(pdat1[,-c(1,2)], 2, function(x){(x - mean(x))/sd(x)})
+sdat1 <- data.frame(pdat1[,c(1,2)], sdat1)
+sdat3 <- apply(pdat3[,-c(1,2)], 2, function(x){(x - mean(x))/sd(x)})
+sdat3 <- data.frame(pdat3[,c(1,2)], sdat3)
+
+
+fit1.p1 <- (lm(sV~Nsp+C+r+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat1))
+fit1.p3 <- (lm(sV~Nsp+C+r+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3))
+summary(fit1.p1)
+summary(fit1.p3)
+
+lm(sV~Nsp+C+r+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = rbind(pdat1, pdat2, pdat3))
 ####################################################################################################################################
 ####################################################################################################################################
 ####################################################################################################################################
 
-gavsim <- lapply(psd2$eqa, get_abundvec, X)
-pdat2 <- prepdat(eqa = gavsim, eqm = psd2$eqm, svals = simfz1$s, sr2 = simfz1$r2, d = psd2$ds)
-pdat3 <- select(pdat2, aN:D)
 
-sadaic <- function(x){
-  c(poilog = AIC(fitpoilog(x)),
-    ls = AIC(fitls(x)),
-    lnrm = AIC(fitlnorm(x)),
-    power = AIC(fitpower(x)),
-    mzsm = AIC(fitmzsm(x)),
-    bs = AIC(fitbs(x)),
-    geom = AIC(fitgeom(x))
-  )
-}
+####################################################################################################################################
+####################################################################################################################################
+####################################################################################################################################
+### Any effect of copy number variation
 
-sadaic(gavsim2[[1]])
+new.eqa <- lapply(psd2$eqa, function(x) x*sample(c(1,2), length(x), replace = T, prob = c(.95,.5)))
+new.eqa <- lapply(psd2$eqa, function(x) rev(sort(x))*rev(sort(rpois(length(x), .01)+1)))
+new.eqa <- lapply(psd2$eqa, function(x){x[which.max(x)] <- max(x)*2;return(x)})
+new.eqa <- lapply(psd2$eqa, function(x){x[order(x) %in% 1:5] <- x[order(x) %in% 1:5]*sample(c(1,2), 5, replace = T, prob = c(.8,.2));return(x)})
+gs.cnv <- lapply(new.eqa, get_abundvec, X)
+sim.cnv <- lapply(gs.cnv, function(x) fzmod(sort(x)))
+sim.cnv <- do.call(rbind, sim.cnv)
 
-sa1 <- t(sapply(gavsim, sadaic))
-mwin <- apply(sa1[,-c(2,3,5)], 1, which.min)
-pdat3$w <- mwin
-acc <- c()
-for(i in 1:length(mwin)){
-  sam1 <- i#sample(1:nrow(pdat3), 1)
-  #fit1 <- MASS::lda(w~aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp+Nsp+C, data = pdat3[-sam1,])
-  fit1 <- MASS::lda(w~Nsp+C+aN+coN+cpN+mN+pN, data = pdat3[-sam1,])
-  preds <- predict(fit1, pdat3[sam1,])
-  acc[i] <- preds$class == pdat3$w[sam1]
-  
-}
-sum(acc)/length(mwin)
-tab1 <- table(pred = preds$class, obs = pdat3$w[sam1])
-sum(diag(tab1))/sum(tab1)
-
-
-sa2 <- t(sapply(gav1, sadaic))
-apply(sa2, 1, which.min)
-
-
-plsim <- lapply(gavsim[which(mwin == 1)], fitpoilog)
-coefsim <- t(sapply(plsim, function(x) x@coef))
-plotu <- lapply(gav1[which(apply(otu3, 2, sum) > X)], fitpoilog)
-coefotu <- t(sapply(plotu, function(x) x@coef))
-
-##################################################
-top50 <- sapply(gav1, function(x) head(rev(sort(x)), 50))[,which(apply(otu3, 2, sum) > 2000)]
-t50 <- apply(otu3, 2, function(x) (rev(sort(x[x > 0]))))
-
-plot(apply(top50, 1, quantile, probs = 0.975), pch = 20, col = "blue", typ = "l", lty = 2)
-points(apply(top50, 1, quantile, probs = 0.025), pch = 20, col = "blue", typ = "l", lty = 2)
-points(apply(top50, 1, median), pch = 20, col = "blue", typ = "l")
-
-s.hmp3 <- apply(top50, 2, function(x) fitzipf_r(x)@coef)
-plot(s.hmp, s.hmp3)
-
-boxplot(t(top50))
-
-plot(apply(t50, 1, quantile, probs = 0.975), pch = 20)
-points(apply(t50, 1, quantile, probs = 0.025), pch = 20)
-points(apply(t50, 1, median), pch = 20, col = "blue")
-
-gav.alt <- apply(t50[,which(apply(otu3, 2, sum) > 2000)], 2, get_abundvec, N = 2000)
-s.hmp4 <- sapply(gav.alt, function(x) fitzipf_r(x)@coef)
-plot(s.hmp, s.hmp4)
+plot(sim.cnv$s, simfz1$s)
 abline(a = 0, b = 1, xpd = F)
-sapply(gav.alt, function(x) fitzipf_r(x)@fullcoef)
-
-tsim50 <- sapply(gavsim[sapply(gavsim, length) > 50], function(x) head(rev(sort(x)), 50))
-
-points(apply(tsim50, 1, quantile, probs = 0.975), pch = 20, col = "darkgreen", typ = "l", lty = 2)
-points(apply(tsim50, 1, quantile, probs = 0.025), pch = 20, col = "darkgreen", typ = "l", lty = 2)
-points(apply(tsim50, 1, median), pch = 20, col = "darkgreen", typ = "l")
 
 
-test1 <- (t50[[118]])
-test2 <- (t50[[174]])
+####################################################################################################################################
+####################################################################################################################################
+####################################################################################################################################
+### A look at stability
+allmats <- get_mat(filepath2, psd2$wrkd)
+alleqa <- get_eqa(filepath2, psd2$wrkd)
 
-lseq <- seq(10, 200, 10)
-mtest <- matrix(nrow = length(lseq), ncol = 2)
-mtest2 <- matrix(nrow = length(lseq), ncol = 2)
-for(i in 1:length(lseq)){
-  mtest[i, ]<- fitzipf_r(test1[1:lseq[i]])@fullcoef
-  mtest2[i, ]<- fitzipf_r(test2[1:lseq[i]])@fullcoef
+eig <- c()
+for(i in 1:length(psd2$eqa)){
+  p <- list(alpha = psd2$rs[[i]], m = allmats[[i]], K = 20)
+  jf <- jacobian.full(alleqa[[i]], lvmodK, parms = p)
+  eig[i] <- max(Re(eigen(jf)$values))
+  print(i)
 }
 
+plot(eig, simfz1$N)
 
-
-
-
-
-
-
+fitE <- lm(eig~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat)
+summary(fitE)
