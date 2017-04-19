@@ -190,8 +190,15 @@ median(t10$sV)
 dfin[[24]]
 
 
-mt1 <- multityp.fill[!is.na(dfin)][[1]][dfin[!is.na(dfin)][[1]] > 0,dfin[!is.na(dfin)][[1]] > 0]
-ab1 <- dfin[!is.na(dfin)][[1]][dfin[!is.na(dfin)][[1]]>0]
+mt1 <- multityp.fill[!is.na(dfin)][[2]][dfin[!is.na(dfin)][[2]] > 0,dfin[!is.na(dfin)][[2]] > 0]
+ab1 <- dfin[!is.na(dfin)][[2]][dfin[!is.na(dfin)][[2]]>0]
+
+library(rootSolve)
+mre2 <- c()
+for(i in 1:10000){
+  jf1 <- jacobian.full(ab1, lvmodK, parms = list(alpha = runif(length(ab1),0,.1), m = mt1, K = 100))
+  mre2[i] <- max(Re(eigen(jf1)$values))
+}
 
 #################################################################################################
 #################################################################################################
