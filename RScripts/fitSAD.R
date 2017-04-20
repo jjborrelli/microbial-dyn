@@ -470,10 +470,10 @@ summary(fit3)
 #######################################
 
 # all data as zscore modeling s value
-fit1.1 <- (lm(sV~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat))
+fit1.1 <- (lm(sV~Nsp+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat))
 summary(fit1.1)
 # zscore data (good fit) modeling s value
-fit2.1 <- (lm(sV~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat[subdat$sR > 0.8,]))
+fit2.1 <- (lm(sV~Nsp+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat[subdat$sR > 0.8,]))
 summary(fit2.1)
 # zscore data modeling r2
 fit3.1 <- (lm(sR~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat))
@@ -485,7 +485,7 @@ summary(fit4)
 subdat3 <- data.frame(mu = t(sa2)[,1], subdat)
 fit5 <- (lm(mu~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat3))
 summary(fit5)
-data.frame(mod1 = summary(fit1.1)$coefficients[,1], mod2 = summary(fit3.1)$coefficients[,1], p1 = summary(fit1.1)$coefficients[,4] <= 0.05, p2 = summary(fit3.1)$coefficients[,4] <= 0.05)
+data.frame(smod = summary(fit1.1)$coefficients[,1], rmod = summary(fit3.1)$coefficients[,1], p1 = summary(fit1.1)$coefficients[,4] <= 0.05, p2 = summary(fit3.1)$coefficients[,4] <= 0.05)
 
 #######################################
 #######################################
@@ -520,7 +520,15 @@ fit1.p3 <- (lm(sV~Nsp+C+r+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3))
 summary(fit1.p1)
 summary(fit1.p3)
 
-lm(sV~Nsp+C+r+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = rbind(pdat1, pdat2, pdat3))
+pall <- rbind(pdat1, pdat2[,-18])
+sall <- apply(pall[,-c(1,2)], 2, function(x){(x - mean(x))/sd(x)})
+sall <- data.frame(pall[,c(1,2)], sall)
+
+fitX <- lm(sV~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = sall) %>% summary()
+
+data.frame(smod = summary(fit1.1)$coefficients[,1], rmod = summary(fit3.1)$coefficients[,1], amod = fitX$coefficients[,1], 
+           p1 = summary(fit1.1)$coefficients[,4] <= 0.05, p2 = summary(fit3.1)$coefficients[,4] <= 0.05, p3 = fitX$coefficients[,4] <= 0.05)
+
 ####################################################################################################################################
 ####################################################################################################################################
 ####################################################################################################################################
@@ -562,3 +570,18 @@ plot(eig, simfz1$N)
 
 fitE <- lm(eig~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat)
 summary(fitE)
+
+####################################################################################################################################
+####################################################################################################################################
+####################################################################################################################################
+### plot all rads
+
+gav1.1 <- lapply(gavsim, function(x) rev(sort(x)))
+max(unlist(gav1.1))
+max(sapply(gav1.1, length))
+
+plot(gav1.1[[1]], ylim = c(0, 1030), xlim = c(0, 800))
+lapply(gav1.1[-1], function(x) points(x))
+
+gav1.2 <- lapply(gav1, function(x) rev(sort(x)))
+lapply(gav1.2, function(x) points(x, pch = 20, col = "blue"))
