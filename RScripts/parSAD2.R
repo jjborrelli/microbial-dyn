@@ -17,6 +17,15 @@ lvmodK2 <- function(times, state, parms){
   })
 }
 
+lvmod <- function(times, state, parms){
+  with(as.list(c(state, parms)), {
+    dB <- state * parms$alpha + state * parms$m %*% state 
+    #dB <- state * parms$alpha * (1 - state/(parms$K)) + state * parms$m %*% state 
+    
+    list(dB)
+  })
+}
+
 # Function to detect extinction (prevents negative abundances)
 ext1 <- function (times, states, parms){
   with(as.list(states), {
@@ -83,6 +92,10 @@ get_eq <- function(mats, times, INTs, Rmax = 1, Kval = 20, Ki = "val"){
       parms <- list(alpha = gr, m = t1, K = Kval)
       # numerical integration of ODE, simulates dynamics of local community
       test <- ode(runif(nrow(t1), .1, .5), 1:times, parms = parms, func = lvmodK, events = list(func = ext1, time =  1:times))
+    }else if(Ki == "none"){
+      parms <- list(alpha = gr, m = t1, K = Kval)
+      # numerical integration of ODE, simulates dynamics of local community
+      test <- ode(runif(nrow(t1), .1, .5), 1:times, parms = parms, func = lvmod, events = list(func = ext1, time =  1:times))
     }
     
     if(nrow(test) == times){
@@ -131,7 +144,7 @@ get_eq1 <- function(mat, times, Rmax = 1, Kval = 20, Ki = "val"){
   gr <- runif(nrow(mat), 0, Rmax)
   
   if(Ki == "rand"){
-    rK <- rlnorm(nrow(t1))
+    rK <- rlnorm(nrow(mat))
     Kalt <- (rK/sum(rK))*K.i
     Kval <- Kalt
     parms <- list(alpha = gr, m = mat, K = Kval)
@@ -144,6 +157,10 @@ get_eq1 <- function(mat, times, Rmax = 1, Kval = 20, Ki = "val"){
     # numerical integration of ODE, simulates dynamics of local community
     test <- ode(runif(nrow(mat), .1, .5), 1:times, parms = parms, func = lvmodK, events = list(func = ext1, time =  1:times))
     kvs <- Kval
+  }else if(Ki == "none"){
+    parms <- list(alpha = gr, m = mat, K = Kval)
+    # numerical integration of ODE, simulates dynamics of local community
+    test <- ode(runif(nrow(mat), .1, .5), 1:times, parms = parms, func = lvmod, events = list(func = ext1, time =  1:times))
   }
   
   if(nrow(test) == times){
@@ -202,22 +219,22 @@ t1-t0
 
 t2 <- Sys.time()
 #filepath1 <- "~/Documents/Data/"
-filepath1 <- "D:/jjborrelli/parSAD_data2/"
+filepath1 <- "D:/jjborrelli/parSADnoK/"
 
 cl <- makeCluster(detectCores() - 1)
-clusterExport(cl, c("filepath1", "lvmodK", "lvmodK2", "ext1", "get_eq1", "fill_mat"))
+clusterExport(cl, c("filepath1", "lvmod", "lvmodK2", "ext1", "get_eq1", "fill_mat"))
 registerDoSNOW(cl)
 
-foreach(x = 3501:4500, .packages = c("deSolve", "R.utils", "igraph")) %dopar% {
+foreach(x = 8001:9000, .packages = c("deSolve", "R.utils", "igraph")) %dopar% {
   S <- sample(seq(500, 1000, 100), 1)
   p1 <- runif(1,0,1)
   p2 <- runif(1, p1, 1)
-  c1 <- runif(1, .1, .3)
+  c1 <- runif(1, .1, .2)
   mats <- get.adjacency(erdos.renyi.game(S, c1, "gnp", directed = F), sparse = F)
   multityp <- mats*sample(c(-1,1,0), length(mats), replace = T, prob = c(p1,p2-p1,1-(p2)))
   multityp.fill <- fill_mat(multityp, sdevp = 1, sdevn = 1)
   diag(multityp.fill) <- runif(length(diag(multityp.fill)), -2, 0)
-  geq1 <- evalWithTimeout(get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = .1), timeout = 120, onTimeout = "warning")
+  geq1 <- evalWithTimeout(get_eq1(multityp.fill, times = 2000, Ki = "val", Kval = 20, Rmax = .2), timeout = 320, onTimeout = "warning")
   #geq1 <- get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = 1)
   if(is.character(geq1)){geq1 <- NA}
   saveRDS(geq1, file = paste(filepath1, "ge", x, ".rds", sep = ""))
@@ -238,13 +255,44 @@ t3 - t2
 
 t4 <- Sys.time()
 #filepath1 <- "~/Documents/Data/"
-filepath2 <- "D:/jjborrelli/parSADhub_data/"
+filepath2 <- "D:/jjborrelli/parSADtatoosh/"
+tatoosh <- as.matrix(read.csv("C:/Users/jjborrelli/Desktop/GitHub/rKeystone/tatoosh.csv", header = F))
 
 cl <- makeCluster(detectCores() - 1)
-clusterExport(cl, c("filepath2", "lvmodK", "lvmodK2", "ext1", "get_eq1", "fill_mat"))
+clusterExport(cl, c("tatoosh", "filepath2", "lvmodK", "lvmodK2", "ext1", "get_eq1", "fill_mat"))
 registerDoSNOW(cl)
 
-foreach(x = c(1643,1776), .packages = c("deSolve", "R.utils", "igraph")) %dopar% {
+foreach(x = 3001:6000, .packages = c("deSolve", "R.utils", "igraph")) %dopar% {
+  multityp <- tatoosh
+  multityp.fill <- fill_mat(multityp, sdevp = 1, sdevn = 1)
+  diag(multityp.fill) <- runif(length(diag(multityp.fill)), -2, 0)
+  geq1 <- evalWithTimeout(get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = .1), timeout = 360, onTimeout = "warning")
+  #geq1 <- get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = 1)
+  if(is.character(geq1)){geq1 <- NA}
+  saveRDS(geq1, file = paste(filepath2, "TATge", x, ".rds", sep = ""))
+  saveRDS(multityp.fill, file = paste(filepath2, "TATmat", x, ".rds", sep = "")) 
+  # return(geq1)
+}
+
+stopCluster(cl)
+
+t5 <- Sys.time()
+t5 - t4
+
+
+################################################################################
+################################################################################
+
+t4 <- Sys.time()
+#filepath1 <- "~/Documents/Data/"
+filepath2 <- "D:/jjborrelli/parSADtatoosh/"
+tatoosh <- as.matrix(read.csv("C:/Users/jjborrelli/Desktop/GitHub/rKeystone/tatoosh.csv", header = F))
+
+cl <- makeCluster(detectCores() - 1)
+clusterExport(cl, c("tatoosh", "filepath2", "lvmodK", "lvmodK2", "ext1", "get_eq1", "fill_mat"))
+registerDoSNOW(cl)
+
+foreach(x = 1:3000, .packages = c("deSolve", "R.utils", "igraph")) %dopar% {
   S <- sample(seq(500, 1000, 100), 1)
   p1 <- runif(1,0,1)
   p2 <- runif(1, p1, 1)
@@ -253,9 +301,10 @@ foreach(x = c(1643,1776), .packages = c("deSolve", "R.utils", "igraph")) %dopar%
   mats <- get.adjacency(barabasi.game(S, pow, m = S/10, directed = F), sparse = F)
   multityp <- mats*sample(c(-1,1,0), length(mats), replace = T, prob = c(p1,p2-p1,1-(p2)))
   multityp.fill <- fill_mat(multityp, sdevp = .5, sdevn = 2)
-  #geq1 <- evalWithTimeout(get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = 1), timeout = 120, onTimeout = "warning")
-  geq1 <- get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = 1)
-  #if(is.character(geq1)){geq1 <- NA}
+  diag(multityp.fill) <- runif(length(diag(multityp.fill)), -2, 0)
+  geq1 <- evalWithTimeout(get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = .1), timeout = 360, onTimeout = "warning")
+  #geq1 <- get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = 1)
+  if(is.character(geq1)){geq1 <- NA}
   saveRDS(geq1, file = paste(filepath2, "HUBge", x, ".rds", sep = ""))
   saveRDS(multityp.fill, file = paste(filepath2, "HUBmat", x, ".rds", sep = "")) 
   # return(geq1)
@@ -265,6 +314,7 @@ stopCluster(cl)
 
 t5 <- Sys.time()
 t5 - t4
+
 
 fna <- c()
 for(x in 1:2000){
