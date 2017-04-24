@@ -7,6 +7,8 @@ library(sads)
 library(MASS)
 library(rpart)
 library(ggplot2)
+library(MuMIn)
+library(igraph)
 
 ############################################################################################################
 ############################################################################################################
@@ -310,6 +312,8 @@ psd3 <- get_dat(filepath3)
 st6 <- Sys.time()
 st6-st5
 
+psd4 <- readRDS("~/Documents/Data/psd1.rds")
+psd5 <- readRDS("~/Documents/Data/psd2.rds")
 #fzd3 <- t(sapply(psd3$eqa, fzmod))
 
 ####################################################################################################################################
@@ -353,7 +357,7 @@ allfit <- data.frame(s = c(fzT$s, fzT2$s, dt1$s, dt2$s, s.hmp),
                      dat = rep(c("M3", "F4", "DT1", "DT2", "HMP"), c(length(fzT$s),length(fzT2$s), length(dt1$s), length(dt2$s), length(s.hmp))))
 
 
-ggplot(allfit[allfit$r2 > 0.9,], aes(x = N, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw()
+ggplot(allfit, aes(x = N, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw()
 ggplot(allfit, aes(x = r2, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw()
 
 ####################################################################################################################################
@@ -371,24 +375,33 @@ gavsim3 <- lapply(psd3$eqa, function(x) get_abundvec(x[x>0], N = X))
 simfz3 <- lapply(gavsim3, function(x) fzmod(sort(x)))
 simfz3 <- do.call(rbind, simfz3)
 
-allfit <- data.frame(s = c(fzT$s, fzT2$s, dt1$s, dt2$s, s.hmp, simfz1$s, simfz2$s, simfz3$s),
-                     N = c(fzT$N, fzT2$N, dt1$N, dt2$N, n.hmp, simfz1$N, simfz2$N, simfz3$N),
-                     r2 = c(fzT$r2, fzT2$r2, dt1$r2, dt2$r2, r2.hmp, simfz1$r2, simfz2$r2, simfz3$r2),
-                     dat = rep(c("M3", "F4", "DT1", "DT2", "HMP", "sim", "sim2", "sim3"),
-                               c(length(fzT$s),length(fzT2$s),length(dt1$s),length(dt2$s),length(s.hmp),nrow(simfz1), nrow(simfz2), nrow(simfz3))))
+gavsim4 <- lapply(psd4$eqa, function(x) get_abundvec(x[x>0], N = X))
+simfz4 <- lapply(gavsim4, function(x) fzmod(sort(x)))
+simfz4 <- do.call(rbind, simfz4)
+
+gavsim5 <- lapply(psd5$eqa, function(x) get_abundvec(x[x>0], N = X))
+simfz5 <- lapply(gavsim5, function(x) fzmod(sort(x)))
+simfz5 <- do.call(rbind, simfz5)
 
 
-ggplot(allfit, aes(x = N, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw() 
+allfit <- data.frame(s = c(fzT$s, fzT2$s, dt1$s, dt2$s, s.hmp, simfz1$s, simfz2$s, simfz3$s, simfz4$s, simfz5$s),
+                     N = c(fzT$N, fzT2$N, dt1$N, dt2$N, n.hmp, simfz1$N, simfz2$N, simfz3$N, simfz4$N, simfz5$N),
+                     r2 = c(fzT$r2, fzT2$r2, dt1$r2, dt2$r2, r2.hmp, simfz1$r2, simfz2$r2, simfz3$r2, simfz4$r2, simfz5$r2),
+                     dat = rep(c("M3", "F4", "DT1", "DT2", "HMP", "sim", "sim2", "sim3", "sim4", "sim5"),
+                               c(length(fzT$s),length(fzT2$s),length(dt1$s),length(dt2$s),length(s.hmp),nrow(simfz1), nrow(simfz2), nrow(simfz3), nrow(simfz4), nrow(simfz5))))
+
+
+ggplot(allfit, aes(x = N, y = s, col = dat)) + geom_smooth() + theme_bw() 
 ggplot(allfit, aes(x = r2, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw() 
 
 ####################################################################################################################################
 ####################################################################################################################################
 ####################################################################################################################################
 # make sure allfit does not include sim dat
-rq <- matrix(nrow = nrow(simfz1), ncol = 2)
+rq <- matrix(nrow = nrow(simfz4), ncol = 2)
 inrange <- c()
-for(i in 1:nrow(simfz1)){
-  if(simfz1[i,]$N > 450){
+for(i in 1:nrow(simfz4)){
+  if(simfz4[i,]$N > 450){
     rq[i,] <- range(allfit$s[allfit$dat != "sim" & allfit$N %in% 400:600])
   }else{
     rq[i,] <- range(allfit$s[allfit$dat != "sim" & allfit$N %in% (simfz1[i,]$N-5):(simfz1[i,]$N+5)])
@@ -411,19 +424,19 @@ for(i in 1:length(t2k$sV)){
 }
 
 
-len1 <- sapply(gavsim,length)[(sapply(gavsim, length) > 50)]
+len1 <- sapply(gavsim4,length)[sapply(gavsim4,length) > 50]
 hmp1 <- sapply(gav1[apply(otu3, 2, sum) > 2000], function(x) rev(sort(x)))
 ir <- c()
 q1 <- c()
-for(j in 281:length(len1)){
+for(j in 1:length(len1)){
   len2 <- len1[j]
-  fzmat <- matrix(nrow = length(hmp1[sapply(hmp1, length) > len2]), ncol = 2)
+  fzmat <- matrix(nrow = length(hmp1[sapply(hmp1, length) > 50]), ncol = 2)
   if(nrow(fzmat) < 2){next}
   for(i in 1:nrow(fzmat)){
-    fzmat[i,] <- fitzipf_r(head(hmp1[sapply(hmp1, length) > len2][[i]], len2))@fullcoef
+    fzmat[i,] <- fitzipf_r(head(hmp1[sapply(hmp1, length) >= 50][[i]], 50))@fullcoef
   }
   r1 <- range(fzmat[,2])
-  s.j <- fitzipf_r(gavsim[[j]])@coef 
+  s.j <- fitzipf_r(head(gavsim4[[j]], 50))@coef 
   
   q1[j] <- sum(fzmat[,2] < s.j)/nrow(fzmat)
   ir[j] <- s.j <= r1[2] & s.j >= r1[1]
@@ -431,6 +444,69 @@ for(j in 281:length(len1)){
 } 
 
 
+
+####################################################################################################################################
+####################################################################################################################################
+#### Effect of truncation on s value
+strt <- Sys.time()
+trunc <- seq(10, 400, 10)
+hmp.sran <- list()
+sim.sran1 <- list()
+sim.sran2 <- list()
+for(i in 1:length(trunc)){
+  hmp.sran[[i]] <- sapply(hmp1[sapply(hmp1, length) >= trunc[i]], function(x) fitzipf_r(x[1:trunc[i]])@coef)
+  sim.sran1[[i]] <- sapply(gavsim[sapply(gavsim, length) >= trunc[i]], function(x) fitzipf_r(x[1:trunc[i]])@coef)
+  sim.sran2[[i]] <- sapply(gavsim4[sapply(gavsim4, length) >= trunc[i]], function(x) fitzipf_r(x[1:trunc[i]])@coef)
+}
+fin <- Sys.time()
+fin-strt
+
+length(hmp.sran)
+hist(hmp.sran[[40]])
+
+plot(sapply(hmp.sran, median)~trunc, ylim = c(0,1.5), typ = "l", lwd = 2)
+points(sapply(hmp.sran, quantile, prob = 0.025)~trunc, typ = "l", lwd = 2)
+points(sapply(hmp.sran, quantile, prob = 0.975)~trunc, typ = "l", lwd = 2)
+
+points(sapply(sim.sran1, median)~trunc, typ = "l", lty = 2, col = "blue", lwd = 2)
+points(sapply(sim.sran1, quantile, prob = 0.025)~trunc, typ = "l", lty = 2, col = "blue", lwd = 2)
+points(sapply(sim.sran1, quantile, prob = 0.975)~trunc, typ = "l", lty = 2, col = "blue", lwd = 2)
+
+points(sapply(sim.sran2, median)~trunc, typ = "l", lty = 2, col = "darkgreen", lwd = 2)
+points(sapply(sim.sran2, quantile, prob = 0.025)~trunc, typ = "l", lty = 2, col = "darkgreen", lwd = 2)
+points(sapply(sim.sran2, quantile, prob = 0.975)~trunc, typ = "l", lty = 2, col = "darkgreen", lwd = 2)
+
+####################################################################################################################################
+####################################################################################################################################
+#### Check whether real data is within range 
+
+
+s50range <- sapply(hmp1[sapply(hmp1, length) >= 50], function(x) fitzipf_r(x[1:50])@coef)
+s50sim <- sapply(gavsim4[sapply(gavsim, length) >= 50], function(x) fitzipf_r(x[1:50])@coef)
+s50sim4 <- sapply(gavsim4[sapply(gavsim4, length) >= 50], function(x) fitzipf_r(x[1:50])@coef)
+
+hist(s50sim4, freq = F, xlim = c(0, 2), col = "grey")
+hist(s50range, freq = F, add = T)
+
+sum(s50sim4 > min(s50range) & s50sim4 < max(s50range))
+
+s100range <- sapply(hmp1[sapply(hmp1, length) >= 100], function(x) fitzipf_r(x[1:100])@coef)
+s100sim <- sapply(gavsim4[sapply(gavsim, length) >= 100], function(x) fitzipf_r(x[1:100])@coef)
+s100sim4 <- sapply(gavsim4[sapply(gavsim4, length) >= 100], function(x) fitzipf_r(x[1:100])@coef)
+
+hist(s100sim4, freq = F, xlim = c(0, 2), col = "grey")
+hist(s100range, freq = F, add = T)
+
+sum(s100sim4 > min(s100range) & s100sim4 < max(s100range))
+
+s200range <- sapply(hmp1[sapply(hmp1, length) >= 200], function(x) fitzipf_r(x[1:200])@coef)
+s200sim <- sapply(gavsim4[sapply(gavsim, length) >= 200], function(x) fitzipf_r(x[1:200])@coef)
+s200sim4 <- sapply(gavsim4[sapply(gavsim4, length) >= 200], function(x) fitzipf_r(x[1:200])@coef)
+
+hist(s200sim4, freq = F, xlim = c(0, 1.6), col = "grey")
+hist(s200range, freq = F, add = T)
+
+sum(s200sim4 > min(s200range) & s200sim4 < max(s200range))
 
 ####################################################################################################################################
 ####################################################################################################################################
@@ -443,12 +519,21 @@ for(j in 281:length(len1)){
 pdat2 <- prepdat(eqa = gavsim, eqm = psd2$eqm, svals = simfz1$s, sr2 = simfz1$r2, d = psd2$ds, r = psd2$rs)
 pdat2$abs <- sapply(psd2$eqa, sum)
 
-subdat <- apply(pdat2[,-c(1,2)], 2, function(x){(x - mean(x))/sd(x)})
+pdat3 <- prepdat(eqa = gavsim4, eqm = psd4$eqm, svals = simfz4$s, sr2 = simfz4$r2, d = psd4$ds, r = psd4$rs)
+pdat3$k <- psd4$kv
+
+pdat4 <- prepdat(eqa = gavsim5, eqm = psd5$eqm, svals = simfz5$s, sr2 = simfz5$r2, d = psd5$ds, r = psd5$rs)
+pdat4$k <- psd5$kv
+
+subdat <- apply(abs(pdat2[,-c(1,2)]), 2, function(x){(x - mean(x))/sd(x)})
 subdat <- data.frame(pdat2[,c(1,2)], subdat)
 subdat2 <- subdat[pdat2$Nsp > 50,]
 subdat2$ir <- ir
 subdat2$Nsp <- subdat$Nsp[pdat2$Nsp > 50]
 subdat2$Nsp2 <- pdat2$Nsp[pdat2$Nsp > 50]
+
+subdata <- apply(abs(pdat3[,-c(1,2)]), 2, function(x){(x - mean(x))/sd(x)})
+subdata <- data.frame(pdat3[,c(1,2)], subdata)
 
 
 #######################################
@@ -456,27 +541,42 @@ subdat2$Nsp2 <- pdat2$Nsp[pdat2$Nsp > 50]
 #######################################
 
 # all orig data modeling s value
-fit1 <- (lm(sV~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2))
+fit1 <- (lm(sV~Nsp+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2))
 summary(fit1)
+# same but for new sim, with K
+fit1a <- (lm(sV~Nsp+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3))
+summary(fit1a)
+# same but for new sim, with K
+fit1b <- (lm(sV~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat4))
+summary(fit1b)
 # orig data (good fit) modeling s value
-fit2 <- (lm(sV~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2[pdat2$sR > 0.8,]))
+fit2 <- (lm(sV~Nsp+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2[pdat2$sR > 0.8,]))
 summary(fit2)
+# same but for new sim, with K
+fit2a <- (lm(sV~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3[pdat3$sR > 0.8,]))
+summary(fit2a)
 # all orig data modeling r2
-fit3 <- (lm(sR~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2))
+fit3 <- (lm(sR~Nsp+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2))
 summary(fit3)
+# all orig data modeling r2, with K
+fit3a <- (lm(sR~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3))
+summary(fit3a)
 
 #######################################
 #######################################
 #######################################
 
 # all data as zscore modeling s value
-fit1.1 <- (lm(sV~Nsp+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat))
+fit1.1 <- (lm(sV~Nsp+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat, na.action = "na.fail", model = F, x = F, y = F))
 summary(fit1.1)
+# all data as zscore modeling s value
+fit1.1a <- (lm(sV~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdata, na.action = "na.fail", model = F, x = F, y = F))
+summary(fit1.1a)
 # zscore data (good fit) modeling s value
 fit2.1 <- (lm(sV~Nsp+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat[subdat$sR > 0.8,]))
 summary(fit2.1)
 # zscore data modeling r2
-fit3.1 <- (lm(sR~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat))
+fit3.1 <- (lm(sR~Nsp+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat, model = F, x = F, y = F, na.action = "na.fail"))
 summary(fit3.1)
 
 fit4 <- lm(cbind(sV, Nsp, abs)~r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat)
@@ -485,8 +585,11 @@ summary(fit4)
 subdat3 <- data.frame(mu = t(sa2)[,1], subdat)
 fit5 <- (lm(mu~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat3))
 summary(fit5)
-data.frame(smod = summary(fit1.1)$coefficients[,1], rmod = summary(fit3.1)$coefficients[,1], p1 = summary(fit1.1)$coefficients[,4] <= 0.05, p2 = summary(fit3.1)$coefficients[,4] <= 0.05)
+data.frame(smod = summary(fit1)$coefficients[,1], rmod = summary(fit1a)$coefficients[,1], p1 = summary(fit1)$coefficients[,4] <= 0.05, p2 = summary(fit1a)$coefficients[,4] <= 0.05)
 
+library(MuMIn)
+allmod <- dredge(fit1.1)
+allmodR <- dredge(fit3.1)
 #######################################
 #######################################
 #######################################
