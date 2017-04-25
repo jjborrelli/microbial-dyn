@@ -291,7 +291,7 @@ st1 <- Sys.time()
 psd1 <- get_dat(filepath1)
 st2 <- Sys.time()
 st2-st1
-
+saveRDS(psd1, file = "~/Documents/Data/psd1.rds")
 #fzd1 <- t(sapply(psd2$eqa, fzmod))
 
 # Fit zipf RAD to random communities with varying pars
@@ -489,7 +489,10 @@ hist(s50sim4, freq = F, xlim = c(0, 2), col = "grey")
 hist(s50range, freq = F, add = T)
 
 sum(s50sim4 > min(s50range) & s50sim4 < max(s50range))
-
+ir50.4 <- vector(length = length(gavsim4)) 
+ir50.4[sapply(gavsim4, length) >=50] <- s50sim4 > min(s50range) & s50sim4 < max(s50range)
+ir50.4[!sapply(gavsim4, length) >=50] <- NA
+  
 s100range <- sapply(hmp1[sapply(hmp1, length) >= 100], function(x) fitzipf_r(x[1:100])@coef)
 s100sim <- sapply(gavsim4[sapply(gavsim, length) >= 100], function(x) fitzipf_r(x[1:100])@coef)
 s100sim4 <- sapply(gavsim4[sapply(gavsim4, length) >= 100], function(x) fitzipf_r(x[1:100])@coef)
@@ -498,6 +501,9 @@ hist(s100sim4, freq = F, xlim = c(0, 2), col = "grey")
 hist(s100range, freq = F, add = T)
 
 sum(s100sim4 > min(s100range) & s100sim4 < max(s100range))
+ir100.4 <- vector(length = length(gavsim4)) 
+ir100.4[sapply(gavsim4, length) >=100] <- s100sim4 > min(s100range) & s100sim4 < max(s100range)
+ir100.4[!sapply(gavsim4, length) >=100] <- NA
 
 s200range <- sapply(hmp1[sapply(hmp1, length) >= 200], function(x) fitzipf_r(x[1:200])@coef)
 s200sim <- sapply(gavsim4[sapply(gavsim, length) >= 200], function(x) fitzipf_r(x[1:200])@coef)
@@ -507,6 +513,9 @@ hist(s200sim4, freq = F, xlim = c(0, 1.6), col = "grey")
 hist(s200range, freq = F, add = T)
 
 sum(s200sim4 > min(s200range) & s200sim4 < max(s200range))
+ir200.4 <- vector(length = length(gavsim4)) 
+ir200.4[sapply(gavsim4, length) >=200] <- s200sim4 > min(s200range) & s200sim4 < max(s200range)
+ir200.4[!sapply(gavsim4, length) >=200] <- NA
 
 ####################################################################################################################################
 ####################################################################################################################################
@@ -521,6 +530,9 @@ pdat2$abs <- sapply(psd2$eqa, sum)
 
 pdat3 <- prepdat(eqa = gavsim4, eqm = psd4$eqm, svals = simfz4$s, sr2 = simfz4$r2, d = psd4$ds, r = psd4$rs)
 pdat3$k <- psd4$kv
+pdat3$ir50 <- ir50.4
+pdat3$ir100 <- ir100.4
+pdat3$ir200 <- ir200.4
 
 pdat4 <- prepdat(eqa = gavsim5, eqm = psd5$eqm, svals = simfz5$s, sr2 = simfz5$r2, d = psd5$ds, r = psd5$rs)
 pdat4$k <- psd5$kv
@@ -562,6 +574,25 @@ summary(fit3)
 fit3a <- (lm(sR~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3))
 summary(fit3a)
 
+#######################################
+#######################################
+#######################################
+tot_count <- function(x, labs, digits, varlen)
+{
+  paste(labs, "\n\nn =", x$frame$n)
+}
+
+fitir <- glm(ir50~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3[complete.cases(pdat3),], family = "binomial")
+summary(fitir)
+
+fpart <- rpart(ir50~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3, method = "class")
+rpart.plot::prp(fpart, uniform = T, node.fun = tot_count)
+#plot(fpart, uniform = T)
+#text(fpart, cex = 0.75)
+library(randomForest)
+fit <- randomForest(factor(ir50)~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3[!is.na(pdat3$ir50),])
+print(fit)
+plot((importance(fit)))
 #######################################
 #######################################
 #######################################
