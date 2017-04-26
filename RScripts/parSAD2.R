@@ -225,7 +225,7 @@ cl <- makeCluster(detectCores() - 1)
 clusterExport(cl, c("filepath1", "lvmod", "lvmodK2", "ext1", "get_eq1", "fill_mat"))
 registerDoSNOW(cl)
 
-foreach(x = 8001:9000, .packages = c("deSolve", "R.utils", "igraph")) %dopar% {
+foreach(x = 15001:17000, .packages = c("deSolve", "R.utils", "igraph")) %dopar% {
   S <- sample(seq(500, 1000, 100), 1)
   p1 <- runif(1,0,1)
   p2 <- runif(1, p1, 1)
@@ -234,7 +234,7 @@ foreach(x = 8001:9000, .packages = c("deSolve", "R.utils", "igraph")) %dopar% {
   multityp <- mats*sample(c(-1,1,0), length(mats), replace = T, prob = c(p1,p2-p1,1-(p2)))
   multityp.fill <- fill_mat(multityp, sdevp = 1, sdevn = 1)
   diag(multityp.fill) <- runif(length(diag(multityp.fill)), -2, 0)
-  geq1 <- evalWithTimeout(get_eq1(multityp.fill, times = 2000, Ki = "val", Kval = 20, Rmax = .2), timeout = 320, onTimeout = "warning")
+  geq1 <- evalWithTimeout(get_eq1(multityp.fill, times = 2000, Ki = "val", Kval = 100, Rmax = 1), timeout = 600, onTimeout = "warning")
   #geq1 <- get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = 1)
   if(is.character(geq1)){geq1 <- NA}
   saveRDS(geq1, file = paste(filepath1, "ge", x, ".rds", sep = ""))
@@ -262,11 +262,11 @@ cl <- makeCluster(detectCores() - 1)
 clusterExport(cl, c("tatoosh", "filepath2", "lvmodK", "lvmodK2", "ext1", "get_eq1", "fill_mat"))
 registerDoSNOW(cl)
 
-foreach(x = 3001:6000, .packages = c("deSolve", "R.utils", "igraph")) %dopar% {
+foreach(x = 6001:10000, .packages = c("deSolve", "R.utils", "igraph")) %dopar% {
   multityp <- tatoosh
   multityp.fill <- fill_mat(multityp, sdevp = 1, sdevn = 1)
   diag(multityp.fill) <- runif(length(diag(multityp.fill)), -2, 0)
-  geq1 <- evalWithTimeout(get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = .1), timeout = 360, onTimeout = "warning")
+  geq1 <- evalWithTimeout(get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 100, Rmax = 1), timeout = 360, onTimeout = "warning")
   #geq1 <- get_eq1(multityp.fill, times = 1000, Ki = "val", Kval = 20, Rmax = 1)
   if(is.character(geq1)){geq1 <- NA}
   saveRDS(geq1, file = paste(filepath2, "TATge", x, ".rds", sep = ""))

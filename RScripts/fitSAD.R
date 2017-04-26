@@ -170,7 +170,8 @@ get_dat <- function(fpath, connected = TRUE){
   iconn <- c()
   mdstr <- list()
   wrks <- c()
-  for(i in 1:length(lf2)){
+  kvals <- c()
+  for(i in :length(lf2)){
     ge1 <- readRDS(paste(fpath, lf1[lf2][[i]], sep = ""))
     if(any(is.na(ge1))){next}
     if(any(is.na(ge1$eqst))){next}
@@ -185,6 +186,7 @@ get_dat <- function(fpath, connected = TRUE){
     mdstr[[i]] <- (diag(mat1[ge1$spp, ge1$spp]))#mean(diag(mat1[ge1$spp, ge1$spp]))
     wrks[i] <- i
     rs[[i]] <- ge1$grs
+    kvals[i] <- ge1$eqkv 
     
     if(i%%100 == 0){cat(round(i/length(lf2)*100), "--:::--")}
   }
@@ -194,6 +196,7 @@ get_dat <- function(fpath, connected = TRUE){
   eqm <- eqmat[!is.na(eqabs) & !sapply(eqabs, is.null)]
   mdstr <- mdstr[!is.na(eqabs) & !sapply(eqabs, is.null)]
   rs <- rs[!is.na(eqabs) & !sapply(eqabs, is.null)]
+  kvals <- kvals[!is.na(eqabs) & !sapply(eqabs, is.null)]
   
   if(connected){
     eqa <- eqa[iconn[!is.na(eqabs) & !sapply(eqabs, is.null)]]
@@ -201,9 +204,10 @@ get_dat <- function(fpath, connected = TRUE){
     mdstr <- mdstr[iconn[!is.na(eqabs) & !sapply(eqabs, is.null)]]
     wrks <- wrks[iconn[!is.na(eqabs) & !sapply(eqabs, is.null)]]
     rs <- rs[iconn[!is.na(eqabs) & !sapply(eqabs, is.null)]]
+    kvals <- kvals[iconn[!is.na(eqabs) & !sapply(eqabs, is.null)]]
   }
   
-  return(list(eqa = eqa, eqm = eqm, ds = mdstr, rs = rs, wrkd = wrks))
+  return(list(eqa = eqa, eqm = eqm, ds = mdstr, rs = rs, wrkd = wrks, kv = kvals))
 }
 
 
@@ -212,16 +216,17 @@ get_mat <- function(fpath, nums){
   lf1 <- list.files(fpath)
   lf2 <- grep("ge", lf1)
   lf3 <- grep("mat", lf1)
-  for(i in 1:length(nums)){
-    ge1 <- readRDS(paste(fpath, lf1[lf2][[nums[i]]], sep = ""))
+  for(i in 5551:7000){
+    ge1 <- readRDS(paste(fpath, lf1[lf2][[i]], sep = ""))
     if(any(is.na(ge1))){next}
     if(any(is.na(ge1$eqst))){next}
     
-    mat1 <- readRDS(paste(fpath, lf1[lf3][[nums[i]]], sep = ""))
+    mat1 <- readRDS(paste(fpath, lf1[lf3][[i]], sep = ""))
     
     eqmat[[i]] <- mat1[ge1$spp, ge1$spp]
     
-    if(i%%100 == 0){cat(ceiling(i/length(nums)*100), "--:::--")}
+    print(i)
+    #if(i%%100 == 0){cat(ceiling(i/length(nums)*100), "--:::--")}
   }
   
   return(eqmat)
