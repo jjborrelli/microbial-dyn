@@ -582,17 +582,18 @@ tot_count <- function(x, labs, digits, varlen)
   paste(labs, "\n\nn =", x$frame$n)
 }
 
-fitir <- glm(ir50~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3[complete.cases(pdat3),], family = "binomial")
+fitir <- glm(ir200~cpN+coN, data = pdat3[complete.cases(pdat3),], family = "binomial")
 summary(fitir)
 
-fpart <- rpart(ir50~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3, method = "class")
+fpart <- rpart(ir200~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3, method = "class")
 rpart.plot::prp(fpart, uniform = T, node.fun = tot_count)
 #plot(fpart, uniform = T)
 #text(fpart, cex = 0.75)
 library(randomForest)
-fit <- randomForest(factor(ir50)~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3[!is.na(pdat3$ir50),])
-print(fit)
-plot((importance(fit)))
+fit200 <- randomForest(factor(ir200)~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3[!is.na(pdat3$ir200),], ntree = 3000, importance = T)
+print(fit50)
+print(fit200)
+cbind(order(importance(fit50)), order(importance(fit100)))
 #######################################
 #######################################
 #######################################
@@ -616,7 +617,7 @@ summary(fit4)
 subdat3 <- data.frame(mu = t(sa2)[,1], subdat)
 fit5 <- (lm(mu~Nsp+C+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat3))
 summary(fit5)
-data.frame(smod = summary(fit1)$coefficients[,1], rmod = summary(fit1a)$coefficients[,1], p1 = summary(fit1)$coefficients[,4] <= 0.05, p2 = summary(fit1a)$coefficients[,4] <= 0.05)
+data.frame(smod = summary(fit1)$coefficients[,1], rmod = summary(fit3)$coefficients[,1], p1 = summary(fit1)$coefficients[,4] <= 0.05, p2 = summary(fit3)$coefficients[,4] <= 0.05)
 
 library(MuMIn)
 allmod <- dredge(fit1.1)
