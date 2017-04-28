@@ -173,7 +173,7 @@ get_dat <- function(fpath, connected = TRUE){
   mdstr <- list()
   wrks <- c()
   kvals <- c()
-  for(i in :length(lf2)){
+  for(i in 1:length(lf2)){
     ge1 <- readRDS(paste(fpath, lf1[lf2][[i]], sep = ""))
     if(any(is.na(ge1))){next}
     if(any(is.na(ge1$eqst))){next}
@@ -296,7 +296,7 @@ st1 <- Sys.time()
 psd1 <- get_dat(filepath1)
 st2 <- Sys.time()
 st2-st1
-saveRDS(psd1, file = "~/Documents/Data/psd1.rds")
+psd1 <- readRDS("~/Documents/Data/psd1.rds")
 #fzd1 <- t(sapply(psd2$eqa, fzmod))
 
 # Fit zipf RAD to random communities with varying pars
@@ -317,10 +317,13 @@ psd3 <- get_dat(filepath3)
 st6 <- Sys.time()
 st6-st5
 
-psd4 <- readRDS("~/Documents/Data/psd1.rds")
-psd5 <- readRDS("~/Documents/Data/psd2.rds")
+psd1 <- readRDS("~/Documents/Data/psd1.rds")
+psd2 <- readRDS("~/Documents/Data/psd2.rds")
+psd3 <- readRDS("~/Documents/Data/psd3.rds")
+psd4 <- readRDS("~/Documents/Data/psd4.rds")
+psd5 <- readRDS("~/Documents/Data/psd5.rds")
 #fzd3 <- t(sapply(psd3$eqa, fzmod))
-
+psd6 <- readRDS("~/Documents/Data/vdat.rds")
 ####################################################################################################################################
 ####################################################################################################################################
 ####################################################################################################################################
@@ -336,6 +339,7 @@ s.hmp2 <- unlist(gavfz2[,"s"])[which(apply(otu3, 2, sum) > X)]
 n.hmp <- unlist(gavfz1[,"N"])[which(apply(otu3, 2, sum) > X)]
 n.hmp2 <- unlist(gavfz2[,"N"])[which(apply(otu3, 2, sum) > X)]
 r2.hmp <- unlist(gavfz1[,"r2"])[which(apply(otu3, 2, sum) > X)]
+hmp1 <- sapply(gav1[apply(otu3, 2, sum) > 2000], function(x) rev(sort(x)))
 
 gavt <-  apply(otuT[,-1], 1, get_abundvec, N = X)
 fzT <- lapply(gavt, function(x) fzmod(sort(x)))
@@ -388,68 +392,22 @@ gavsim5 <- lapply(psd5$eqa, function(x) get_abundvec(x[x>0], N = X))
 simfz5 <- lapply(gavsim5, function(x) fzmod(sort(x)))
 simfz5 <- do.call(rbind, simfz5)
 
-
-allfit <- data.frame(s = c(fzT$s, fzT2$s, dt1$s, dt2$s, s.hmp, simfz1$s, simfz2$s, simfz3$s, simfz4$s, simfz5$s),
-                     N = c(fzT$N, fzT2$N, dt1$N, dt2$N, n.hmp, simfz1$N, simfz2$N, simfz3$N, simfz4$N, simfz5$N),
-                     r2 = c(fzT$r2, fzT2$r2, dt1$r2, dt2$r2, r2.hmp, simfz1$r2, simfz2$r2, simfz3$r2, simfz4$r2, simfz5$r2),
-                     dat = rep(c("M3", "F4", "DT1", "DT2", "HMP", "sim", "sim2", "sim3", "sim4", "sim5"),
-                               c(length(fzT$s),length(fzT2$s),length(dt1$s),length(dt2$s),length(s.hmp),nrow(simfz1), nrow(simfz2), nrow(simfz3), nrow(simfz4), nrow(simfz5))))
+gavsim6 <- lapply(psd6$eqa, function(x) get_abundvec(x[x>0], N = X))
+simfz6 <- lapply(gavsim6, function(x) fzmod(sort(x)))
+simfz6 <- do.call(rbind, simfz6)
 
 
-ggplot(allfit, aes(x = N, y = s, col = dat)) + geom_smooth() + theme_bw() 
+allfit <- data.frame(s = c(fzT$s, fzT2$s, dt1$s, dt2$s, s.hmp, simfz1$s, simfz2$s, simfz3$s, simfz4$s, simfz5$s, simfz6$s),
+                     N = c(fzT$N, fzT2$N, dt1$N, dt2$N, n.hmp, simfz1$N, simfz2$N, simfz3$N, simfz4$N, simfz5$N, simfz6$N),
+                     r2 = c(fzT$r2, fzT2$r2, dt1$r2, dt2$r2, r2.hmp, simfz1$r2, simfz2$r2, simfz3$r2, simfz4$r2, simfz5$r2, simfz6$r2),
+                     dat = rep(c("M3", "F4", "DT1", "DT2", "HMP", "sim", "sim2", "sim3", "sim4", "sim5", "sim6"),
+                               c(length(fzT$s),length(fzT2$s),length(dt1$s),length(dt2$s),length(s.hmp),nrow(simfz1), nrow(simfz2), nrow(simfz3), nrow(simfz4), nrow(simfz5), nrow(simfz6))))
+
+
+ggplot(allfit, aes(x = N, y = s, col = dat)) + geom_point(alpha = .4) + geom_smooth() + theme_bw() 
 ggplot(allfit, aes(x = r2, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw() 
 
 ####################################################################################################################################
-####################################################################################################################################
-####################################################################################################################################
-# make sure allfit does not include sim dat
-rq <- matrix(nrow = nrow(simfz4), ncol = 2)
-inrange <- c()
-for(i in 1:nrow(simfz4)){
-  if(simfz4[i,]$N > 450){
-    rq[i,] <- range(allfit$s[allfit$dat != "sim" & allfit$N %in% 400:600])
-  }else{
-    rq[i,] <- range(allfit$s[allfit$dat != "sim" & allfit$N %in% (simfz1[i,]$N-5):(simfz1[i,]$N+5)])
-  }
-  inrange[i] <- simfz1[i,]$s <= rq[i,2] & simfz1[i,]$s >= rq[i,1]
-}
-sum(inrange)
-length(inrange)
-
-inrange2 <- c()
-test <- c()
-for(i in 1:length(t2k$sV)){
-  if(t2k$Nsp[i] > 450){
-    rq[i,] <- range(allfit$s[allfit$dat != "sim" & allfit$N %in% 1:100])
-  }else{
-    test[i] <- sum(allfit$N %in% (t2k$Nsp[i]-5):(t2k$Nsp[i]+5))
-    rq[i,] <- range(allfit$s[allfit$dat != "sim" & allfit$N %in% (t2k$Nsp[i]-20):(t2k$Nsp[i]+20)])
-  }
-  inrange2[i] <- t2k$sV[i] <= rq[i,2] & t2k$sV[i] >= rq[i,1]
-}
-
-
-len1 <- sapply(gavsim4,length)[sapply(gavsim4,length) > 50]
-hmp1 <- sapply(gav1[apply(otu3, 2, sum) > 2000], function(x) rev(sort(x)))
-ir <- c()
-q1 <- c()
-for(j in 1:length(len1)){
-  len2 <- len1[j]
-  fzmat <- matrix(nrow = length(hmp1[sapply(hmp1, length) > 50]), ncol = 2)
-  if(nrow(fzmat) < 2){next}
-  for(i in 1:nrow(fzmat)){
-    fzmat[i,] <- fitzipf_r(head(hmp1[sapply(hmp1, length) >= 50][[i]], 50))@fullcoef
-  }
-  r1 <- range(fzmat[,2])
-  s.j <- fitzipf_r(head(gavsim4[[j]], 50))@coef 
-  
-  q1[j] <- sum(fzmat[,2] < s.j)/nrow(fzmat)
-  ir[j] <- s.j <= r1[2] & s.j >= r1[1]
-  print(j)
-} 
-
-
-
 ####################################################################################################################################
 ####################################################################################################################################
 #### Effect of truncation on s value
@@ -484,11 +442,25 @@ points(sapply(sim.sran2, quantile, prob = 0.975)~trunc, typ = "l", lty = 2, col 
 ####################################################################################################################################
 ####################################################################################################################################
 #### Check whether real data is within range 
+# this function replicates everything in this section
+inrange <- function(trunc, gav, realdat){
+  realdat <- lapply(realdat, function(x) rev(sort(x)))
+  gav <- lapply(gav, function(x) rev(sort(x)))
+  
+  realrange <- sapply(realdat[sapply(realdat, length) >= trunc], function(x) fitzipf_r(x[1:trunc])@coef)
+  simrange <- sapply(gav[sapply(gav, length) >= trunc], function(x) fitzipf_r(x[1:trunc])@coef)
+  
+  irT <- vector(length = length(gav)) 
+  irT[sapply(gav, length) >= trunc] <- simrange > min(realrange) & simrange < max(realrange)
+  irT[!sapply(gav, length) >= trunc] <- NA
+  
+  return(irT)
+}
 
-
-s50range <- sapply(hmp1[sapply(hmp1, length) >= 50], function(x) fitzipf_r(x[1:50])@coef)
+s50range <- sapply(gav1[sapply(gav1, length) >= 50], function(x) fitzipf_r(x[1:50])@coef)
 s50sim <- sapply(gavsim4[sapply(gavsim, length) >= 50], function(x) fitzipf_r(x[1:50])@coef)
 s50sim4 <- sapply(gavsim4[sapply(gavsim4, length) >= 50], function(x) fitzipf_r(x[1:50])@coef)
+s50sim6 <- sapply(gavsim6[sapply(gavsim6, length) >= 50], function(x) fitzipf_r(x[1:50])@coef)
 
 hist(s50sim4, freq = F, xlim = c(0, 2), col = "grey")
 hist(s50range, freq = F, add = T)
@@ -497,10 +469,15 @@ sum(s50sim4 > min(s50range) & s50sim4 < max(s50range))
 ir50.4 <- vector(length = length(gavsim4)) 
 ir50.4[sapply(gavsim4, length) >=50] <- s50sim4 > min(s50range) & s50sim4 < max(s50range)
 ir50.4[!sapply(gavsim4, length) >=50] <- NA
+
+ir50.6 <- vector(length = length(gavsim6)) 
+ir50.6[sapply(gavsim6, length) >=50] <- s50sim6 > min(s50range) & s50sim6 < max(s50range)
+ir50.6[!sapply(gavsim6, length) >=50] <- NA
   
 s100range <- sapply(hmp1[sapply(hmp1, length) >= 100], function(x) fitzipf_r(x[1:100])@coef)
 s100sim <- sapply(gavsim4[sapply(gavsim, length) >= 100], function(x) fitzipf_r(x[1:100])@coef)
 s100sim4 <- sapply(gavsim4[sapply(gavsim4, length) >= 100], function(x) fitzipf_r(x[1:100])@coef)
+s100sim6 <- sapply(gavsim6[sapply(gavsim6, length) >= 100], function(x) fitzipf_r(x[1:100])@coef)
 
 hist(s100sim4, freq = F, xlim = c(0, 2), col = "grey")
 hist(s100range, freq = F, add = T)
@@ -510,9 +487,14 @@ ir100.4 <- vector(length = length(gavsim4))
 ir100.4[sapply(gavsim4, length) >=100] <- s100sim4 > min(s100range) & s100sim4 < max(s100range)
 ir100.4[!sapply(gavsim4, length) >=100] <- NA
 
+ir100.6 <- vector(length = length(gavsim6)) 
+ir100.6[sapply(gavsim6, length) >= 100] <- s100sim6 > min(s100range) & s100sim6 < max(s100range)
+ir100.6[!sapply(gavsim6, length) >= 100] <- NA
+
 s200range <- sapply(hmp1[sapply(hmp1, length) >= 200], function(x) fitzipf_r(x[1:200])@coef)
 s200sim <- sapply(gavsim4[sapply(gavsim, length) >= 200], function(x) fitzipf_r(x[1:200])@coef)
 s200sim4 <- sapply(gavsim4[sapply(gavsim4, length) >= 200], function(x) fitzipf_r(x[1:200])@coef)
+s200sim6 <- sapply(gavsim6[sapply(gavsim6, length) >= 200], function(x) fitzipf_r(x[1:200])@coef)
 
 hist(s200sim4, freq = F, xlim = c(0, 1.6), col = "grey")
 hist(s200range, freq = F, add = T)
@@ -522,6 +504,9 @@ ir200.4 <- vector(length = length(gavsim4))
 ir200.4[sapply(gavsim4, length) >=200] <- s200sim4 > min(s200range) & s200sim4 < max(s200range)
 ir200.4[!sapply(gavsim4, length) >=200] <- NA
 
+ir200.6 <- vector(length = length(gavsim6)) 
+ir200.6[sapply(gavsim6, length) >= 200] <- s200sim6 > min(s200range) & s200sim6 < max(s200range)
+ir200.6[!sapply(gavsim6, length) >= 200] <- NA
 ####################################################################################################################################
 ####################################################################################################################################
 ####################################################################################################################################
@@ -529,18 +514,43 @@ ir200.4[!sapply(gavsim4, length) >=200] <- NA
 #testing objs
 # add self interaction mean
 
-#pdat <- prepdat(eqa = psd2$eqa, eqm = psd2$eqm, svals = fzd2[,"s"], sr2 = fzd2[,"r2"], d = psd2$ds)
+pdat1 <- prepdat(eqa = gavsim2, eqm = psd1$eqm, svals = simfz2$s, sr2 = simfz2$r2, d = psd1$ds, r = psd1$rs)
+pdat1$k <- 20
+pdat1$ir50 <- inrange(50, gavsim2, hmp1)
+pdat1$ir100 <- inrange(100, gavsim2, hmp1)
+pdat1$ir200 <- inrange(200, gavsim2, hmp1)
+
 pdat2 <- prepdat(eqa = gavsim, eqm = psd2$eqm, svals = simfz1$s, sr2 = simfz1$r2, d = psd2$ds, r = psd2$rs)
-pdat2$abs <- sapply(psd2$eqa, sum)
+pdat2$k <- 20
+pdat2$ir50 <- inrange(50, gavsim, hmp1)
+pdat2$ir100 <- inrange(100, gavsim, hmp1)
+pdat2$ir200 <- inrange(200, gavsim, hmp1)
 
-pdat3 <- prepdat(eqa = gavsim4, eqm = psd4$eqm, svals = simfz4$s, sr2 = simfz4$r2, d = psd4$ds, r = psd4$rs)
-pdat3$k <- psd4$kv
-pdat3$ir50 <- ir50.4
-pdat3$ir100 <- ir100.4
-pdat3$ir200 <- ir200.4
+pdat3 <- prepdat(eqa = gavsim3, eqm = psd3$eqm, svals = simfz3$s, sr2 = simfz3$r2, d = psd3$ds, r = psd3$rs)
+pdat3$k <- 20
+pdat3$ir50 <- inrange(50, gavsim3, hmp1)
+pdat3$ir100 <- inrange(100, gavsim3, hmp1)
+pdat3$ir200 <- inrange(200, gavsim3, hmp1)
 
-pdat4 <- prepdat(eqa = gavsim5, eqm = psd5$eqm, svals = simfz5$s, sr2 = simfz5$r2, d = psd5$ds, r = psd5$rs)
-pdat4$k <- psd5$kv
+pdat4 <- prepdat(eqa = gavsim4, eqm = psd4$eqm, svals = simfz4$s, sr2 = simfz4$r2, d = psd4$ds, r = psd4$rs)
+pdat4$k <- psd4$kv
+pdat4$ir50 <- inrange(50, gavsim4, hmp1)
+pdat4$ir100 <- inrange(100, gavsim4, hmp1)
+pdat4$ir200 <- inrange(200, gavsim4, hmp1)
+
+pdat5 <- prepdat(eqa = gavsim5, eqm = psd5$eqm, svals = simfz5$s, sr2 = simfz5$r2, d = psd5$ds, r = psd5$rs)
+pdat5$k <- psd5$kv
+pdat5$ir50 <- inrange(50, gavsim5, hmp1)
+pdat5$ir100 <- inrange(100, gavsim5, hmp1)
+pdat5$ir200 <- inrange(200, gavsim5, hmp1)
+
+pdat6 <- prepdat(eqa = gavsim6, eqm = psd6$eqm, svals = simfz6$s, sr2 = simfz6$r2, d = psd6$ds, r = psd6$rs)
+pdat6$k <- psd6$kv
+pdat6$ir50 <- inrange(50, gavsim6, hmp1)
+pdat6$ir100 <- inrange(100, gavsim6, hmp1)
+pdat6$ir200 <- inrange(200, gavsim6, hmp1)
+
+alldat <- data.table::rbindlist(list(pdat1,pdat2,pdat4,pdat6))
 
 subdat <- apply(abs(pdat2[,-c(1,2)]), 2, function(x){(x - mean(x))/sd(x)})
 subdat <- data.frame(pdat2[,c(1,2)], subdat)
@@ -558,7 +568,7 @@ subdata <- data.frame(pdat3[,c(1,2)], subdata)
 #######################################
 
 # all orig data modeling s value
-fit1 <- (lm(sV~Nsp+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat2))
+fit1 <- (lm(sV~Nsp+r+C+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, model = F, x = F, y = F))
 summary(fit1)
 # same but for new sim, with K
 fit1a <- (lm(sV~Nsp+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3))
@@ -590,15 +600,28 @@ tot_count <- function(x, labs, digits, varlen)
 fitir <- glm(ir200~cpN+coN, data = pdat3[complete.cases(pdat3),], family = "binomial")
 summary(fitir)
 
-fpart <- rpart(ir200~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3, method = "class")
-rpart.plot::prp(fpart, uniform = T, node.fun = tot_count)
+fpart50 <- rpart(ir50~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, method = "class")
+fpart200 <- rpart(ir200~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat6, method = "class")
+plotcp(fpart200)
+rpart.plot::prp(fpart50, uniform = T, node.fun = tot_count)
+rpart.plot::prp(fpart200, uniform = T, node.fun = tot_count)
+?rpart
 #plot(fpart, uniform = T)
 #text(fpart, cex = 0.75)
 library(randomForest)
-fit200 <- randomForest(factor(ir200)~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3[!is.na(pdat3$ir200),], ntree = 3000, importance = T)
+fit50 <- randomForest(factor(ir50)~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat[!is.na(alldat$ir50),], ntree = 3000, importance = T)
+fit200 <- randomForest(factor(ir200)~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat[!is.na(alldat$ir200),], ntree = 3000, importance = T)
 print(fit50)
 print(fit200)
 cbind(order(importance(fit50)), order(importance(fit100)))
+
+
+rfS <- randomForest(sV~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, ntree = 3000, importance = T)
+print(rfS)
+rfSt <- rpart(sV~r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, method = "anova")
+rpart.plot::prp(rfSt, uniform = T, node.fun = tot_count)
+varImpPlot(rfS)
+rsq.rpart(rfSt)
 #######################################
 #######################################
 #######################################
