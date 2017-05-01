@@ -339,7 +339,7 @@ s.hmp2 <- unlist(gavfz2[,"s"])[which(apply(otu3, 2, sum) > X)]
 n.hmp <- unlist(gavfz1[,"N"])[which(apply(otu3, 2, sum) > X)]
 n.hmp2 <- unlist(gavfz2[,"N"])[which(apply(otu3, 2, sum) > X)]
 r2.hmp <- unlist(gavfz1[,"r2"])[which(apply(otu3, 2, sum) > X)]
-hmp1 <- sapply(gav1[apply(otu3, 2, sum) > 2000], function(x) rev(sort(x)))
+hmp1 <- sapply(gav1[apply(otu3, 2, sum) >= 2000], function(x) rev(sort(x)))
 
 gavt <-  apply(otuT[,-1], 1, get_abundvec, N = X)
 fzT <- lapply(gavt, function(x) fzmod(sort(x)))
@@ -452,7 +452,7 @@ inrange <- function(trunc, gav, realdat){
   
   irT <- vector(length = length(gav)) 
   irT[sapply(gav, length) >= trunc] <- simrange > min(realrange) & simrange < max(realrange)
-  irT[!sapply(gav, length) >= trunc] <- NA
+  irT[sapply(gav, length) < trunc] <- NA
   
   return(irT)
 }
@@ -601,24 +601,29 @@ fitir <- glm(ir200~cpN+coN, data = pdat3[complete.cases(pdat3),], family = "bino
 summary(fitir)
 
 fpart50 <- rpart(ir50~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, method = "class")
-fpart200 <- rpart(ir200~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat6, method = "class")
+fpart100 <- rpart(ir100~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, method = "class")
+fpart200 <- rpart(ir200~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, method = "class")
 plotcp(fpart200)
-rpart.plot::prp(fpart50, uniform = T, node.fun = tot_count)
-rpart.plot::prp(fpart200, uniform = T, node.fun = tot_count)
+rpart.plot::prp(fpart50, uniform = T, node.fun = tot_count, extra = 1)
+rpart.plot::prp(fpart100, uniform = T, node.fun = tot_count, extra = 1)
+rpart.plot::prp(fpart200, uniform = T, node.fun = tot_count, extra = 1)
 ?rpart
 #plot(fpart, uniform = T)
 #text(fpart, cex = 0.75)
 library(randomForest)
-fit50 <- randomForest(factor(ir50)~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat[!is.na(alldat$ir50),], ntree = 3000, importance = T)
-fit200 <- randomForest(factor(ir200)~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat[!is.na(alldat$ir200),], ntree = 3000, importance = T)
+fit50 <- randomForest(factor(ir50)~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat[!is.na(alldat$ir50),], ntree = 3000, importance = T, mtry = 15)
+fit100 <- randomForest(factor(ir100)~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat[!is.na(alldat$ir100),], ntree = 3000, importance = T, mtry = 15)
+fit200 <- randomForest(factor(ir200)~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat[!is.na(alldat$ir200),], ntree = 3000, importance = T, mtry = 15)
 print(fit50)
+print(fit100)
 print(fit200)
-cbind(order(importance(fit50)), order(importance(fit100)))
-
+varImpPlot(fit50)
+varImpPlot(fit100)
+varImpPlot(fit200)
 
 rfS <- randomForest(sV~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, ntree = 3000, importance = T)
 print(rfS)
-rfSt <- rpart(sV~r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, method = "anova")
+rfSt <- rpart(sV~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, method = "anova")
 rpart.plot::prp(rfSt, uniform = T, node.fun = tot_count)
 varImpPlot(rfS)
 rsq.rpart(rfSt)
