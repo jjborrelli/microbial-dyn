@@ -600,9 +600,9 @@ tot_count <- function(x, labs, digits, varlen)
 fitir <- glm(ir200~cpN+coN, data = pdat3[complete.cases(pdat3),], family = "binomial")
 summary(fitir)
 
-fpart50 <- rpart(ir50~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, method = "class")
-fpart100 <- rpart(ir100~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, method = "class")
-fpart200 <- rpart(ir200~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, method = "class")
+fpart50 <- rpart(ir50~r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, method = "class")
+fpart100 <- rpart(ir100~r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, method = "class")
+fpart200 <- rpart(ir200~r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, method = "class")
 plotcp(fpart200)
 rpart.plot::prp(fpart50, uniform = T, node.fun = tot_count, extra = 1)
 rpart.plot::prp(fpart100, uniform = T, node.fun = tot_count, extra = 1)
@@ -611,9 +611,18 @@ rpart.plot::prp(fpart200, uniform = T, node.fun = tot_count, extra = 1)
 #plot(fpart, uniform = T)
 #text(fpart, cex = 0.75)
 library(randomForest)
-fit50 <- randomForest(factor(ir50)~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat[!is.na(alldat$ir50),], ntree = 3000, importance = T, mtry = 15)
-fit100 <- randomForest(factor(ir100)~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat[!is.na(alldat$ir100),], ntree = 3000, importance = T, mtry = 15)
-fit200 <- randomForest(factor(ir200)~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat[!is.na(alldat$ir200),], ntree = 3000, importance = T, mtry = 15)
+fit50 <- randomForest(factor(ir50)~r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat[!is.na(alldat$ir50),], ntree = 3000, importance = T, mtry = 15)
+fit100 <- randomForest(factor(ir100)~r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat[!is.na(alldat$ir100),], ntree = 3000, importance = T, mtry = 15)
+
+fit200 <- randomForest(factor(ir200)~r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat[!is.na(alldat$ir200),], ntree = 3000, importance = T, mtry = 15)
+zs <- sample(which(alldat$ir200[!is.na(alldat$ir200)] != 1), 100)
+ons <- which(alldat$ir200[!is.na(alldat$ir200)] != 0)
+fit200A <- randomForest(factor(ir200)~r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat[!is.na(alldat$ir200),][c(zs,ons),], ntree = 3000, importance = T, mtry = 10)
+varImpPlot(fit200A)
+fit200Acart <- rpart(factor(ir200)~r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat[!is.na(alldat$ir200),][c(zs,ons),], method = "class")
+rpart.plot::prp((fit200Acart), uniform = T, node.fun = tot_count, extra = 1)
+plotcp(fit200Acart)
+
 print(fit50)
 print(fit100)
 print(fit200)
@@ -631,6 +640,12 @@ rsq.rpart(rfSt)
 #######################################
 #######################################
 
+
+
+
+#######################################
+#######################################
+#######################################
 # all data as zscore modeling s value
 fit1.1 <- (lm(sV~Nsp+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = subdat, na.action = "na.fail", model = F, x = F, y = F))
 summary(fit1.1)
