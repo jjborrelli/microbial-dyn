@@ -324,6 +324,8 @@ psd4 <- readRDS("~/Documents/Data/psd4.rds")
 psd5 <- readRDS("~/Documents/Data/psd5.rds")
 #fzd3 <- t(sapply(psd3$eqa, fzmod))
 psd6 <- readRDS("~/Documents/Data/vdat.rds")
+psd7 <- readRDS("~/Desktop/vdat2.rds")
+psd8 <- readRDS("~/Desktop/vdat3.rds")
 ####################################################################################################################################
 ####################################################################################################################################
 ####################################################################################################################################
@@ -396,6 +398,13 @@ gavsim6 <- lapply(psd6$eqa, function(x) get_abundvec(x[x>0], N = X))
 simfz6 <- lapply(gavsim6, function(x) fzmod(sort(x)))
 simfz6 <- do.call(rbind, simfz6)
 
+gavsim7 <- lapply(psd7$eqa, function(x) get_abundvec(x[x>0], N = X))
+simfz7 <- lapply(gavsim7, function(x) fzmod(sort(x)))
+simfz7 <- do.call(rbind, simfz7)
+
+gavsim8 <- lapply(psd8$eqa, function(x) get_abundvec(x[x>0], N = X))
+simfz8 <- lapply(gavsim8, function(x) fzmod(sort(x)))
+simfz8 <- do.call(rbind, simfz8)
 
 allfit <- data.frame(s = c(fzT$s, fzT2$s, dt1$s, dt2$s, s.hmp, simfz1$s, simfz2$s, simfz3$s, simfz4$s, simfz5$s, simfz6$s),
                      N = c(fzT$N, fzT2$N, dt1$N, dt2$N, n.hmp, simfz1$N, simfz2$N, simfz3$N, simfz4$N, simfz5$N, simfz6$N),
@@ -550,6 +559,10 @@ pdat6$ir50 <- inrange(50, gavsim6, hmp1)
 pdat6$ir100 <- inrange(100, gavsim6, hmp1)
 pdat6$ir200 <- inrange(200, gavsim6, hmp1)
 
+pdat7 <- prepdat(eqa = gavsim7, eqm = psd7$eqm, svals = simfz7$s, sr2 = simfz7$r2, d = psd7$ds, r = psd7$rs)
+pdat7$k <- psd7$kv
+
+
 alldat <- data.table::rbindlist(list(pdat1,pdat2,pdat4,pdat6))
 
 subdat <- apply(abs(pdat2[,-c(1,2)]), 2, function(x){(x - mean(x))/sd(x)})
@@ -568,7 +581,7 @@ subdata <- data.frame(pdat3[,c(1,2)], subdata)
 #######################################
 
 # all orig data modeling s value
-fit1 <- (lm(sV~Nsp+r+C+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, model = F, x = F, y = F))
+fit1 <- (lm(sV~Nsp+r+C+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat7, model = F, x = F, y = F))
 summary(fit1)
 # same but for new sim, with K
 fit1a <- (lm(sV~Nsp+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3))
@@ -630,9 +643,9 @@ varImpPlot(fit50)
 varImpPlot(fit100)
 varImpPlot(fit200)
 
-rfS <- randomForest(sV~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, ntree = 3000, importance = T)
+rfS <- randomForest(sV~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat7, ntree = 3000, importance = T)
 print(rfS)
-rfSt <- rpart(sV~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, method = "anova")
+rfSt <- rpart(sV~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat7[pdat7$Nsp >= 200,], method = "anova")
 rpart.plot::prp(rfSt, uniform = T, node.fun = tot_count)
 varImpPlot(rfS)
 rsq.rpart(rfSt)
