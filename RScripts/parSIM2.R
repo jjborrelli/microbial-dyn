@@ -1,5 +1,5 @@
-mats <- readRDS("~/Abundance/mats.rds")
-psd7 <- readRDS("~/Abundance/vdat2.rds")
+mats <- readRDS("~/Documents/Data/mats.rds")
+psd7 <- readRDS("~/Documents/Data/vdat2.rds")
 
 library(deSolve)
 
@@ -40,30 +40,7 @@ ext1 <- function (times, states, parms){
   })
 }
 
-fill_mats <- function(mats, sdevp = .5, sdevn = 1){
-  t2 <- list()
-  for(i in 1:length(mats)){
-    t1 <- mats[[i]]
-    diag(t1) <- 0  #-rbeta(length(diag(t1)), 1.1, 5)*5
-    t1[t1 == 1] <- abs(rnorm(sum(t1 == 1), 0, sdevp))
-    #abs(rnorm(sum(t1 == 1), mean(INTs), sd(INTs))) #runif(sum(t1 == 1), 0, 1) 
-    t1[t1 == -1] <- -abs(rnorm(sum(t1 == -1), 0, sdevn))
-    #-abs(rnorm(sum(t1 == -1), mean(INTs), sd(INTs))) # runif(sum(t1 == -1), -1, 0) 
-    t2[[i]] <- t1 
-  }
-  return(t2)
-}
 
-fill_mat <- function(mat, sdevp = .5, sdevn = 1){
-  t1 <- mat
-  diag(t1) <- 0  #-rbeta(length(diag(t1)), 1.1, 5)*5
-  t1[t1 == 1] <- abs(rnorm(sum(t1 == 1), 0, sdevp))
-  #abs(rnorm(sum(t1 == 1), mean(INTs), sd(INTs))) #runif(sum(t1 == 1), 0, 1) 
-  t1[t1 == -1] <- -abs(rnorm(sum(t1 == -1), 0, sdevn))
-  #-abs(rnorm(sum(t1 == -1), mean(INTs), sd(INTs))) # runif(sum(t1 == -1), -1, 0)
-  
-  return(t1)
-}
 
 # Function to get equilibrium communitie
 get_eq1 <- function(mat, times, Rmax = 1, Kval = 20, Ki = "val"){
@@ -149,11 +126,22 @@ itystr <- function(x){
 }
 ####################################################################################################################
 ####################################################################################################################
-library(parallel)
-library(doSNOW)
+library(R.utils)
 ####################################################################################################################
 ####################################################################################################################
-for(I in 1:length(mats)){
+
+wrk <- c()
+eig <- c()
+eig2 <- c()
+spp <- list()
+eqst <- list()
+grs <- list()
+eqkv <- c()
+eqm <- list()
+ico <- c()
+Con <- c()
+s0 <- Sys.time()
+for(I in 1:5000){
   
   a.i <- psd7$eqa[[I]][order(as.numeric(names(psd7$eqa[[I]])))]
   m.i <- mats[[I]]
@@ -161,36 +149,38 @@ for(I in 1:length(mats)){
   r.i <- psd7$rs[[I]]
   
   par1 <- list(alpha = r.i, m = m.i, K = k.i)
-  out <- ode(y = a.i, times = 1:1000, func = lvmodK, parms = par1, events = list(func = ext1, time =  1:1000))
-  matplot(out[,-1], typ = "l")
+  out <- evalWithTimeout(ode(y = a.i, times = 1:2000, func = lvmodK, parms = par1, events = list(func = ext1, time =  1:2000)), timeout = 600, onTimeout = "silent")
+  if(is.null(out)){wrk[I] <- FALSE;next}
+  matplot(out[,-1], typ = "l", main = I)
   
   jf <- jacobian.full(a.i, lvmodK, parms = par1)
-  print(max(Re(eigen(jf)$values)))
+  eig[I] <- max(Re(eigen(jf)$values))
+  
+  if(nrow(out) < 2000){wrk[I] <- FALSE;next}
+  
+  
+  spp[[I]] <- out[2000,-1] > 10^-10
+  if(sum(abs(sign(m.i[spp[[I]],spp[[I]]]))) == nrow(m.i[spp[[I]],spp[[I]]])){wrk[I] <- FALSE;next}
+  
+  ity <- itystr(m.i[spp[[I]],spp[[I]]])
+  
+  ico[I] <- is.connected(graph.adjacency(abs(sign(m.i[spp[[I]],spp[[I]]]))))
+  Con[I] <- sum(abs(sign(m.i[spp[[I]],spp[[I]]])))/(sum(spp[[I]])*sum(spp[[I]]))
+  
+  eqst[[I]] <- out[2000,-1][spp[[I]]]
+  grs[[I]] <- r.i[spp[[I]]]
+  eqkv[I] <- k.i
+  eqm[[I]] <- ity
+  
+  par2 <- list(alpha = grs[[I]], m = m.i[spp[[I]],spp[[I]]], K = k.i)
+  jf2 <- jacobian.full(eqst[[I]], lvmodK, parms = par2)
+  eig2[I] <- max(Re(eigen(jf2)$values))
+  print(c(I, eig[[I]], eig2[[I]]))
+  
 }
+s1 <- Sys.time()
+s1-s0
 
+
+# wrk[is.na(wrk)] <- TRUE
 #25264
-
-cl <- makeCluster(n.cores, type = "FORK")
-clusterExport(cl, c("lvmod", "lvmodK2", "ext1", "psd7", "mats"))
-registerDoSNOW(cl)
-
-RESULTS <- foreach(x = 1:length(mats), .packages = c("deSolve", "R.utils", "igraph")) %do% {
-  a.i <- psd7$eqa[[x]][order(as.numeric(names(psd7$eqa[[x]])))]
-  m.i <- mats[[x]]
-  k.i <- psd7$kv[[x]]
-  r.i <- psd7$rs[[x]]
-  
-  par1 <- list(alpha = r.i, m = m.i, K = k.i)
-  out <- ode(y = a.i, times = 1:1800, func = lvmodK, parms = par1, events = list(func = ext1, time =  1:1800))
-  
-  spp <- out[,-1] > 10^-10
-  ity <- itystr(m.i[spp,spp])
-  
-  ico <- is.connected(graph.adjacency(abs(sign(m.i[spp,spp]))))
-  Con <- sum(abs(sign(m.i[spp,spp])))/(sum(spp)*sum(spp))
-  
-  return(list(spp = spp, eqst = out[,-1][spp], grs = r.i[spp], eqkv = k.i, eqm = ity, ico = ico))
-}
-
-save(RESULTS, "~/Abundance/dat2ALT.Rdata")
-
