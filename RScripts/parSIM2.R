@@ -1,5 +1,5 @@
 mats <- readRDS("~/Abundance/mats.rds")
-psd7 <- readRDS("~/Abundance/vdat3.rds")
+psd7 <- readRDS("~/Abundance/vdat2.rds")
 
 library(deSolve)
 
@@ -172,7 +172,7 @@ for(I in 1:length(mats)){
 
 cl <- makeCluster(n.cores, type = "FORK")
 clusterExport(cl, c("lvmod", "lvmodK2", "ext1", "psd7", "mats"))
-?registerDoSNOW(cl)
+registerDoSNOW(cl)
 
 RESULTS <- foreach(x = 1:length(mats), .packages = c("deSolve", "R.utils", "igraph")) %do% {
   a.i <- psd7$eqa[[x]][order(as.numeric(names(psd7$eqa[[x]])))]
