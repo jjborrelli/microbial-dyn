@@ -130,7 +130,7 @@ library(R.utils)
 ####################################################################################################################
 ####################################################################################################################
 
-wrk <- c()
+wrk <- rep(NA, 5000)
 eig <- c()
 eig2 <- c()
 spp <- list()
@@ -141,7 +141,7 @@ eqm <- list()
 ico <- c()
 Con <- c()
 s0 <- Sys.time()
-for(I in 1:5000){
+for(I in 761:5000){
   
   a.i <- psd7$eqa[[I]][order(as.numeric(names(psd7$eqa[[I]])))]
   m.i <- mats[[I]]
@@ -149,7 +149,7 @@ for(I in 1:5000){
   r.i <- psd7$rs[[I]]
   
   par1 <- list(alpha = r.i, m = m.i, K = k.i)
-  out <- evalWithTimeout(ode(y = a.i, times = 1:2000, func = lvmodK, parms = par1, events = list(func = ext1, time =  1:2000)), timeout = 600, onTimeout = "silent")
+  out <- evalWithTimeout(ode(y = a.i, times = 1:2000, func = lvmodK, parms = par1, events = list(func = ext1, time =  1:2000)), timeout = 120, onTimeout = "silent")
   if(is.null(out)){wrk[I] <- FALSE;next}
   matplot(out[,-1], typ = "l", main = I)
   
@@ -176,7 +176,7 @@ for(I in 1:5000){
   jf2 <- jacobian.full(eqst[[I]], lvmodK, parms = par2)
   eig2[I] <- max(Re(eigen(jf2)$values))
   print(c(I, eig[[I]], eig2[[I]]))
-  
+  wrk[I] <- TRUE
 }
 s1 <- Sys.time()
 s1-s0
