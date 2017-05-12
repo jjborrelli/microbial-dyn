@@ -141,7 +141,7 @@ eqm <- list()
 ico <- c()
 Con <- c()
 s0 <- Sys.time()
-for(I in 761:5000){
+for(I in 1801:2000){
   
   a.i <- psd7$eqa[[I]][order(as.numeric(names(psd7$eqa[[I]])))]
   m.i <- mats[[I]]
@@ -157,7 +157,7 @@ for(I in 761:5000){
   eig[I] <- max(Re(eigen(jf)$values))
   
   if(nrow(out) < 2000){wrk[I] <- FALSE;next}
-  
+  if(any(is.na(out))){wrk[I] <- FALSE;next}
   
   spp[[I]] <- out[2000,-1] > 10^-10
   if(sum(abs(sign(m.i[spp[[I]],spp[[I]]]))) == nrow(m.i[spp[[I]],spp[[I]]])){wrk[I] <- FALSE;next}

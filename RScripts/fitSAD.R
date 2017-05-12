@@ -406,6 +406,11 @@ gavsim8 <- lapply(psd8$eqa, function(x) get_abundvec(x[x>0], N = X))
 simfz8 <- lapply(gavsim8, function(x) fzmod(sort(x)))
 simfz8 <- do.call(rbind, simfz8)
 
+gavsim9 <- lapply(dat9$eqa, function(x) get_abundvec(x[x>0], N = X))
+simfz9 <- lapply(gavsim9, function(x) fzmod(sort(x)))
+simfz9 <- do.call(rbind, simfz9)
+
+
 allfit <- data.frame(s = c(fzT$s, fzT2$s, dt1$s, dt2$s, s.hmp, simfz1$s, simfz2$s, simfz3$s, simfz4$s, simfz5$s, simfz6$s),
                      N = c(fzT$N, fzT2$N, dt1$N, dt2$N, n.hmp, simfz1$N, simfz2$N, simfz3$N, simfz4$N, simfz5$N, simfz6$N),
                      r2 = c(fzT$r2, fzT2$r2, dt1$r2, dt2$r2, r2.hmp, simfz1$r2, simfz2$r2, simfz3$r2, simfz4$r2, simfz5$r2, simfz6$r2),
@@ -562,6 +567,11 @@ pdat6$ir200 <- inrange(200, gavsim6, hmp1)
 pdat7 <- prepdat(eqa = gavsim7, eqm = psd7$eqm, svals = simfz7$s, sr2 = simfz7$r2, d = psd7$ds, r = psd7$rs)
 pdat7$k <- psd7$kv
 
+pdat8 <- prepdat(eqa = gavsim8, eqm = psd8$eqm, svals = simfz8$s, sr2 = simfz8$r2, d = psd8$ds, r = psd8$rs)
+pdat8$k <- psd8$kv
+
+pdat9 <- prepdat(eqa = gavsim9, eqm = psd9$eqm, svals = simfz9$s, sr2 = simfz9$r2, d = psd9$ds, r = psd9$rs)
+pdat9$k <- psd9$kv
 
 alldat <- data.table::rbindlist(list(pdat1,pdat2,pdat4,pdat6))
 
@@ -575,13 +585,29 @@ subdat2$Nsp2 <- pdat2$Nsp[pdat2$Nsp > 50]
 subdata <- apply(abs(pdat3[,-c(1,2)]), 2, function(x){(x - mean(x))/sd(x)})
 subdata <- data.frame(pdat3[,c(1,2)], subdata)
 
+x1 <- which(pdat7[,"sR"] > 0.99)
+x <- x1[79]
+#plot(dzipf(1:pdat7[x,"Nsp"], pdat7[x,"Nsp"], 1), typ = "o", col = "green4")
+#points(dzipf(1:pdat7[x,"Nsp"], pdat7[x,"Nsp"], .8), typ = "o", col = "green3")
+plot(dzipf(1:pdat7[x,"Nsp"], pdat7[x,"Nsp"], pdat7[x,"sV"]), typ = "o", col = "blue")
+points(rev(sort(gavsim7[[x]]))/sum(gavsim7[[x]]))
+pdat7[x,"sR"]
+
+plot(aggregate(pdat7$Nsp, list(pdat7$k), quantile, prob = 0.975), ylim = c(0,600), typ = "o")
+points(aggregate(pdat7$Nsp, list(pdat7$k), median), typ = "o")
+points(aggregate(pdat7$Nsp, list(pdat7$k), quantile, prob = 0.025), typ = "o")
+points(aggregate(pdat7$Nsp, list(pdat7$k), max), typ = "o")
+points(aggregate(pdat7$Nsp, list(pdat7$k), min), typ = "o")
+
+df1 <- data.frame(N = signif(pdat8$Nsp,1)[pdat8$Nsp > 10], K = pdat8$k[pdat8$Nsp > 10], s = pdat8$sV[pdat8$Nsp > 10])
+ggplot(df1, aes(x = (K), y = s)) + geom_point() + geom_smooth() + facet_wrap(~N, scales = "free_y")
 
 #######################################
 # Models ##############################
 #######################################
 
 # all orig data modeling s value
-fit1 <- (lm(sV~Nsp+r+C+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat7, model = F, x = F, y = F))
+fit1 <- (lm(sV~Nsp+r+C+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat8, model = F, x = F, y = F))
 summary(fit1)
 # same but for new sim, with K
 fit1a <- (lm(sV~Nsp+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3))
@@ -643,9 +669,9 @@ varImpPlot(fit50)
 varImpPlot(fit100)
 varImpPlot(fit200)
 
-rfS <- randomForest(sV~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat7, ntree = 3000, importance = T)
+rfS <- randomForest(sV~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat8, ntree = 3000, importance = T)
 print(rfS)
-rfSt <- rpart(sV~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat7[pdat7$Nsp >= 200,], method = "anova")
+rfSt <- rpart(sV~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat8, method = "anova")
 rpart.plot::prp(rfSt, uniform = T, node.fun = tot_count)
 varImpPlot(rfS)
 rsq.rpart(rfSt)
