@@ -141,7 +141,7 @@ eqm <- list()
 ico <- c()
 Con <- c()
 s0 <- Sys.time()
-for(I in 1801:2000){
+for(I in 2001:15000){
   
   a.i <- psd7$eqa[[I]][order(as.numeric(names(psd7$eqa[[I]])))]
   m.i <- mats[[I]]

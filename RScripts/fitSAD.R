@@ -270,7 +270,7 @@ rm(metadat)
 ####################################################################################################################################
 
 otuT <- read.csv("Desktop/Archive/feces_M3_spp.csv")
-fzT <- apply(otuT[,-1], 1, function(x) fzmod(sort(x[x!=0])))
+fzT <- apply(otuT[,-1], 1, function(x) fzmod(rev(sort(x[x!=0]))))
 fzT <- do.call(rbind, fzT)
 
 otuT2 <- read.csv("Desktop/Archive/feces_F4_spp.csv")
@@ -326,6 +326,7 @@ psd5 <- readRDS("~/Documents/Data/psd5.rds")
 psd6 <- readRDS("~/Documents/Data/vdat.rds")
 psd7 <- readRDS("~/Desktop/vdat2.rds")
 psd8 <- readRDS("~/Desktop/vdat3.rds")
+psd9 <- readRDS("~/Desktop/vdat5.rds")
 ####################################################################################################################################
 ####################################################################################################################################
 ####################################################################################################################################
@@ -406,7 +407,7 @@ gavsim8 <- lapply(psd8$eqa, function(x) get_abundvec(x[x>0], N = X))
 simfz8 <- lapply(gavsim8, function(x) fzmod(sort(x)))
 simfz8 <- do.call(rbind, simfz8)
 
-gavsim9 <- lapply(dat9$eqa, function(x) get_abundvec(x[x>0], N = X))
+gavsim9 <- lapply(psd9$eqa, function(x) get_abundvec(x[x>0], N = X))
 simfz9 <- lapply(gavsim9, function(x) fzmod(sort(x)))
 simfz9 <- do.call(rbind, simfz9)
 
@@ -572,6 +573,7 @@ pdat8$k <- psd8$kv
 
 pdat9 <- prepdat(eqa = gavsim9, eqm = psd9$eqm, svals = simfz9$s, sr2 = simfz9$r2, d = psd9$ds, r = psd9$rs)
 pdat9$k <- psd9$kv
+pdat9$ir50 <- inrange(50, gavsim9, hmp1)
 
 alldat <- data.table::rbindlist(list(pdat1,pdat2,pdat4,pdat6))
 
@@ -593,24 +595,25 @@ plot(dzipf(1:pdat7[x,"Nsp"], pdat7[x,"Nsp"], pdat7[x,"sV"]), typ = "o", col = "b
 points(rev(sort(gavsim7[[x]]))/sum(gavsim7[[x]]))
 pdat7[x,"sR"]
 
-plot(aggregate(pdat7$Nsp, list(pdat7$k), quantile, prob = 0.975), ylim = c(0,600), typ = "o")
-points(aggregate(pdat7$Nsp, list(pdat7$k), median), typ = "o")
-points(aggregate(pdat7$Nsp, list(pdat7$k), quantile, prob = 0.025), typ = "o")
+plot(aggregate(pdat9$Nsp, list(pdat9$k), quantile, prob = 0.975), ylim = c(0,600), typ = "o")
+points(aggregate(pdat9$Nsp, list(pdat9$k), median), typ = "o")
+points(aggregate(pdat9$Nsp, list(pdat9$k), quantile, prob = 0.025), typ = "o")
 points(aggregate(pdat7$Nsp, list(pdat7$k), max), typ = "o")
 points(aggregate(pdat7$Nsp, list(pdat7$k), min), typ = "o")
 
-df1 <- data.frame(N = signif(pdat8$Nsp,1)[pdat8$Nsp > 10], K = pdat8$k[pdat8$Nsp > 10], s = pdat8$sV[pdat8$Nsp > 10])
+df1 <- data.frame(N = signif(pdat9$Nsp,1)[pdat9$Nsp > 10], K = pdat9$k[pdat9$Nsp > 10], s = pdat9$sV[pdat9$Nsp > 10])
 ggplot(df1, aes(x = (K), y = s)) + geom_point() + geom_smooth() + facet_wrap(~N, scales = "free_y")
+ggplot(df1, aes(x = factor(K), y = s)) + geom_boxplot() + facet_wrap(~N, scales = "free_y")
 
 #######################################
 # Models ##############################
 #######################################
 
 # all orig data modeling s value
-fit1 <- (lm(sV~Nsp+r+C+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat8, model = F, x = F, y = F))
+fit1 <- (lm(sV~Nsp+r+C+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat9, model = F, x = F, y = F))
 summary(fit1)
 # same but for new sim, with K
-fit1a <- (lm(sV~Nsp+r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat3))
+fit1a <- (lm(sV~Nsp, data = pdat9))
 summary(fit1a)
 # same but for new sim, with K
 fit1b <- (lm(sV~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat4))
@@ -639,10 +642,10 @@ tot_count <- function(x, labs, digits, varlen)
 fitir <- glm(ir200~cpN+coN, data = pdat3[complete.cases(pdat3),], family = "binomial")
 summary(fitir)
 
-fpart50 <- rpart(ir50~r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, method = "class")
-fpart100 <- rpart(ir100~r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, method = "class")
-fpart200 <- rpart(ir200~r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, method = "class")
-plotcp(fpart200)
+fpart50 <- rpart(ir50~r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat9, method = "class")
+fpart100 <- rpart(ir100~r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat9, method = "class")
+fpart200 <- rpart(ir200~r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat9, method = "class")
+plotcp(fpart50)
 rpart.plot::prp(fpart50, uniform = T, node.fun = tot_count, extra = 1)
 rpart.plot::prp(fpart100, uniform = T, node.fun = tot_count, extra = 1)
 rpart.plot::prp(fpart200, uniform = T, node.fun = tot_count, extra = 1)
