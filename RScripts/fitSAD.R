@@ -672,12 +672,12 @@ varImpPlot(fit50)
 varImpPlot(fit100)
 varImpPlot(fit200)
 
-rfS <- randomForest(sV~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat8, ntree = 3000, importance = T)
+rfS <- randomForest(maxn~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat9, ntree = 3000, importance = T)
 print(rfS)
-rfSt <- rpart(sV~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat8, method = "anova")
-rpart.plot::prp(rfSt, uniform = T, node.fun = tot_count)
+rfSt <- rpart::rpart(sV~Nsp+r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat9, method = "anova")
+rpart.plot::prp(rfSt, uniform = T, extra = 1)
 varImpPlot(rfS)
-rsq.rpart(rfSt)
+rpart::rsq.rpart(rfSt)
 #######################################
 #######################################
 #######################################
