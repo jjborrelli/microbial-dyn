@@ -127,10 +127,12 @@ itystr <- function(x){
 ####################################################################################################################
 ####################################################################################################################
 library(R.utils)
+library(rootSolve)
+library(igraph)
 ####################################################################################################################
 ####################################################################################################################
 
-wrk <- rep(NA, 5000)
+wrk <- rep(NA, 1000)
 eig <- c()
 eig2 <- c()
 spp <- list()
@@ -141,7 +143,7 @@ eqm <- list()
 ico <- c()
 Con <- c()
 s0 <- Sys.time()
-for(I in 2001:15000){
+for(I in 1:1000){
   
   a.i <- psd7$eqa[[I]][order(as.numeric(names(psd7$eqa[[I]])))]
   m.i <- mats[[I]]
@@ -149,15 +151,17 @@ for(I in 2001:15000){
   r.i <- psd7$rs[[I]]
   
   par1 <- list(alpha = r.i, m = m.i, K = k.i)
-  out <- evalWithTimeout(ode(y = a.i, times = 1:2000, func = lvmodK, parms = par1, events = list(func = ext1, time =  1:2000)), timeout = 120, onTimeout = "silent")
+  out <- evalWithTimeout(ode(y = a.i, times = 1:10000, func = lvmodK, parms = par1, events = list(func = ext1, time =  1:10000)), timeout = 120, onTimeout = "silent")
   if(is.null(out)){wrk[I] <- FALSE;next}
-  matplot(out[,-1], typ = "l", main = I)
+  
   
   jf <- jacobian.full(a.i, lvmodK, parms = par1)
   eig[I] <- max(Re(eigen(jf)$values))
   
   if(nrow(out) < 2000){wrk[I] <- FALSE;next}
   if(any(is.na(out))){wrk[I] <- FALSE;next}
+  
+  matplot(out[,-1], typ = "l", main = paste(I, sum(out[10000,-1] > 0), sep = ";"))
   
   spp[[I]] <- out[2000,-1] > 10^-10
   if(sum(abs(sign(m.i[spp[[I]],spp[[I]]]))) == nrow(m.i[spp[[I]],spp[[I]]])){wrk[I] <- FALSE;next}
@@ -175,7 +179,7 @@ for(I in 2001:15000){
   par2 <- list(alpha = grs[[I]], m = m.i[spp[[I]],spp[[I]]], K = k.i)
   jf2 <- jacobian.full(eqst[[I]], lvmodK, parms = par2)
   eig2[I] <- max(Re(eigen(jf2)$values))
-  print(c(I, eig[[I]], eig2[[I]]))
+  print(c(I, eig[[I]], eig2[[I]], sum(out[2000,-1] > 0)))
   wrk[I] <- TRUE
 }
 s1 <- Sys.time()
@@ -184,3 +188,35 @@ s1-s0
 
 # wrk[is.na(wrk)] <- TRUE
 #25264
+st1 <- Sys.time()
+I = 35
+eqst2 <- list()
+s.v <- c()
+r.2 <- c()
+N <- c()
+pmat <- list()
+a.i <- psd7$eqa[[I]][order(as.numeric(names(psd7$eqa[[I]])))]
+m.i <- mats[[I]]
+k.i <- psd7$kv[[I]]
+r.i <- psd7$rs[[I]]
+for(i in 1:100){
+  
+  par1 <- list(alpha = r.i, m = m.i, K = k.i)
+  par1$m[par1$m != 0] <- abs(rnorm(sum(par1$m != 0), par1$m[par1$m != 0], .5)) * sign(par1$m[par1$m != 0])
+  diag(par1$m) <- diag(m.i)
+  #par1$m <- fill_mats(list(sign(par1$m)), sdevn = 1, sdevp = 1)[[1]]
+  out <- evalWithTimeout(ode(y = a.i, times = 1:2000, func = lvmodK, parms = par1, events = list(func = ext1, time =  1:2000)), timeout = 120, onTimeout = "silent")
+  if(is.null(out)){next}
+  if(nrow(out) != 2000){next}
+  eqst2[[i]] <- out[2000,-1][out[2000,-1] > 0]
+  matplot(out[,-1], typ = "l", main = paste(i, sum(out[2000,-1] > 0), sep = " | "))
+  
+  fz <- fzmod(rev(sort(eqst2[[i]]))/ sum(eqst2[[i]]))
+  
+  s.v[i] <- fz$s
+  r.2[i] <- fz$r2
+  N[i] <- fz$N
+  pmat[[i]] <- par1$m   
+}
+
+st2 <- Sys.time()
