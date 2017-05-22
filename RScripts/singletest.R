@@ -110,7 +110,7 @@ fill_mat <- function(mat, dis, p1 = .5, p2 = 1){
 ######################################################################################
 ######################################################################################
 
-multityp <- lapply(1:10, function(x){
+multityp <- lapply(1:20, function(x){
   S <- 600
   p1 <- runif(1,0,1)
   p2 <- runif(1, p1, 1)
@@ -120,11 +120,11 @@ multityp <- lapply(1:10, function(x){
   return((tat))
 })
 
-multityp.fill <- lapply(multityp, function(x) fill_mat(x, dis = "beta", p1 = 1, p2 = 4))
+multityp.fill <- lapply(multityp, function(x) fill_mat(x, dis = "beta", p1 = 1, p2 = 2))
 
 par1 <- list()
 dyn <- list()
-for(i in 1:10){
+for(i in 1:20){
 
   diag(multityp.fill[[i]]) <- (runif(nrow(multityp.fill[[i]]), -1, 0))
 
@@ -135,27 +135,59 @@ for(i in 1:10){
 }
 
 
-p1 <- par1[[1]]
-d1 <- dyn[[1]]
+eqab <- lapply(dyn, function(x) if(nrow(x) == 2000){x[2000,-1][x[2000,-1]>0]}else{NA})
+sapply(eqab, function(x) if(any(is.na(x))){NA}else{fzmod((x))})[[6]]
+
+
+p1 <- par1[[6]]
+d1 <- dyn[[6]]
 
 
 par3 <- list()
 dyn2 <- list()
-tops <- c(545, 205, 116, 587, 191)
-for(i in 1:10){
+#tops <- c(545, 205, 116, 587, 191)
+for(i in 1:100){
   par2 <- p1
-  #par2$m[par2$m != 0] <- rnorm(sum(p1$m != 0), p1$m[p1$m != 0], p1$m[p1$m != 0]*.1)
+  #par2$m[par2$m != 0] <- abs(rnorm(sum(p1$m != 0), p1$m[p1$m != 0], abs(p1$m[p1$m != 0]*.1)))*sign(p1$m[p1$m != 0])
+  #diag(par2$m) <- diag(p1$m)
   par2$K <- rep(p1$K/sum(d1[2000,-1] > 10^-10), 600)
-  #par2$K[545] <- par2$K[545]*(i/2) 
-  r1 <- rlnorm(600, -4, 1)
-  par2$K <- par2$K[order(d1[2000,-1], decreasing = T)]+sort(r1, decreasing = T)
+  #par2$alpha <- rev(sort(par2$alpha))
+  par2$K[7] <- par2$K[7]*(2) 
+  #r1 <- rlnorm(600, -1, 1)
+  #par2$K <- par2$K[order(d1[2000,-1], decreasing = T)]*sort(r1, decreasing = T)
   
   par3[[i]] <- par2
-  dyn2[[i]] <-(ode(d1[2000,-1], times = 1:2000, func = lvmodKi, parms = par3[[i]], events = list(func = ext1, time =  1:2000)))
+  dyn2[[i]] <-(ode(d1[1,-1], times = 1:2000, func = lvmodKi, parms = par3[[i]], events = list(func = ext1, time =  1:2000)))
   
   matplot(dyn2[[i]][,-1], typ = "l", main = i)
 }
 
 
 eqab <- lapply(dyn2, function(x) if(nrow(x) == 2000){x[2000,-1][x[2000,-1]>0]}else{NA})
-sapply(eqab, function(x) if(any(is.na(x))){NA}else{fzmod(get_abundvec(x))})
+sapply(eqab, function(x) if(any(is.na(x))){NA}else{fzmod((x))})[,1]
+mean(unlist(sapply(eqab, function(x) if(any(is.na(x))){NA}else{fzmod((x))})[1,]))
+
+par4 <- list()
+dyn3 <- list()
+#tops <- c(545, 205, 116, 587, 191)
+for(i in 1:10){
+  par2 <- p1
+  par2$m[par2$m != 0] <- abs(rnorm(sum(p1$m != 0), p1$m[p1$m != 0], abs(p1$m[p1$m != 0]*.1)))*sign(p1$m[p1$m != 0])
+  diag(par2$m) <- diag(p1$m)
+  #par2$K <- rep(p1$K/sum(d1[2000,-1] > 10^-10), 600)
+  #par2$alpha <- rev(sort(par2$alpha))
+  #par2$K[545] <- par2$K[545]*(i/2) 
+  #r1 <- rlnorm(600, -1, 1)
+  #par2$K <- par2$K[order(d1[2000,-1], decreasing = T)]*sort(r1, decreasing = T)
+  
+  par4[[i]] <- par2
+  dyn3[[i]] <-(ode(d1[1,-1], times = 1:2000, func = lvmodK, parms = par4[[i]], events = list(func = ext1, time =  1:2000)))
+  
+  matplot(dyn3[[i]][,-1], typ = "l", main = i)
+}
+
+
+
+eqab <- lapply(dyn3, function(x) if(nrow(x) == 2000){x[2000,-1][x[2000,-1]>0]}else{NA})
+sapply(eqab, function(x) if(any(is.na(x))){NA}else{fzmod((x))})
+mean(unlist(sapply(eqab, function(x) if(any(is.na(x))){NA}else{fzmod((x))})[1,]))
