@@ -109,8 +109,8 @@ fill_mat <- function(mat, dis, p1 = .5, p2 = 1){
 ######################################################################################
 ######################################################################################
 ######################################################################################
-
-multityp <- lapply(1:20, function(x){
+# Test effect of diagonal
+multityp <- lapply(1:1000, function(x){
   S <- 600
   p1 <- runif(1,0,1)
   p2 <- runif(1, p1, 1)
@@ -120,13 +120,13 @@ multityp <- lapply(1:20, function(x){
   return((tat))
 })
 
-multityp.fill <- lapply(multityp, function(x) fill_mat(x, dis = "beta", p1 = 1, p2 = 2))
+multityp.fill <- lapply(multityp, function(x) fill_mat(x, dis = "beta", p1 = 1, p2 = 1))
 
 par1 <- list()
 dyn <- list()
-for(i in 1:20){
+for(i in 1:length(multityp.fill)){
 
-  diag(multityp.fill[[i]]) <- (runif(nrow(multityp.fill[[i]]), -1, 0))
+  diag(multityp.fill[[i]]) <- -rbeta(nrow(multityp.fill[[i]]), 1, 6)# (runif(nrow(multityp.fill[[i]]), -1, 0))
 
   par1[[i]] <- list(alpha = runif(nrow(multityp.fill[[i]]), 0,.1), m = multityp.fill[[i]], K = 20)
   dyn[[i]] <-(ode(runif(nrow(multityp.fill[[i]]),.001,.02), times = 1:2000, func = lvmodK, parms = par1[[i]], events = list(func = ext1, time =  1:2000)))
@@ -136,9 +136,47 @@ for(i in 1:20){
 
 
 eqab <- lapply(dyn, function(x) if(nrow(x) == 2000){x[2000,-1][x[2000,-1]>0]}else{NA})
-sapply(eqab, function(x) if(any(is.na(x))){NA}else{fzmod((x))})[[6]]
+eqfz <- sapply(eqab, function(x) if(any(is.na(x))){NA}else{fzmod((x))})
+points(do.call(rbind, eqfz[!is.na(eqfz)])[,1:2])
+
+####################################################################
+####################################################################
+plot(s.hmp~n.hmp, col = "blue", pch = 20, ylim = c(0, max(s.hmp)), xlim = c(0,600))
+
+####################################################################
+####################################################################
+# Test effect of interactions
+#multityp <- lapply(1:200, function(x){
+#  S <- 600
+#  p1 <- runif(1,0,1)
+#  p2 <- runif(1, p1, 1)
+#  c1 <- runif(1, .1, .3)
+#  mats <- get.adjacency(erdos.renyi.game(S, c1, "gnp", directed = F), sparse = F)
+#  tat <- mats*sample(c(-1,1,0), length(mats), replace = T, prob = c(p1,p2-p1,1-(p2)))
+#  return((tat))
+#})
+
+multityp.fill2 <- lapply(multityp, function(x) fill_mat(x, dis = "beta", p1 = 1, p2 = 6))
+
+par2 <- list()
+dy2 <- list()
+for(i in 1:length(multityp.fill2)){
+  
+  diag(multityp.fill2[[i]]) <- (runif(nrow(multityp.fill[[i]]), -1, 0))
+  
+  par2[[i]] <- list(alpha = runif(nrow(multityp.fill2[[i]]), 0,.1), m = multityp.fill2[[i]], K = 20)
+  dyn2[[i]] <-(ode(runif(nrow(multityp.fill[[i]]),.001,.02), times = 1:2000, func = lvmodK, parms = par1[[i]], events = list(func = ext1, time =  1:2000)))
+  
+  matplot(dyn2[[i]][,-1], typ = "l", main = i)
+}
 
 
+eqab2 <- lapply(dyn2, function(x) if(nrow(x) == 2000){x[2000,-1][x[2000,-1]>0]}else{NA})
+eqfz2 <- sapply(eqab2, function(x) if(any(is.na(x))){NA}else{fzmod((x))})
+plot(do.call(rbind, eqfz2[!is.na(eqfz2)])[,1:2], col = "darkgreen", pch = 20)
+
+####################################################################
+####################################################################
 p1 <- par1[[6]]
 d1 <- dyn[[6]]
 
@@ -146,13 +184,13 @@ d1 <- dyn[[6]]
 par3 <- list()
 dyn2 <- list()
 #tops <- c(545, 205, 116, 587, 191)
-for(i in 1:100){
+for(i in 1:10){
   par2 <- p1
   #par2$m[par2$m != 0] <- abs(rnorm(sum(p1$m != 0), p1$m[p1$m != 0], abs(p1$m[p1$m != 0]*.1)))*sign(p1$m[p1$m != 0])
-  #diag(par2$m) <- diag(p1$m)
-  par2$K <- rep(p1$K/sum(d1[2000,-1] > 10^-10), 600)
+  diag(par2$m) <- -rbeta(nrow(par2$m), 1, 2)
+  #par2$K <- rep(p1$K/sum(d1[2000,-1] > 10^-10), 600)
   #par2$alpha <- rev(sort(par2$alpha))
-  par2$K[7] <- par2$K[7]*(2) 
+  #par2$K[7] <- par2$K[7]*(2) 
   #r1 <- rlnorm(600, -1, 1)
   #par2$K <- par2$K[order(d1[2000,-1], decreasing = T)]*sort(r1, decreasing = T)
   
