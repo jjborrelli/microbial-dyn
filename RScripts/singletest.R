@@ -126,7 +126,7 @@ par1 <- list()
 dyn <- list()
 for(i in 1:length(multityp.fill)){
 
-  diag(multityp.fill[[i]]) <- -rbeta(nrow(multityp.fill[[i]]), 1, 6)# (runif(nrow(multityp.fill[[i]]), -1, 0))
+  diag(multityp.fill[[i]]) <- -rbeta(nrow(multityp.fill[[i]]), 6, 1)# (runif(nrow(multityp.fill[[i]]), -1, 0))
 
   par1[[i]] <- list(alpha = runif(nrow(multityp.fill[[i]]), 0,.1), m = multityp.fill[[i]], K = 20)
   dyn[[i]] <-(ode(runif(nrow(multityp.fill[[i]]),.001,.02), times = 1:2000, func = lvmodK, parms = par1[[i]], events = list(func = ext1, time =  1:2000)))
@@ -137,11 +137,11 @@ for(i in 1:length(multityp.fill)){
 
 eqab <- lapply(dyn, function(x) if(nrow(x) == 2000){x[2000,-1][x[2000,-1]>0]}else{NA})
 eqfz <- sapply(eqab, function(x) if(any(is.na(x))){NA}else{fzmod((x))})
-points(do.call(rbind, eqfz[!is.na(eqfz)])[,1:2])
+plot(do.call(rbind, eqfz[!is.na(eqfz)])[,1:2])
 
 ####################################################################
 ####################################################################
-plot(s.hmp~n.hmp, col = "blue", pch = 20, ylim = c(0, max(s.hmp)), xlim = c(0,600))
+points(s.hmp~n.hmp, col = "blue", pch = 20, ylim = c(0, max(s.hmp)), xlim = c(0,600))
 
 ####################################################################
 ####################################################################
@@ -158,25 +158,44 @@ plot(s.hmp~n.hmp, col = "blue", pch = 20, ylim = c(0, max(s.hmp)), xlim = c(0,60
 
 multityp.fill2 <- lapply(multityp, function(x) fill_mat(x, dis = "beta", p1 = 1, p2 = 6))
 
-par2 <- list()
-dy2 <- list()
+par2 <- par1
+dyn2 <- list()
 for(i in 1:length(multityp.fill2)){
   
   diag(multityp.fill2[[i]]) <- (runif(nrow(multityp.fill[[i]]), -1, 0))
   
   par2[[i]] <- list(alpha = runif(nrow(multityp.fill2[[i]]), 0,.1), m = multityp.fill2[[i]], K = 20)
-  dyn2[[i]] <-(ode(runif(nrow(multityp.fill[[i]]),.001,.02), times = 1:2000, func = lvmodK, parms = par1[[i]], events = list(func = ext1, time =  1:2000)))
-  
-  matplot(dyn2[[i]][,-1], typ = "l", main = i)
+  d <-(ode(runif(nrow(multityp.fill2[[i]]),.001,.02), times = 1:2000, func = lvmodK, parms = par2[[i]], events = list(func = ext1, time =  1:2000)))
+  if(nrow(d) != 2000){dyn2[[i]] <- NA;next}else{dyn2[[i]] <- d[2000,-1]}
+  matplot(d[,-1], typ = "l", main = i)
 }
 
 
-eqab2 <- lapply(dyn2, function(x) if(nrow(x) == 2000){x[2000,-1][x[2000,-1]>0]}else{NA})
-eqfz2 <- sapply(eqab2, function(x) if(any(is.na(x))){NA}else{fzmod((x))})
-plot(do.call(rbind, eqfz2[!is.na(eqfz2)])[,1:2], col = "darkgreen", pch = 20)
+#eqab2 <- lapply(dyn2[!is.na(dyn2)], function(x) fzmod(get_abundvec(x, 2000)))
+#eqfz2 <- sapply(eqab2, function(x) if(any(is.na(x))){NA}else{fzmod((x))})
+#plot(do.call(rbind, eqab2)[,1:2], col = "darkgreen", pch = 20)
 
 ####################################################################
 ####################################################################
+multityp.fill3 <- multityp.fill
+
+par3 <- par1
+dyn3 <- list()
+for(i in 1:length(multityp.fill)){
+  
+  diag(multityp.fill3[[i]]) <- -rbeta(nrow(multityp.fill3[[i]]), 6, 1)# (runif(nrow(multityp.fill[[i]]), -1, 0))
+  
+  par3[[i]] <- list(alpha = runif(nrow(multityp.fill3[[i]]), 0,.1), m = multityp.fill3[[i]], K = 20)
+  d <-(ode(runif(nrow(multityp.fill3[[i]]),.001,.02), times = 1:2000, func = lvmodK, parms = par3[[i]], events = list(func = ext1, time =  1:2000)))
+  if(nrow(d) != 2000){dyn3[[i]] <- NA;next}else{dyn3[[i]] <- d[2000,-1]}
+  matplot(d[,-1], typ = "l", main = i)
+}
+
+eqab3 <- lapply(dyn3[!is.na(dyn3)], function(x) fzmod(get_abundvec(x, 2000)))
+plot(do.call(rbind, eqab3)[,1:2], col = "darkgreen", pch = 20)
+####################################################################
+####################################################################
+
 p1 <- par1[[6]]
 d1 <- dyn[[6]]
 
