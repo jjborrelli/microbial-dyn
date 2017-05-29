@@ -27,10 +27,11 @@ dat2.fin$rabi <- unlist(lapply(lapply(dat2, "[[", 2), function(x) x$ab.i/sum(x$a
 
 
 datrel <- rbindlist(lapply(lapply(dat, "[[", 2), function(x){for(i in 1:ncol(x)){x[,i] <- x[,i]/sum(x[,i]); x[,i][is.nan(x[,i])] <- 0};return(x)}))
+dat2rel <- rbindlist(lapply(lapply(dat2, "[[", 2), function(x){for(i in 1:ncol(x)){x[,i] <- x[,i]/sum(x[,i]); x[,i][is.nan(x[,i])] <- 0};return(x)}))
 
 plot(dat.init$spp~dat.init$ab.i)
 
-fit1 <- lm((ab)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = datrel, x = F, y = F, model = F, na.action = "na.fail")
+fit1 <- lm((ab)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = dat.fin, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit1)
 #dfit1 <- MuMIn::dredge(fit1)
 
@@ -64,25 +65,34 @@ summary(fit2)
 fit2 <- lm(log10(ma)~log10(N)+d.tot+cc.w+nComp+CompIn+nMut+nPred+PredOut+nAmens+CommIn, data = df1, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit2)
 
+
+allord <- unlist(lapply(lapply(dat,"[[", 2), function(x) order(x$ab, decreasing = T)))
+topthree <- (allord %in% 1:3)
 topfive <- (allord %in% 1:5)
 topten <- (allord %in% 1:10)
 
+dat.fin$t3 <- topthree
 dat.fin$t5 <- topfive
 dat.fin$t10 <- topten
 
-gt5 <- glm(t5~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, family = "binomial", data = dat.fin, x = F, y = F, model = F, na.action = "na.fail")
+
+gt3 <- glm(dat.fin$t5~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, family = "binomial", data = dat.fin, x = F, y = F, model = F, na.action = "na.fail")
+summary(gt3)
+DAAG::cv.binary(gt3)
+gt5 <- glm(dat.fin$t5~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, family = "binomial", data = dat.fin, x = F, y = F, model = F, na.action = "na.fail")
 summary(gt5)
 DAAG::cv.binary(gt5)
-gt10 <- glm(t10~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, family = "binomial", data = dat.fin, x = F, y = F, model = F, na.action = "na.fail")
+gt10 <- glm(dat.fin$t10~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, family = "binomial", data = dat.fin, x = F, y = F, model = F, na.action = "na.fail")
 summary(gt10)
 DAAG::cv.binary(gt10)
 
 library(MASS)
-ldafit <- lda(t10~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = dat.fin)
+ldafit3 <- lda(t3~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = dat.fin)
+ldafit5 <- lda(t3~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = dat.fin)
+ldafit10 <- lda(t3~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = dat.fin)
 
 
 #PCoAres <- vegan::capscale(dplyr::select(dat.fin, K2, bet.w, d.tot, cc.w, apl.w.mu, nComp:CommOut)~1, distance = "bray")
 library(ape)
 pc1 <- princomp(dplyr::select(dat.fin, K2, bet.w, d.tot, cc.w, apl.w.mu, nComp:CommOut))
 loadings(pc1)
-dmat <- dist(dplyr::select(dat.fin, K2, bet.w, d.tot, cc.w, apl.w.mu, nComp:CommOut), method = "euclidean")
