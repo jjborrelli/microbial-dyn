@@ -2,6 +2,8 @@ library(data.table)
 library(rpart)
 library(rpart.plot)
 library(randomForest)
+library(sads)
+library(lme4)
 
 dat <- readRDS("~/Documents/AbundData/res.rds")
 dat2 <- readRDS("~/Documents/AbundData/res2.rds")
@@ -36,7 +38,7 @@ datz$rab <- dat.fin$rab
 dat2rel <- rbindlist(lapply(lapply(dat2, "[[", 2), function(x){for(i in 1:ncol(x)){x[,i] <- x[,i]/sum(x[,i]); x[,i][is.nan(x[,i])] <- 0};return(x)}))
 
 plot(dat.init$spp~dat.init$ab.i)
-library(lme4)
+
 fit1 <- lmer(rab~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut+(1 | com), data = datz, na.action = "na.fail")
 summary(fit1)
 #dfit1 <- MuMIn::dredge(fit1)
@@ -120,24 +122,34 @@ rf3 <- randomForest(factor(t3)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut
 
 ###########################################################################
 ###########################################################################
-maxab <- sapply(lapply(dat,"[[", 2), function(x) max(x$ab/sum(x$ab)))
+maxab <- sapply(lapply(dat,"[[", 2), function(x) max(x$ab))
 summary(maxab)
+
+## 
+fz1 <- lapply(lapply(dat, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+rbfz <- do.call(rbind, fz1)
 
 df1 <- as.data.frame(t(sapply(lapply(dat,"[[", 2), function(x) colMeans(x))))
 df2 <- as.data.frame(apply(df1, 2, function(x){(x-mean(x))/sd(x)}))
+
 df1$N <- sapply(lapply(dat,"[[", 2), function(x) nrow(x))
 df1$ma <- maxab
+df1$fz <- rbfz[,2]
+
 df2$N <- sapply(lapply(dat,"[[", 2), function(x) nrow(x))
 df2$ma <- maxab
 df2$fz <- rbfz[,2]
-fit2 <- lm(cbind(ma, N)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = df2, x = F, y = F, model = F, na.action = "na.fail")
+
+
+fit2 <- lm(cbind(log10(ma), N)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = df2, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit2)
+
 fit3 <- lm(fz~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = df2, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit3)
-## 
-library(sads)
-fz1 <- lapply(lapply(dat, "[[", 2), function(x) fzmod(x$ab/sum(x$ab)))
-summary(lm(rbfz[,2]~fit2$fitted.values))
+AIC(fit3)
+fit4 <- (lm(rbfz[,2]~fit2$fitted.values))
+summary(fit4)
+AIC(fit4)
 ###########################################################################
 ###########################################################################
 
