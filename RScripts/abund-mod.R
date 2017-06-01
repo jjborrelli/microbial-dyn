@@ -43,7 +43,13 @@ fit1 <- lmer(rab~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+Mu
 summary(fit1)
 #dfit1 <- MuMIn::dredge(fit1)
 
-fit2 <- lm(rab~K2+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut+allIn+allOut, data = dat.init, x = F, y = F, model = F, na.action = "na.fail")
+fit2 <- MASS::lda(spp~K2+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut+allIn+allOut, data = rbind(dat.init,dat2.init), CV = TRUE)
+tab <- table(factor(c(dat.init$spp,dat2.init$spp)), fit2$class)
+conCV1 <- rbind(tab[1, ]/sum(tab[1, ]), tab[2, ]/sum(tab[2, ]))
+dimnames(conCV1) <- list(Actual = c("No", "Yes"), "Predicted (cv)" = c("No","Yes"))
+print(round(conCV1, 3))
+
+
 summary(fit2)
 fpart2 <- rpart(log(ab)~K2+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = dat.fin, method = "anova")
 prp(fpart2, extra = 1)
@@ -123,31 +129,41 @@ rf3 <- randomForest(factor(t3)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut
 ###########################################################################
 ###########################################################################
 maxab <- sapply(lapply(dat,"[[", 2), function(x) max(x$ab))
-summary(maxab)
+maxab2 <- sapply(lapply(dat2,"[[", 2), function(x) max(x$ab))
 
 ## 
-fz1 <- lapply(lapply(dat, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+fz1 <- lapply(lapply(dat, "[[", 2), function(x) fzmod(x$ab/sum(x$ab)))
 rbfz <- do.call(rbind, fz1)
+fz2 <- lapply(lapply(dat2, "[[", 2), function(x) fzmod(x$ab/sum(x$ab)))
+rbfz2 <- do.call(rbind, fz2)
 
 df1 <- as.data.frame(t(sapply(lapply(dat,"[[", 2), function(x) colMeans(x))))
+df1.1 <- as.data.frame(t(sapply(lapply(dat2,"[[", 2), function(x) colMeans(x))))
 df2 <- as.data.frame(apply(df1, 2, function(x){(x-mean(x))/sd(x)}))
 
 df1$N <- sapply(lapply(dat,"[[", 2), function(x) nrow(x))
 df1$ma <- maxab
 df1$fz <- rbfz[,2]
+df1.1$N <- sapply(lapply(dat2,"[[", 2), function(x) nrow(x))
+df1.1$ma <- maxab2
+df1.1$fz <- rbfz2[,2]
 
 df2$N <- sapply(lapply(dat,"[[", 2), function(x) nrow(x))
 df2$ma <- maxab
 df2$fz <- rbfz[,2]
 
 
-fit2 <- lm(cbind(log10(ma), N)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = df2, x = F, y = F, model = F, na.action = "na.fail")
-summary(fit2)
+fit2ma <- lm(log10(ma)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df1, df1.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit2ma)
+fit2N <- lm(N~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df1, df1.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit2N)
 
-fit3 <- lm(fz~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = df2, x = F, y = F, model = F, na.action = "na.fail")
-summary(fit3)
-AIC(fit3)
-fit4 <- (lm(rbfz[,2]~fit2$fitted.values))
+fit3 <- lm(fz~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df1,df2), x = F, y = F, model = F, na.action = "na.fail")
+fit3.1 <- lm(fz~K2+bet.uw+d.tot+cc.uw+apl.uw.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df1,df2), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit3.1)
+AIC(fit3.1)
+
+fit4 <- (lm(c(rbfz[,2],rbfz2[,2])~fit2$fitted.values))
 summary(fit4)
 AIC(fit4)
 ###########################################################################
@@ -155,9 +171,9 @@ AIC(fit4)
 
 
 #PCoAres <- vegan::capscale(dplyr::select(dat.fin, K2, bet.w, d.tot, cc.w, apl.w.mu, nComp:CommOut)~1, distance = "bray")
-library(ape)
-pc1 <- princomp(dplyr::select(dat.fin, K2, bet.w, d.tot, cc.w, apl.w.mu, nComp:CommOut))
-loadings(pc1)
+#library(ape)
+#pc1 <- princomp(dplyr::select(dat.fin, K2, bet.w, d.tot, cc.w, apl.w.mu, nComp:CommOut))
+#loadings(pc1)
 
-library(vegan)
-nmds1 <- metaMDS(dplyr::select(dat.fin, K2, bet.w, d.tot, cc.w, apl.w.mu, nComp:CommOut), distance = "bray")
+#library(vegan)
+#nmds1 <- metaMDS(dplyr::select(dat.fin, K2, bet.w, d.tot, cc.w, apl.w.mu, nComp:CommOut), distance = "bray")
