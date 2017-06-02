@@ -129,7 +129,7 @@ rf3 <- randomForest(factor(t3)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut
 ###########################################################################
 ###########################################################################
 maxab <- sapply(lapply(dat,"[[", 2), function(x) max(x$ab))
-maxab2 <- sapply(lapply(dat2,"[[", 2), function(x) max(x$ab))
+maxab2 <- sapply(lapply(dat2,"[[", 2), function(x) max(x$ab/sum(x$ab)))
 
 ## 
 fz1 <- lapply(lapply(dat, "[[", 2), function(x) fzmod(x$ab/sum(x$ab)))
@@ -258,10 +258,18 @@ AIC(fit4)
 ###########################################################################
 
 
-#PCoAres <- vegan::capscale(dplyr::select(dat.fin, K2, bet.w, d.tot, cc.w, apl.w.mu, nComp:CommOut)~1, distance = "bray")
-#library(ape)
-#pc1 <- princomp(dplyr::select(dat.fin, K2, bet.w, d.tot, cc.w, apl.w.mu, nComp:CommOut))
-#loadings(pc1)
+df1 <- as.data.frame(t(sapply(lapply(dat,"[[", 1), function(x) colMeans(x[x$spp == 1,]))))
+df1.1 <- as.data.frame(t(sapply(lapply(dat2,"[[", 1), function(x) colMeans(x[x$spp == 1,]))))
+df2 <- as.data.frame(apply(df1, 2, function(x){(x-mean(x))/sd(x)}))
+df2.1 <- as.data.frame(apply(df1.1, 2, function(x){(x-mean(x))/sd(x)}))
 
-#library(vegan)
-#nmds1 <- metaMDS(dplyr::select(dat.fin, K2, bet.w, d.tot, cc.w, apl.w.mu, nComp:CommOut), distance = "bray")
+df1.1$N <- sapply(lapply(dat2,"[[", 2), function(x) nrow(x))
+df1.1$ma <- maxab2
+df1.1$fz <- rbfz2[,2]
+
+df2$N <- sapply(lapply(dat,"[[", 2), function(x) nrow(x))
+df2$ma <- maxab
+df2$fz <- rbfz[,2]
+df2.1$N <- sapply(lapply(dat2,"[[", 2), function(x) nrow(x))
+df2.1$ma <- maxab2
+df2.1$fz <- rbfz2[,2]
