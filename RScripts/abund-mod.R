@@ -140,6 +140,7 @@ rbfz2 <- do.call(rbind, fz2)
 df1 <- as.data.frame(t(sapply(lapply(dat,"[[", 2), function(x) colMeans(x))))
 df1.1 <- as.data.frame(t(sapply(lapply(dat2,"[[", 2), function(x) colMeans(x))))
 df2 <- as.data.frame(apply(df1, 2, function(x){(x-mean(x))/sd(x)}))
+df2.1 <- as.data.frame(apply(df1.1, 2, function(x){(x-mean(x))/sd(x)}))
 
 df1$N <- sapply(lapply(dat,"[[", 2), function(x) nrow(x))
 df1$ma <- maxab
@@ -151,19 +152,106 @@ df1.1$fz <- rbfz2[,2]
 df2$N <- sapply(lapply(dat,"[[", 2), function(x) nrow(x))
 df2$ma <- maxab
 df2$fz <- rbfz[,2]
+df2.1$N <- sapply(lapply(dat2,"[[", 2), function(x) nrow(x))
+df2.1$ma <- maxab2
+df2.1$fz <- rbfz2[,2]
 
-
-fit2ma <- lm(log10(ma)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df1, df1.1), x = F, y = F, model = F, na.action = "na.fail")
+#########################
+# MODEL MAXIMUM ABUNDANCE
+## ALL PRED
+fit2ma <- lm(log10(ma)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
 summary(fit2ma)
-fit2N <- lm(N~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df1, df1.1), x = F, y = F, model = F, na.action = "na.fail")
+AIC(fit2ma)
+## WITHOUT COVARYING INT STRENGTHS (IN vs OUT)
+fit2ma <- lm(log10(ma)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit2ma)
+AIC(fit2ma)
+## ONLY NETWORK STRUCTURE
+fit2ma <- lm(log10(ma)~K2+bet.w+d.tot+cc.w+apl.w.mu, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit2ma)
+AIC(fit2ma)
+## ONLY INTERACTIONS
+fit2ma <- lm(log10(ma)~nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit2ma)
+AIC(fit2ma)
+## ONLY INTERACTIONS W/O COVARYING INT STRENGTHS
+fit2ma <- lm(log10(ma)~nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit2ma)
+AIC(fit2ma)
+## ALL INT STRENGTHS AND NUM INTS
+fit2ma <- lm(log10(ma)~d.tot+allOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit2ma)
+AIC(fit2ma)
+## ONLY COMP AND MUT
+fit2ma <- lm(log10(ma)~nComp+CompOut+nMut+MutOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit2ma)
+AIC(fit2ma)
+
+#########################
+# MODEL NUMBER OF SPECIES
+## ALL PRED
+fit2N <- lm(N~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
 summary(fit2N)
+AIC(fit2N)
+## WITHOUT COVARYING INT STRENGTHS (IN vs OUT)
+fit2N <- lm(N~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit2N)
+AIC(fit2N)
+## ONLY NETWORK STRUCTURE
+fit2N <- lm(N~K2+bet.w+d.tot+cc.w+apl.w.mu, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit2N)
+AIC(fit2N)
+## ONLY INTERACTIONS
+fit2N <- lm(N~nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit2N)
+AIC(fit2N)
+## ONLY INTERACTIONS W/O COVARYING INT STRENGTHS
+fit2N <- lm(N~nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit2N)
+AIC(fit2N)
+## ALL INT STRENGTHS AND NUM INTS
+fit2N <- lm(N~d.tot+allIn+allOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit2N)
+AIC(fit2N)
+## ONLY COMP AND MUT
+fit2N <- lm(N~nComp+CompOut+nMut+MutOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit2N)
+AIC(fit2N)
 
-fit3 <- lm(fz~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df1,df2), x = F, y = F, model = F, na.action = "na.fail")
-fit3.1 <- lm(fz~K2+bet.uw+d.tot+cc.uw+apl.uw.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df1,df2), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit3.1)
-AIC(fit3.1)
 
-fit4 <- (lm(c(rbfz[,2],rbfz2[,2])~fit2$fitted.values))
+###########################
+# MODEL RANK ABUNDANCE DIST
+## ALL PRED
+fit3 <- lm(fz~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit3)
+AIC(fit3)
+## WITHOUT COVARYING INT STRENGTHS (IN vs OUT)
+fit3 <- lm(fz~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit3)
+AIC(fit3)
+## ONLY NETWORK STRUCTURE
+fit3 <- lm(fz~K2+bet.w+d.tot+cc.w+apl.w.mu, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit3)
+AIC(fit3)
+## ONLY INTERACTIONS
+fit3 <- lm(fz~nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit3)
+AIC(fit3)
+## ONLY INTERACTIONS W/O COVARYING INT STRENGTHS
+fit3 <- lm(fz~nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit3)
+AIC(fit3)
+## ALL INT STRENGTHS AND NUM INTS
+fit3 <- lm(fz~d.tot+allIn+allOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit3)
+AIC(fit3)
+## ONLY COMP AND MUT
+fit3 <- lm(fz~nComp+CompOut+nMut+MutOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit3)
+AIC(fit3)
+
+
+fit4 <- (lm(c(rbfz[,2],rbfz2[,2])~fit2ma$fitted.values+fit2N$fitted.values))
 summary(fit4)
 AIC(fit4)
 ###########################################################################
