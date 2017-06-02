@@ -110,8 +110,8 @@ fill_mat <- function(mat, dis, p1 = .5, p2 = 1){
 ######################################################################################
 ######################################################################################
 # Test effect of diagonal
-multityp <- lapply(1:1000, function(x){
-  S <- 600
+multityp <- lapply(1:10, function(x){
+  S <- 2
   p1 <- runif(1,0,1)
   p2 <- runif(1, p1, 1)
   c1 <- runif(1, .1, .3)
@@ -120,7 +120,7 @@ multityp <- lapply(1:1000, function(x){
   return((tat))
 })
 
-multityp.fill <- lapply(multityp, function(x) fill_mat(x, dis = "beta", p1 = 1, p2 = 1))
+multityp.fill <- lapply(multityp[7], function(x) fill_mat(x, dis = "beta", p1 = 1, p2 = 1))
 
 par1 <- list()
 dyn <- list()
@@ -132,7 +132,7 @@ for(i in 1:length(multityp.fill)){
   dyn[[i]] <-(ode(runif(nrow(multityp.fill[[i]]),.001,.02), times = 1:2000, func = lvmodK, parms = par1[[i]], events = list(func = ext1, time =  1:2000)))
   
   matplot(dyn[[i]][,-1], typ = "l", main = i)
-}
+ }
 
 
 eqab <- lapply(dyn, function(x) if(nrow(x) == 2000){x[2000,-1][x[2000,-1]>0]}else{NA})
