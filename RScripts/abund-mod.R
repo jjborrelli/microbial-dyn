@@ -26,6 +26,7 @@ dat2.init$rabi <- unlist(lapply(lapply(dat2, "[[", 1), function(x) x$ab.i/sum(x$
 dat2.fin$com <- rep(1:1000, sapply(lapply(dat2, "[[", 2), nrow))
 dat2.fin$rab <- unlist(lapply(lapply(dat2, "[[", 2), function(x) x$ab/sum(x$ab)))
 dat2.fin$rabi <- unlist(lapply(lapply(dat2, "[[", 2), function(x) x$ab.i/sum(x$ab.i)))
+dat2.fin$N <- rep(sapply(lapply(dat2, "[[", 2), nrow),sapply(lapply(dat2, "[[", 2), nrow))
 
 
 datrel <- rbindlist(lapply(lapply(dat, "[[", 2), function(x){for(i in 1:ncol(x)){x[,i] <- x[,i]/sum(x[,i]); x[,i][is.nan(x[,i])] <- 0};return(x)}))
@@ -38,10 +39,12 @@ datz$rab <- dat.fin$rab
 dat2rel <- rbindlist(lapply(lapply(dat2, "[[", 2), function(x){for(i in 1:ncol(x)){x[,i] <- x[,i]/sum(x[,i]); x[,i][is.nan(x[,i])] <- 0};return(x)}))
 
 plot(dat.init$spp~dat.init$ab.i)
-
-fit1 <- lmer(rab~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut+(1 | com), data = datz, na.action = "na.fail")
+alld <- rbind(dat.fin, dat2.fin)
+alld <- apply(alld, 2, function(x) (x-mean(x))/sd(x))
+alld[,"ab"] <- c(dat.fin$ab, dat2.fin$ab)
+fit1 <- lmer(log10(ab)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+(1 | com), data = as.data.frame(alld), na.action = "na.fail")
 summary(fit1)
-#dfit1 <- MuMIn::dredge(fit1)
+
 
 fit2 <- MASS::lda(spp~K2+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut+allIn+allOut, data = rbind(dat.init,dat2.init), CV = TRUE)
 tab <- table(factor(c(dat.init$spp,dat2.init$spp)), fit2$class)
@@ -129,18 +132,27 @@ rf3 <- randomForest(factor(t3)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut
 ###########################################################################
 ###########################################################################
 maxab <- sapply(lapply(dat,"[[", 2), function(x) max(x$ab))
-maxab2 <- sapply(lapply(dat2,"[[", 2), function(x) max(x$ab/sum(x$ab)))
+maxab2 <- sapply(lapply(dat2,"[[", 2), function(x) max(x$ab))
 
 ## 
 fz1 <- lapply(lapply(dat, "[[", 2), function(x) fzmod(x$ab/sum(x$ab)))
+fz1.1 <- lapply(lapply(dat, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
 rbfz <- do.call(rbind, fz1)
+rbfz.1 <- do.call(rbind, fz1.1)
 fz2 <- lapply(lapply(dat2, "[[", 2), function(x) fzmod(x$ab/sum(x$ab)))
+fz2.1 <- lapply(lapply(dat2, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
 rbfz2 <- do.call(rbind, fz2)
+rbfz2.1 <- do.call(rbind, fz2.1)
 
 df1 <- as.data.frame(t(sapply(lapply(dat,"[[", 2), function(x) colMeans(x))))
 df1.1 <- as.data.frame(t(sapply(lapply(dat2,"[[", 2), function(x) colMeans(x))))
 df2 <- as.data.frame(apply(df1, 2, function(x){(x-mean(x))/sd(x)}))
 df2.1 <- as.data.frame(apply(df1.1, 2, function(x){(x-mean(x))/sd(x)}))
+
+df1.2 <- as.data.frame(apply(rbind(df1, df1.1), 2, function(x){(x-mean(x))/sd(x)}))
+df1.2$ma <- c(maxab, maxab2)
+df1.2$fz <- c(rbfz[,2], rbfz2[,2])
+
 
 df1$N <- sapply(lapply(dat,"[[", 2), function(x) nrow(x))
 df1$ma <- maxab
@@ -152,124 +164,166 @@ df1.1$fz <- rbfz2[,2]
 df2$N <- sapply(lapply(dat,"[[", 2), function(x) nrow(x))
 df2$ma <- maxab
 df2$fz <- rbfz[,2]
+df2$fz2 <- rbfz.1[,2]
 df2.1$N <- sapply(lapply(dat2,"[[", 2), function(x) nrow(x))
 df2.1$ma <- maxab2
 df2.1$fz <- rbfz2[,2]
+df2.1$fz2 <- rbfz2.1[,2]
+
 
 #########################
 # MODEL MAXIMUM ABUNDANCE
+fit2ma <- lm(log10(ma)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+fitmadf <- data.frame(full1 = c(fit2ma$coefficients, allOut = NA))
+coefnames <- c(names(fit2ma$coefficients), "allOut")
+fitmap <- data.frame(full1 = c(summary(fit2ma)$coefficients[,4] <= 0.05, allOut = NA))
+mafit <- data.frame(full1 = c(NA, NA), full2 = c(NA, NA), struct = c(NA, NA), ints = c(NA, NA), ints2 = c(NA, NA), degstr = c(NA, NA), commut = c(NA, NA))
 ## ALL PRED
 fit2ma <- lm(log10(ma)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit2ma)
-AIC(fit2ma)
+summary(fit2ma) # r2 = .75
+mafit$full1 <- c(AIC(fit2ma), summary(fit2ma)$r.squared) # -1909
+fitmadf$full1[coefnames %in% names(fit2ma$coefficients)] <- fit2ma$coefficients
+fitmap$full1[coefnames %in% names(fit2ma$coefficients)] <- summary(fit2ma)$coefficients[,4] <= 0.05
 ## WITHOUT COVARYING INT STRENGTHS (IN vs OUT)
 fit2ma <- lm(log10(ma)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit2ma)
-AIC(fit2ma)
+summary(fit2ma) # r2 = ..74
+mafit$full2 <- c(AIC(fit2ma), summary(fit2ma)$r.squared) # -1876
+fitmadf$full2[coefnames %in% names(fit2ma$coefficients)] <- fit2ma$coefficients
+fitmap$full2[coefnames %in% names(fit2ma$coefficients)] <- summary(fit2ma)$coefficients[,4] <= 0.05
 ## ONLY NETWORK STRUCTURE
 fit2ma <- lm(log10(ma)~K2+bet.w+d.tot+cc.w+apl.w.mu, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit2ma)
-AIC(fit2ma)
+summary(fit2ma) # r2 = .30 
+mafit$struct <- c(AIC(fit2ma), summary(fit2ma)$r.squared)  # 103
+fitmadf$struct[coefnames %in% names(fit2ma$coefficients)] <- fit2ma$coefficients
+fitmap$struct[coefnames %in% names(fit2ma$coefficients)] <- summary(fit2ma)$coefficients[,4] <= 0.05
 ## ONLY INTERACTIONS
 fit2ma <- lm(log10(ma)~nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit2ma)
-AIC(fit2ma)
+summary(fit2ma) # r2 = .59
+mafit$ints <- c(AIC(fit2ma), summary(fit2ma)$r.squared)  # -982
+fitmadf$ints[coefnames %in% names(fit2ma$coefficients)] <- fit2ma$coefficients
+fitmap$ints[coefnames %in% names(fit2ma$coefficients)] <- summary(fit2ma)$coefficients[,4] <= 0.05
 ## ONLY INTERACTIONS W/O COVARYING INT STRENGTHS
 fit2ma <- lm(log10(ma)~nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit2ma)
-AIC(fit2ma)
+summary(fit2ma) # r2 = .56
+mafit$ints2 <- c(AIC(fit2ma), summary(fit2ma)$r.squared) # -818
+fitmadf$ints2[coefnames %in% names(fit2ma$coefficients)] <- fit2ma$coefficients
+fitmap$ints2[coefnames %in% names(fit2ma$coefficients)] <- summary(fit2ma)$coefficients[,4] <= 0.05
 ## ALL INT STRENGTHS AND NUM INTS
 fit2ma <- lm(log10(ma)~d.tot+allOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit2ma)
-AIC(fit2ma)
+summary(fit2ma) # r2 = .37
+mafit$degstr <- c(AIC(fit2ma), summary(fit2ma)$r.squared)  # -116
+fitmadf$degstr[coefnames %in% names(fit2ma$coefficients)] <- fit2ma$coefficients
+fitmap$degstr[coefnames %in% names(fit2ma$coefficients)] <- summary(fit2ma)$coefficients[,4] <= 0.05
 ## ONLY COMP AND MUT
 fit2ma <- lm(log10(ma)~nComp+CompOut+nMut+MutOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit2ma)
-AIC(fit2ma)
+summary(fit2ma) # r2 = .34
+mafit$commut <- c(AIC(fit2ma), summary(fit2ma)$r.squared)  # -10
+fitmadf$commut[coefnames %in% names(fit2ma$coefficients)] <- fit2ma$coefficients
+fitmap$commut[coefnames %in% names(fit2ma$coefficients)] <- summary(fit2ma)$coefficients[,4] <= 0.05
+
 
 #########################
 # MODEL NUMBER OF SPECIES
+fitNdf <- fitmadf
+fitNp <- fitmap
+Nfit <- data.frame(full1 = c(NA, NA), full2 = c(NA, NA), struct = c(NA, NA), ints = c(NA, NA), ints2 = c(NA, NA), degstr = c(NA, NA), commut = c(NA, NA))
 ## ALL PRED
 fit2N <- lm(N~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit2N)
-AIC(fit2N)
+summary(fit2N) # .96
+Nfit$full1 <- c(AIC(fit2N), summary(fit2N)$r.squared)  # 18123
+fitNdf$full1[coefnames %in% names(fit2N$coefficients)] <- fit2N$coefficients
+fitNp$full1[coefnames %in% names(fit2N$coefficients)] <- summary(fit2N)$coefficients[,4] <= 0.05
 ## WITHOUT COVARYING INT STRENGTHS (IN vs OUT)
 fit2N <- lm(N~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit2N)
-AIC(fit2N)
+summary(fit2N) # .96
+Nfit$full2 <- c(AIC(fit2N), summary(fit2N)$r.squared)  # 18116
+fitNdf$full2[coefnames %in% names(fit2N$coefficients)] <- fit2N$coefficients
+fitNp$full2[coefnames %in% names(fit2N$coefficients)] <- summary(fit2N)$coefficients[,4] <= 0.05
 ## ONLY NETWORK STRUCTURE
 fit2N <- lm(N~K2+bet.w+d.tot+cc.w+apl.w.mu, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit2N)
-AIC(fit2N)
+summary(fit2N) # .96
+Nfit$struct <- c(AIC(fit2N), summary(fit2N)$r.squared)  # 18144
+fitNdf$struct[coefnames %in% names(fit2N$coefficients)] <- fit2N$coefficients
+fitNp$struct[coefnames %in% names(fit2N$coefficients)] <- summary(fit2N)$coefficients[,4] <= 0.05
 ## ONLY INTERACTIONS
 fit2N <- lm(N~nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit2N)
-AIC(fit2N)
+summary(fit2N) # .63
+Nfit$ints <- c(AIC(fit2N), summary(fit2N)$r.squared)  # 22393
+fitNdf$ints[coefnames %in% names(fit2N$coefficients)] <- fit2N$coefficients
+fitNp$ints[coefnames %in% names(fit2N$coefficients)] <- summary(fit2N)$coefficients[,4] <= 0.05
 ## ONLY INTERACTIONS W/O COVARYING INT STRENGTHS
 fit2N <- lm(N~nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit2N)
-AIC(fit2N)
+summary(fit2N) # .58
+Nfit$ints2 <- c(AIC(fit2N), summary(fit2N)$r.squared) # 22595
+fitNdf$ints2[coefnames %in% names(fit2N$coefficients)] <- fit2N$coefficients
+fitNp$ints2[coefnames %in% names(fit2N$coefficients)] <- summary(fit2N)$coefficients[,4] <= 0.05
 ## ALL INT STRENGTHS AND NUM INTS
-fit2N <- lm(N~d.tot+allIn+allOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit2N)
-AIC(fit2N)
+fit2N <- lm(N~d.tot+allOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit2N) # .25
+Nfit$degstr <- c(AIC(fit2N), summary(fit2N)$r.squared) # 23772
+fitNdf$degstr[coefnames %in% names(fit2N$coefficients)] <- fit2N$coefficients
+fitNp$degstr[coefnames %in% names(fit2N$coefficients)] <- summary(fit2N)$coefficients[,4] <= 0.05
 ## ONLY COMP AND MUT
 fit2N <- lm(N~nComp+CompOut+nMut+MutOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit2N)
-AIC(fit2N)
+summary(fit2N) # .41
+Nfit$commut <- c(AIC(fit2N), summary(fit2N)$r.squared)  # 23264
+fitNdf$commut[coefnames %in% names(fit2N$coefficients)] <- fit2N$coefficients
+fitNp$commut[coefnames %in% names(fit2N$coefficients)] <- summary(fit2N)$coefficients[,4] <= 0.05
+
 
 
 ###########################
 # MODEL RANK ABUNDANCE DIST
+fitsdf <- fitmadf
+sfitp <- fitmap
+sfit <- data.frame(full1 = c(NA, NA), full2 = c(NA, NA), struct = c(NA, NA), ints = c(NA, NA), ints2 = c(NA, NA), degstr = c(NA, NA), commut = c(NA, NA))
 ## ALL PRED
 fit3 <- lm(fz~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit3)
-AIC(fit3)
+summary(fit3) # .83
+sfit$full1 <- c(AIC(fit3), summary(fit3)$r.squared) # -5350
+fitsdf$full1[coefnames %in% names(fit3$coefficients)] <- fit3$coefficients
+sfitp$full1[coefnames %in% names(fit3$coefficients)] <- summary(fit3)$coefficients[,4] <= 0.05
 ## WITHOUT COVARYING INT STRENGTHS (IN vs OUT)
-fit3 <- lm(fz~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit3)
-AIC(fit3)
+fit3 <- lm(fz2~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit3) # .83
+sfit$full2 <- c(AIC(fit3), summary(fit3)$r.squared)# -5341
+fitsdf$full2[coefnames %in% names(fit3$coefficients)] <- fit3$coefficients
+sfitp$full2[coefnames %in% names(fit3$coefficients)] <- summary(fit3)$coefficients[,4] <= 0.05
 ## ONLY NETWORK STRUCTURE
 fit3 <- lm(fz~K2+bet.w+d.tot+cc.w+apl.w.mu, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit3)
-AIC(fit3)
+summary(fit3) # .80
+sfit$struct <- c(AIC(fit3), summary(fit3)$r.squared) # -5030
+fitsdf$struct[coefnames %in% names(fit3$coefficients)] <- fit3$coefficients
+sfitp$struct[coefnames %in% names(fit3$coefficients)] <- summary(fit3)$coefficients[,4] <= 0.05
 ## ONLY INTERACTIONS
 fit3 <- lm(fz~nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit3)
-AIC(fit3)
+summary(fit3) # .55
+sfit$ints <- c(AIC(fit3), summary(fit3)$r.squared)#  -3397
+fitsdf$ints[coefnames %in% names(fit3$coefficients)] <- fit3$coefficients
+sfitp$ints[coefnames %in% names(fit3$coefficients)] <- summary(fit3)$coefficients[,4] <= 0.05
 ## ONLY INTERACTIONS W/O COVARYING INT STRENGTHS
 fit3 <- lm(fz~nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit3)
-AIC(fit3)
+summary(fit3) # .52
+sfit$ints2 <- c(AIC(fit3), summary(fit3)$r.squared) # -3287
+fitsdf$ints2[coefnames %in% names(fit3$coefficients)] <- fit3$coefficients
+sfitp$ints2[coefnames %in% names(fit3$coefficients)] <- summary(fit3)$coefficients[,4] <= 0.05
 ## ALL INT STRENGTHS AND NUM INTS
-fit3 <- lm(fz~d.tot+allIn+allOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit3)
-AIC(fit3)
+fit3 <- lm(fz~d.tot+allOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit3) # .22
+sfit$degstr <- c(AIC(fit3), summary(fit3)$r.squared) # -2320
+fitsdf$degstr[coefnames %in% names(fit3$coefficients)] <- fit3$coefficients
+sfitp$degstr[coefnames %in% names(fit3$coefficients)] <- summary(fit3)$coefficients[,4] <= 0.05
 ## ONLY COMP AND MUT
 fit3 <- lm(fz~nComp+CompOut+nMut+MutOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
-summary(fit3)
-AIC(fit3)
+summary(fit3) # .43
+sfit$commut <- c(AIC(fit3), summary(fit3)$r.squared) # -2935
+fitsdf$commut[coefnames %in% names(fit3$coefficients)] <- fit3$coefficients
+sfitp$commut[coefnames %in% names(fit3$coefficients)] <- summary(fit3)$coefficients[,4] <= 0.05
 
-
-fit4 <- (lm(c(rbfz[,2],rbfz2[,2])~fit2ma$fitted.values+fit2N$fitted.values))
+# fit2ma and fit2N second fits better than first
+fit4 <- (lm(c(rbfz[,2],rbfz2[,2])~fit2ma$fitted.values+fit2N$fitted.values)) 
 summary(fit4)
 AIC(fit4)
 ###########################################################################
 ###########################################################################
 
-
-df1 <- as.data.frame(t(sapply(lapply(dat,"[[", 1), function(x) colMeans(x[x$spp == 1,]))))
-df1.1 <- as.data.frame(t(sapply(lapply(dat2,"[[", 1), function(x) colMeans(x[x$spp == 1,]))))
-df2 <- as.data.frame(apply(df1, 2, function(x){(x-mean(x))/sd(x)}))
-df2.1 <- as.data.frame(apply(df1.1, 2, function(x){(x-mean(x))/sd(x)}))
-
-df1.1$N <- sapply(lapply(dat2,"[[", 2), function(x) nrow(x))
-df1.1$ma <- maxab2
-df1.1$fz <- rbfz2[,2]
-
-df2$N <- sapply(lapply(dat,"[[", 2), function(x) nrow(x))
-df2$ma <- maxab
-df2$fz <- rbfz[,2]
-df2.1$N <- sapply(lapply(dat2,"[[", 2), function(x) nrow(x))
-df2.1$ma <- maxab2
-df2.1$fz <- rbfz2[,2]
