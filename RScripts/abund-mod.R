@@ -5,15 +5,15 @@ library(randomForest)
 library(sads)
 library(lme4)
 
-dat <- readRDS("~/Documents/AbundData/res.rds")
-dat2 <- readRDS("~/Documents/AbundData/res2.rds")
+dat <- readRDS("~/Documents/AbundData/res4.rds")
+dat2 <- readRDS("~/Documents/AbundData/res.rds")
 
 dat.fin <- rbindlist(lapply(dat, "[[", 2))
 dat.init <- rbindlist(lapply(dat, "[[", 1))
-dat.init$com <- rep(1:1000, each = 600)
+dat.init$com <- rep(1:1500, each = 600)
 dat.init$rab <- unlist(lapply(lapply(dat, "[[", 1), function(x) x$ab/sum(x$ab)))
 dat.init$rabi <- unlist(lapply(lapply(dat, "[[", 1), function(x) x$ab.i/sum(x$ab.i)))
-dat.fin$com <- rep(1:1000, sapply(lapply(dat, "[[", 2), nrow))
+dat.fin$com <- rep(1:1500, sapply(lapply(dat, "[[", 2), nrow))
 dat.fin$rab <- unlist(lapply(lapply(dat, "[[", 2), function(x) x$ab/sum(x$ab)))
 dat.fin$rabi <- unlist(lapply(lapply(dat, "[[", 2), function(x) x$ab.i/sum(x$ab.i)))
 dat.fin$N <- rep(sapply(lapply(dat, "[[", 2), nrow),sapply(lapply(dat, "[[", 2), nrow))
@@ -39,10 +39,7 @@ datz$rab <- dat.fin$rab
 dat2rel <- rbindlist(lapply(lapply(dat2, "[[", 2), function(x){for(i in 1:ncol(x)){x[,i] <- x[,i]/sum(x[,i]); x[,i][is.nan(x[,i])] <- 0};return(x)}))
 
 plot(dat.init$spp~dat.init$ab.i)
-alld <- rbind(dat.fin, dat2.fin)
-alld <- apply(alld, 2, function(x) (x-mean(x))/sd(x))
-alld[,"ab"] <- c(dat.fin$ab, dat2.fin$ab)
-fit1 <- lmer(log10(ab)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+(1 | com), data = as.data.frame(alld), na.action = "na.fail")
+fit1 <- lmer(log10(ab)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+(1 | com), data = dat.fin, na.action = "na.fail")
 summary(fit1)
 
 
@@ -143,6 +140,9 @@ fz2 <- lapply(lapply(dat2, "[[", 2), function(x) fzmod(x$ab/sum(x$ab)))
 fz2.1 <- lapply(lapply(dat2, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
 rbfz2 <- do.call(rbind, fz2)
 rbfz2.1 <- do.call(rbind, fz2.1)
+
+points(rbfz[,1:2], pch = 20)
+plot(rbfz2[,1:2], pch = 20, col = "blue")
 
 df1 <- as.data.frame(t(sapply(lapply(dat,"[[", 2), function(x) colMeans(x))))
 df1.1 <- as.data.frame(t(sapply(lapply(dat2,"[[", 2), function(x) colMeans(x))))
@@ -284,7 +284,7 @@ sfit$full1 <- c(AIC(fit3), summary(fit3)$r.squared) # -5350
 fitsdf$full1[coefnames %in% names(fit3$coefficients)] <- fit3$coefficients
 sfitp$full1[coefnames %in% names(fit3$coefficients)] <- summary(fit3)$coefficients[,4] <= 0.05
 ## WITHOUT COVARYING INT STRENGTHS (IN vs OUT)
-fit3 <- lm(fz2~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = rbind(df2, df2.1), x = F, y = F, model = F, na.action = "na.fail")
+fit3 <- lm(fz~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = df1, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit3) # .83
 sfit$full2 <- c(AIC(fit3), summary(fit3)$r.squared)# -5341
 fitsdf$full2[coefnames %in% names(fit3$coefficients)] <- fit3$coefficients
