@@ -5,8 +5,11 @@ library(randomForest)
 library(sads)
 library(lme4)
 
-dat <- readRDS("~/Documents/AbundData/res4.rds")
-dat2 <- readRDS("~/Documents/AbundData/res.rds")
+dat <- readRDS("~/Documents/AbundData/res.rds")
+dat2 <- readRDS("~/Documents/AbundData/res2.rds")
+dat4 <- readRDS("~/Documents/AbundData/res4.rds")
+dat5 <- readRDS("~/Documents/AbundData/res5.rds")
+dat6 <- readRDS("~/Documents/AbundData/res6.rds")
 
 dat.fin <- rbindlist(lapply(dat, "[[", 2))
 dat.init <- rbindlist(lapply(dat, "[[", 1))
@@ -137,14 +140,14 @@ fz1.1 <- lapply(lapply(dat, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$
 rbfz <- do.call(rbind, fz1)
 rbfz.1 <- do.call(rbind, fz1.1)
 fz2 <- lapply(lapply(dat2, "[[", 2), function(x) fzmod(x$ab/sum(x$ab)))
-fz2.1 <- lapply(lapply(dat2, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+#fz2.1 <- lapply(lapply(dat2, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
 rbfz2 <- do.call(rbind, fz2)
 rbfz2.1 <- do.call(rbind, fz2.1)
 
 points(rbfz[,1:2], pch = 20)
 plot(rbfz2[,1:2], pch = 20, col = "blue")
 
-df1 <- as.data.frame(t(sapply(lapply(dat,"[[", 2), function(x) colMeans(x))))
+df1 <- as.data.frame(t(sapply(lapply(dat6,"[[", 2), function(x) colMeans(x))))
 df1.1 <- as.data.frame(t(sapply(lapply(dat2,"[[", 2), function(x) colMeans(x))))
 df2 <- as.data.frame(apply(df1, 2, function(x){(x-mean(x))/sd(x)}))
 df2.1 <- as.data.frame(apply(df1.1, 2, function(x){(x-mean(x))/sd(x)}))
@@ -327,3 +330,29 @@ AIC(fit4)
 ###########################################################################
 ###########################################################################
 
+
+fz1 <- lapply(lapply(dat, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+fz1 <- do.call(rbind, fz1)
+fz2 <- lapply(lapply(dat2, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+fz2 <- do.call(rbind, fz2)
+fz4 <- lapply(lapply(dat4, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+fz4 <- do.call(rbind, fz4)
+fz5 <- lapply(lapply(dat5, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+fz5 <- do.call(rbind, fz5)
+fz6.1 <- lapply(lapply(dat6, "[[", 2), function(x) fzmod((x$ab/sum(x$ab))))
+fz6.1 <- do.call(rbind, fz6.1)
+
+points(rbindlist(list(fz1[,1:2], fz2[,1:2], fz4[,1:2], fz5[,1:2], fz6[,1:2])), col = "darkgrey", pch = 20)
+
+
+ct <- c()
+pv <-c()
+conns <- unique(round(t(sapply(dat6, "[[", 3))[,1], 2))[1:23]
+for(i in 1:length(conns)){
+  corr <- cor.test(df1$nAmens[round(t(sapply(dat6, "[[", 3))[,1], 2) == conns[i]], fz6$s[round(t(sapply(dat6, "[[", 3))[,1], 2) == conns[i]])
+  ct[i] <- corr$estimate
+  pv[i] <- corr$p.value
+  #plot(df1$nComp[round(t(sapply(dat6, "[[", 3))[,1], 2) == conns[i]], fz6$s[round(t(sapply(dat6, "[[", 3))[,1], 2) == conns[i]])
+}
+
+cbind(ct,pv <= 0.05)
