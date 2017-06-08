@@ -335,8 +335,8 @@ X <- 2000
 
 gav1 <- apply(otu3, 2, get_abundvec, N = X)
 gav2 <- apply(otu3, 2, function(x) get_abundvec(x[x>=5], N = X))
-gavfz1 <- t(sapply(gav1, fzmod))
-gavfz2 <- t(sapply(gav2, fzmod))
+gavfz1 <- t(sapply(gav2, fzmod))
+gavfz2 <- t(sapply(gav1, function(x) fzmod(x[x >= 3])))
 s.hmp <- unlist(gavfz1[,"s"])[which(apply(otu3, 2, sum) > X)]
 s.hmp2 <- unlist(gavfz2[,"s"])[which(apply(otu3, 2, sum) > X)]
 n.hmp <- unlist(gavfz1[,"N"])[which(apply(otu3, 2, sum) > X)]
