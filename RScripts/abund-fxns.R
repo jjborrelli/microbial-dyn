@@ -178,3 +178,25 @@ sp_role <- function(mat){
   #res <- cbind(res, mod)
   return(res)
 }
+
+
+webprops <- function(mat){
+  # convert to unweighted and weighted graphs 
+  g <- graph.adjacency(abs(sign(mat)))
+  g2 <- graph.adjacency(abs(mat), weighted = T)
+  
+  cc.w <- transitivity(g, "global")
+  
+  conn <- edge_density(g, loops = T)
+  
+  diam.uw <- diameter(g)
+  diam.w <- diameter(g2)
+  
+  mod.uw <- modularity(g, walktrap.community(g)$membership)
+  mod.w <- modularity(g2, walktrap.community(g2)$membership)
+  
+  apl <- average.path.length(g)
+  nclust <- no.clusters(g2, "strong")
+  
+  return(data.frame(cc.w, conn, diam.uw, diam.w, apl, mod.uw, mod.w, nclust))
+}
