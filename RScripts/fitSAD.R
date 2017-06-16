@@ -270,19 +270,19 @@ rm(metadat)
 ####################################################################################################################################
 
 otuT <- read.csv("Desktop/Archive/feces_M3_spp.csv")
-fzT <- apply(otuT[,-1], 1, function(x) fzmod(rev(sort(x[x!=0]))))
+fzT <- apply(otuT[,-1], 1, function(x) fzmod(get_abundvec(rev(sort(x[x!=0])), 2000)))
 fzT <- do.call(rbind, fzT)
 
 otuT2 <- read.csv("Desktop/Archive/feces_F4_spp.csv")
-fzT2 <- apply(otuT2[,-1], 1, function(x) fzmod(sort(x[x>0])))
+fzT2 <- apply(otuT2[,-1], 1, function(x) fzmod(get_abundvec(rev(sort(x[x!=0])), 2000)))
 fzT2 <- do.call(rbind, fzT2)
 
 dtgut1 <- read.csv("Desktop/Archive/dtgut1.csv")
-dt1 <- apply(dtgut1[complete.cases(dtgut1),-1], 1, function(x) fzmod(sort(x[x>0])))
+dt1 <- apply(dtgut1[complete.cases(dtgut1),-1], 1, function(x) fzmod(get_abundvec(rev(sort(x[x!=0])), 2000)))
 dt1 <- do.call(rbind, dt1)
 
 dtgut2 <- read.csv("Desktop/Archive/dtgut2.csv")
-dt2 <- apply(dtgut2[complete.cases(dtgut2),-1], 1, function(x) fzmod(sort(x[x>0])))
+dt2 <- apply(dtgut2[complete.cases(dtgut2),-1], 1, function(x) fzmod(get_abundvec(rev(sort(x[x!=0])), 2000)))
 dt2 <- do.call(rbind, dt2)
 
 ####################################################################################################################################
@@ -324,19 +324,19 @@ psd4 <- readRDS("~/Documents/Data/psd4.rds")
 psd5 <- readRDS("~/Documents/Data/psd5.rds")
 #fzd3 <- t(sapply(psd3$eqa, fzmod))
 psd6 <- readRDS("~/Documents/Data/vdat.rds")
-psd7 <- readRDS("~/Desktop/vdat2.rds")
-psd8 <- readRDS("~/Desktop/vdat3.rds")
-psd9 <- readRDS("~/Desktop/vdat5.rds")
+psd7 <- readRDS("~/Documents/Data/vdat2.rds")
+psd8 <- readRDS("~/Documents/Data/vdat3.rds")
+psd9 <- readRDS("~/Documents/Data/vdat5.rds")
 ####################################################################################################################################
 ####################################################################################################################################
 ####################################################################################################################################
 ## Standardize reads to X
 X <- 2000
 
-gav1 <- apply(otu3, 2, get_abundvec, N = X)
-gav2 <- apply(otu3, 2, function(x) get_abundvec(x[x>=5], N = X))
-gavfz1 <- t(sapply(gav2, fzmod))
-gavfz2 <- t(sapply(gav1, function(x) fzmod(x[x >= 3])))
+gav1 <- apply(otu3, 2, get_abundvec, N = 2000)
+#gav2 <- apply(otu3, 2, function(x) get_abundvec(x[x>=5], N = X))
+gavfz1 <- t(sapply(gav1, fzmod))
+#gavfz2 <- t(sapply(gav1, function(x) fzmod(x[x >= 3])))
 s.hmp <- unlist(gavfz1[,"s"])[which(apply(otu3, 2, sum) > X)]
 s.hmp2 <- unlist(gavfz2[,"s"])[which(apply(otu3, 2, sum) > X)]
 n.hmp <- unlist(gavfz1[,"N"])[which(apply(otu3, 2, sum) > X)]
@@ -363,13 +363,13 @@ dt2 <- do.call(rbind, dt2)
 ####################################################################################################################################
 ####################################################################################################################################
 
-allfit <- data.frame(s = c(fzT$s, fzT2$s, dt1$s, dt2$s, s.hmp),
-                     N = c(fzT$N, fzT2$N, dt1$N, dt2$N, n.hmp),
-                     r2 = c(fzT$r2, fzT2$r2, dt1$r2, dt2$r2, r2.hmp),
-                     dat = rep(c("M3", "F4", "DT1", "DT2", "HMP"), c(length(fzT$s),length(fzT2$s), length(dt1$s), length(dt2$s), length(s.hmp))))
+allfit <- data.frame(s = c(fzT$s, fzT2$s, dt1$s, dt2$s, s.hmp, fzag$s),
+                     N = c(fzT$N, fzT2$N, dt1$N, dt2$N, n.hmp, fzag$N),
+                     r2 = c(fzT$r2, fzT2$r2, dt1$r2, dt2$r2, r2.hmp, fzag$r2),
+                     dat = rep(c("M3", "F4", "DT1", "DT2", "HMP", "AG"), c(length(fzT$s),length(fzT2$s), length(dt1$s), length(dt2$s), length(s.hmp), length(fzag$N))))
 
 
-ggplot(allfit, aes(x = N, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw()
+ggplot(allfit[allfit$r2 > 0.9,], aes(x = log10(N), y = log10(s))) + geom_point(aes(col = dat)) + geom_smooth(aes(col = "black")) + theme_bw()
 ggplot(allfit, aes(x = r2, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw()
 
 ####################################################################################################################################
@@ -418,10 +418,45 @@ allfit <- data.frame(s = c(fzT$s, fzT2$s, dt1$s, dt2$s, s.hmp, simfz1$s, simfz2$
                      dat = rep(c("M3", "F4", "DT1", "DT2", "HMP", "sim", "sim2", "sim3", "sim4", "sim5", "sim6"),
                                c(length(fzT$s),length(fzT2$s),length(dt1$s),length(dt2$s),length(s.hmp),nrow(simfz1), nrow(simfz2), nrow(simfz3), nrow(simfz4), nrow(simfz5), nrow(simfz6))))
 
+#allfitRe <- readRDS("~/Documents/AbundData/allfitREAL.rds")
 
-ggplot(allfit, aes(x = N, y = s, col = dat)) + geom_point(alpha = .4) + geom_smooth() + theme_bw() 
+p1 <- ggplot(allfitRe, aes(x = log10(N), y = log10(s))) + geom_point(aes(alpha = r2, col = dat)) + geom_smooth(method = "lm", col = "black") + 
+  labs(x = expression(log[10](N)), y = expression(log[10](s)), color = "Data Source", alpha = expression("RAD fit" ~ R^2)) + 
+  theme_bw() + theme(axis.title=element_text(size=18,face="bold"), axis.text = element_text(size = 14))
+
+dfresid <- data.frame(resids = residuals(lm(log10(s)~log10(N), data = allfitRe)))
+p2 <- ggplot(dfresid, aes(x = resids, y = ..density..)) + geom_density(fill = "green4") + 
+  labs(x = "Residuals", y = "Density") + 
+  theme_bw() + theme(axis.title=element_text(size=18,face="bold"), axis.text = element_text(size = 14))
+
+p3 <- ggplot(alldat2, aes(x = log10(N), y = log10(fz))) + geom_point(aes(alpha = r2, col = typ)) + geom_smooth(method = "lm", col = "black") + 
+  labs(x = expression(log[10](N)), y = expression(log[10](s)), color = "Network Type", alpha = expression("RAD fit" ~ R^2)) + 
+  scale_color_manual(labels = c("BA", "Random"), values = c("#F8766D", "#00BFC4")) + 
+  theme_bw() + theme(axis.title=element_text(size=18,face="bold"), axis.text = element_text(size = 14))
+
+dfresidsim <- data.frame(resids = residuals(lm(log10(fz)~log10(N), data = alldat2)))
+p4 <- ggplot(dfresidsim, aes(x = resids, y = ..density..)) + geom_density(fill = "green4") + 
+  labs(x = "Residuals", y = "Density") + 
+  theme_bw() + theme(axis.title=element_text(size=18,face="bold"), axis.text = element_text(size = 14))
+
+
 ggplot(allfit, aes(x = r2, y = s, col = dat)) + geom_point() + geom_smooth() + theme_bw() 
 
+library(multipanelfigure)
+
+cols <- 3
+rows <- 2
+figure <- multi_panel_figure(
+  width = 300,
+  columns = cols,
+  height = 200,
+  rows = rows)
+
+figure %<>% fill_panel(p1, row = 1, column = 1:2)
+figure %<>% fill_panel(p3, row = 2, column = 1:2)
+figure %<>% fill_panel(p2, row = 1, column = 3)
+figure %<>% fill_panel(p4, row = 2, column = 3)
+figure
 ####################################################################################################################################
 ####################################################################################################################################
 ####################################################################################################################################
@@ -575,7 +610,7 @@ pdat9 <- prepdat(eqa = gavsim9, eqm = psd9$eqm, svals = simfz9$s, sr2 = simfz9$r
 pdat9$k <- psd9$kv
 pdat9$ir50 <- inrange(50, gavsim9, hmp1)
 
-alldat <- data.table::rbindlist(list(pdat1,pdat2,pdat4,pdat6))
+alldat <- data.table::rbindlist(list(pdat1,pdat2,pdat4,pdat6,pdat7,pdat8,pdat9))
 
 subdat <- apply(abs(pdat2[,-c(1,2)]), 2, function(x){(x - mean(x))/sd(x)})
 subdat <- data.frame(pdat2[,c(1,2)], subdat)
@@ -642,7 +677,7 @@ tot_count <- function(x, labs, digits, varlen)
 fitir <- glm(ir200~cpN+coN, data = pdat3[complete.cases(pdat3),], family = "binomial")
 summary(fitir)
 
-fpart50 <- rpart(ir50~r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat9, method = "class")
+fpart50 <- rpart(sV~r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = alldat, method = "class")
 fpart100 <- rpart(ir100~r+k+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat9, method = "class")
 fpart200 <- rpart(ir200~r+D+aN+coN+cpN+mN+pN+aS+coS+cpS+mS+pSn+pSp, data = pdat9, method = "class")
 plotcp(fpart50)
