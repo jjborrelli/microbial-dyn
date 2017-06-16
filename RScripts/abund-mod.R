@@ -7,6 +7,7 @@ library(lme4)
 
 dat <- readRDS("~/Documents/AbundData/res.rds")
 dat2 <- readRDS("~/Documents/AbundData/res2.rds")
+dat3 <- readRDS("~/Documents/AbundData/res3.rds")
 dat4 <- readRDS("~/Documents/AbundData/res4.rds")
 dat5 <- readRDS("~/Documents/AbundData/res5.rds")
 dat6 <- readRDS("~/Documents/AbundData/res6.rds")
@@ -133,122 +134,158 @@ rf3 <- randomForest(factor(t3)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut
 
 ###########################################################################
 ###########################################################################
+dat.comp <- readRDS("~/Documents/AbundData/rescomp1.rds")
+macom <- sapply(lapply(dat.comp,"[[", 2), function(x) max(x$ab))
+fzcom <- do.call(rbind,lapply(lapply(dat.comp, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000))))
+
+###########################################################################
+###########################################################################
+
+dat <- readRDS("~/Documents/AbundData/res.rds")
+dat2 <- readRDS("~/Documents/AbundData/res2.rds")
+dat3 <- readRDS("~/Documents/AbundData/res3.rds")
+dat4 <- readRDS("~/Documents/AbundData/res4.rds")
+dat5 <- readRDS("~/Documents/AbundData/res5.rds")
+dat6 <- readRDS("~/Documents/AbundData/res6.rds")
+
+
+###########################################################################
+
 maxab <- sapply(lapply(dat,"[[", 2), function(x) max(x$ab))
 maxab2 <- sapply(lapply(dat2,"[[", 2), function(x) max(x$ab))
+maxab3 <- sapply(lapply(dat3,"[[", 2), function(x) max(x$ab))
 maxab4 <- sapply(lapply(dat4,"[[", 2), function(x) max(x$ab))
 maxab5 <- sapply(lapply(dat5,"[[", 2), function(x) max(x$ab))
 maxab6 <- sapply(lapply(dat6,"[[", 2), function(x) max(x$ab))
 
 ## 
-fz1 <- lapply(lapply(dat, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
-rbfz <- do.call(rbind, fz1)
-fz2 <- lapply(lapply(dat2, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
-rbfz2 <- do.call(rbind, fz2)
-fz4 <- lapply(lapply(dat4, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
-rbfz4 <- do.call(rbind, fz4)
-fz5 <- lapply(lapply(dat5, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
-rbfz5 <- do.call(rbind, fz5)
-fz6 <- lapply(lapply(dat6, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
-rbfz6 <- do.call(rbind, fz6)
+rbfz <- lapply(lapply(dat, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+#rbfz <- lapply(lapply(dat, "[[", 2), function(x) fzmod((x$ab/sum(x$ab))))
+rbfz <- do.call(rbind, rbfz)
+rbfz2 <- lapply(lapply(dat2, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+#rbfz2 <- lapply(lapply(dat2, "[[", 2), function(x) fzmod((x$ab/sum(x$ab))))
+rbfz2 <- do.call(rbind, rbfz2)
+rbfz3 <- lapply(lapply(dat3, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+#rbfz3 <- lapply(lapply(dat3, "[[", 2), function(x) fzmod((x$ab/sum(x$ab))))
+rbfz3 <- do.call(rbind, rbfz3)
+rbfz4 <- lapply(lapply(dat4, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+#rbfz4 <- lapply(lapply(dat4, "[[", 2), function(x) fzmod((x$ab/sum(x$ab))))
+rbfz4 <- do.call(rbind, rbfz4)
+rbfz5 <- lapply(lapply(dat5, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+#rbfz5 <- lapply(lapply(dat5, "[[", 2), function(x) fzmod((x$ab/sum(x$ab))))
+rbfz5 <- do.call(rbind, rbfz5)
+rbfz6 <- lapply(lapply(dat6, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+#rbfz6 <- lapply(lapply(dat6, "[[", 2), function(x) fzmod((x$ab/sum(x$ab))))
+rbfz6 <- do.call(rbind, rbfz6)
 
-points(rbfz[,1:2], pch = 20)
-plot(rbfz2[,1:2], pch = 20, col = "blue")
+#points(rbfz[,1:2], pch = 20)
+#plot(rbfz2[,1:2], pch = 20, col = "blue")
 
-df1.1 <- as.data.frame(t(sapply(lapply(dat,"[[", 1), function(x) colMeans(x))))
-df1.2 <- as.data.frame(t(sapply(lapply(dat2,"[[", 1), function(x) colMeans(x))))
-df1.4 <- as.data.frame(t(sapply(lapply(dat4,"[[", 1), function(x) colMeans(x))))
-df1.5 <- as.data.frame(t(sapply(lapply(dat5,"[[", 1), function(x) colMeans(x))))
-df1.6 <- as.data.frame(t(sapply(lapply(dat6,"[[", 1), function(x) colMeans(x))))
+df1.1 <- as.data.frame(t(sapply(lapply(dat,"[[", 2), function(x) colMeans(x))))
+df1.2 <- as.data.frame(t(sapply(lapply(dat2,"[[", 2), function(x) colMeans(x))))
+df1.3 <- as.data.frame(t(sapply(lapply(dat3,"[[", 2), function(x) colMeans(x))))
+df1.4 <- as.data.frame(t(sapply(lapply(dat4,"[[", 2), function(x) colMeans(x))))
+df1.5 <- as.data.frame(t(sapply(lapply(dat5,"[[", 2), function(x) colMeans(x))))
+df1.6 <- as.data.frame(t(sapply(lapply(dat6,"[[", 2), function(x) colMeans(x))))
 df2.1 <- as.data.frame(apply(df1.1, 2, function(x){(x-mean(x))/sd(x)}))
 df2.2 <- as.data.frame(apply(df1.2, 2, function(x){(x-mean(x))/sd(x)}))
+df2.3 <- as.data.frame(apply(df1.3, 2, function(x){(x-mean(x))/sd(x)}))
 df2.4 <- as.data.frame(apply(df1.4, 2, function(x){(x-mean(x))/sd(x)}))
 df2.5 <- as.data.frame(apply(df1.5, 2, function(x){(x-mean(x))/sd(x)}))
 df2.6 <- as.data.frame(apply(df1.6, 2, function(x){(x-mean(x))/sd(x)}))
 
-df1.1$N <- sapply(lapply(dat,"[[", 2), function(x) nrow(x))
+df1.1$N <- rbfz[,1]#sapply(lapply(dat,"[[", 2), function(x) nrow(x))
 df1.1$ma <- maxab
 df1.1$fz <- rbfz[,2]
-df1.2$N <- sapply(lapply(dat2,"[[", 2), function(x) nrow(x))
+df1.2$N <- rbfz2[,1]#sapply(lapply(dat2,"[[", 2), function(x) nrow(x))
 df1.2$ma <- maxab2
 df1.2$fz <- rbfz2[,2]
-df1.4$N <- sapply(lapply(dat4,"[[", 2), function(x) nrow(x))
+df1.3$N <- rbfz3[,1]#sapply(lapply(dat3,"[[", 2), function(x) nrow(x))
+df1.3$ma <- maxab3
+df1.3$fz <- rbfz3[,2]
+df1.4$N <- rbfz4[,1]#sapply(lapply(dat4,"[[", 2), function(x) nrow(x))
 df1.4$ma <- maxab4
 df1.4$fz <- rbfz4[,2]
-df1.5$N <- sapply(lapply(dat5,"[[", 2), function(x) nrow(x))
+df1.5$N <- rbfz5[,1]#sapply(lapply(dat5,"[[", 2), function(x) nrow(x))
 df1.5$ma <- maxab5
 df1.5$fz <- rbfz5[,2]
-df1.6$N <- sapply(lapply(dat6,"[[", 2), function(x) nrow(x))
+df1.6$N <- rbfz6[,1]#sapply(lapply(dat6,"[[", 2), function(x) nrow(x))
 df1.6$ma <- maxab6
 df1.6$fz <- rbfz6[,2]
 
 
-df2.1$N <- sapply(lapply(dat,"[[", 2), function(x) nrow(x))
+df2.1$N <- rbfz[,1]#sapply(lapply(dat,"[[", 2), function(x) nrow(x))
 df2.1$ma <- maxab
 df2.1$fz <- rbfz[,2]
-df2.2$N <- sapply(lapply(dat2,"[[", 2), function(x) nrow(x))
+df2.2$N <- rbfz2[,1]#sapply(lapply(dat2,"[[", 2), function(x) nrow(x))
 df2.2$ma <- maxab2
 df2.2$fz <- rbfz2[,2]
-df2.4$N <- sapply(lapply(dat4,"[[", 2), function(x) nrow(x))
+df2.3$N <- rbfz3[,1]#sapply(lapply(dat3,"[[", 2), function(x) nrow(x))
+df2.3$ma <- maxab3
+df2.3$fz <- rbfz3[,2]
+df2.4$N <- rbfz4[,1]#sapply(lapply(dat4,"[[", 2), function(x) nrow(x))
 df2.4$ma <- maxab4
 df2.4$fz <- rbfz4[,2]
-df2.5$N <- sapply(lapply(dat5,"[[", 2), function(x) nrow(x))
+df2.5$N <- rbfz5[,1]#sapply(lapply(dat5,"[[", 2), function(x) nrow(x))
 df2.5$ma <- maxab5
 df2.5$fz <- rbfz5[,2]
-df2.6$N <- sapply(lapply(dat6,"[[", 2), function(x) nrow(x))
+df2.6$N <- rbfz6[,1]#sapply(lapply(dat6,"[[", 2), function(x) nrow(x))
 df2.6$ma <- maxab6
 df2.6$fz <- rbfz6[,2]
 
-alldat <- rbindlist(list(df2.1,df2.2,df2.4,df2.5,df2.6))
-alldat$typ <- factor(rep(c("rand", "hub"), c(2000, 4500)))
-alldat2 <- rbindlist(list(df1.1,df1.2,df1.4,df1.5,df1.6))
-alldat2$typ <- factor(rep(c("rand", "hub"), c(2000, 4500)))
-alldat2$r2 <- c(rbfz[,"r2"],rbfz2[,"r2"],rbfz4[,"r2"],rbfz5[,"r2"],rbfz6[,"r2"])
+alldat <- rbindlist(list(df2.1, df2.2, df2.3, df2.4, df2.5, df2.6))
+alldat$typ <- factor(rep(c("rand", "hub"), c(3000, 4500)))
+alldat2 <- rbindlist(list(df1.1, df1.2, df1.3, df1.4, df1.5, df1.6))
+alldat2$typ <- factor(rep(c("rand", "hub"), c(3000, 4500)))
+alldat2$r2 <- c(rbfz[,"r2"],rbfz2[,"r2"], rbfz3[,"r2"],rbfz4[,"r2"],rbfz5[,"r2"],rbfz6[,"r2"])
+alldat$N2 <- ((alldat$N-mean(alldat$N))/sd(alldat$N))
+
 
 #########################
 # MODEL MAXIMUM ABUNDANCE
-fit2ma <- lm(log10(ma)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit2ma <- lm(log10(ma)~N2+K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 fitmadf <- data.frame(full1 = c(fit2ma$coefficients, allOut = NA))
 coefnames <- c(names(fit2ma$coefficients), "allOut")
 fitmap <- data.frame(full1 = c(summary(fit2ma)$coefficients[,4] <= 0.05, allOut = NA))
 mafit <- data.frame(full1 = c(NA, NA), full2 = c(NA, NA), struct = c(NA, NA), ints = c(NA, NA), ints2 = c(NA, NA), degstr = c(NA, NA), commut = c(NA, NA))
 ## ALL PRED
-fit2ma <- lm(log10(ma)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit2ma <- lm(log10(ma)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit2ma) # r2 = .75
 mafit$full1 <- c(AIC(fit2ma), summary(fit2ma)$r.squared) # -1909
 fitmadf$full1[coefnames %in% names(fit2ma$coefficients)] <- fit2ma$coefficients
 fitmap$full1[coefnames %in% names(fit2ma$coefficients)] <- summary(fit2ma)$coefficients[,4] <= 0.05
 ## WITHOUT COVARYING INT STRENGTHS (IN vs OUT)
-fit2ma <- lm(log10(ma)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit2ma <- lm(log10(ma)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit2ma) # r2 = ..74
 mafit$full2 <- c(AIC(fit2ma), summary(fit2ma)$r.squared) # -1876
 fitmadf$full2[coefnames %in% names(fit2ma$coefficients)] <- fit2ma$coefficients
 fitmap$full2[coefnames %in% names(fit2ma$coefficients)] <- summary(fit2ma)$coefficients[,4] <= 0.05
 ## ONLY NETWORK STRUCTURE
-fit2ma <- lm(log10(ma)~K2+bet.w+d.tot+cc.w+apl.w.mu, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit2ma <- lm(log10(ma)~K2+bet.w+d.tot+cc.w+apl.w.mu+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit2ma) # r2 = .30 
 mafit$struct <- c(AIC(fit2ma), summary(fit2ma)$r.squared)  # 103
 fitmadf$struct[coefnames %in% names(fit2ma$coefficients)] <- fit2ma$coefficients
 fitmap$struct[coefnames %in% names(fit2ma$coefficients)] <- summary(fit2ma)$coefficients[,4] <= 0.05
 ## ONLY INTERACTIONS
-fit2ma <- lm(log10(ma)~nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit2ma <- lm(log10(ma)~nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit2ma) # r2 = .59
 mafit$ints <- c(AIC(fit2ma), summary(fit2ma)$r.squared)  # -982
 fitmadf$ints[coefnames %in% names(fit2ma$coefficients)] <- fit2ma$coefficients
 fitmap$ints[coefnames %in% names(fit2ma$coefficients)] <- summary(fit2ma)$coefficients[,4] <= 0.05
 ## ONLY INTERACTIONS W/O COVARYING INT STRENGTHS
-fit2ma <- lm(log10(ma)~nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit2ma <- lm(log10(ma)~nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit2ma) # r2 = .56
 mafit$ints2 <- c(AIC(fit2ma), summary(fit2ma)$r.squared) # -818
 fitmadf$ints2[coefnames %in% names(fit2ma$coefficients)] <- fit2ma$coefficients
 fitmap$ints2[coefnames %in% names(fit2ma$coefficients)] <- summary(fit2ma)$coefficients[,4] <= 0.05
 ## ALL INT STRENGTHS AND NUM INTS
-fit2ma <- lm(log10(ma)~d.tot+allOut, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit2ma <- lm(log10(ma)~d.tot+allOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit2ma) # r2 = .37
 mafit$degstr <- c(AIC(fit2ma), summary(fit2ma)$r.squared)  # -116
 fitmadf$degstr[coefnames %in% names(fit2ma$coefficients)] <- fit2ma$coefficients
 fitmap$degstr[coefnames %in% names(fit2ma$coefficients)] <- summary(fit2ma)$coefficients[,4] <= 0.05
 ## ONLY COMP AND MUT
-fit2ma <- lm(log10(ma)~nComp+CompOut+nMut+MutOut, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit2ma <- lm(log10(ma)~nComp+CompOut+nMut+MutOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit2ma) # r2 = .34
 mafit$commut <- c(AIC(fit2ma), summary(fit2ma)$r.squared)  # -10
 fitmadf$commut[coefnames %in% names(fit2ma$coefficients)] <- fit2ma$coefficients
@@ -261,43 +298,43 @@ fitNdf <- fitmadf
 fitNp <- fitmap
 Nfit <- data.frame(full1 = c(NA, NA), full2 = c(NA, NA), struct = c(NA, NA), ints = c(NA, NA), ints2 = c(NA, NA), degstr = c(NA, NA), commut = c(NA, NA))
 ## ALL PRED
-fit2N <- lm(N~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit2N <- lm(N~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit2N) # .96
 Nfit$full1 <- c(AIC(fit2N), summary(fit2N)$r.squared)  # 18123
 fitNdf$full1[coefnames %in% names(fit2N$coefficients)] <- fit2N$coefficients
 fitNp$full1[coefnames %in% names(fit2N$coefficients)] <- summary(fit2N)$coefficients[,4] <= 0.05
 ## WITHOUT COVARYING INT STRENGTHS (IN vs OUT)
-fit2N <- lm(N~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit2N <- lm(N~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit2N) # .96
 Nfit$full2 <- c(AIC(fit2N), summary(fit2N)$r.squared)  # 18116
 fitNdf$full2[coefnames %in% names(fit2N$coefficients)] <- fit2N$coefficients
 fitNp$full2[coefnames %in% names(fit2N$coefficients)] <- summary(fit2N)$coefficients[,4] <= 0.05
 ## ONLY NETWORK STRUCTURE
-fit2N <- lm(N~K2+bet.w+d.tot+cc.w+apl.w.mu, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit2N <- lm(N~K2+bet.w+d.tot+cc.w+apl.w.mu+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit2N) # .96
 Nfit$struct <- c(AIC(fit2N), summary(fit2N)$r.squared)  # 18144
 fitNdf$struct[coefnames %in% names(fit2N$coefficients)] <- fit2N$coefficients
 fitNp$struct[coefnames %in% names(fit2N$coefficients)] <- summary(fit2N)$coefficients[,4] <= 0.05
 ## ONLY INTERACTIONS
-fit2N <- lm(N~nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit2N <- lm(N~nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit2N) # .63
 Nfit$ints <- c(AIC(fit2N), summary(fit2N)$r.squared)  # 22393
 fitNdf$ints[coefnames %in% names(fit2N$coefficients)] <- fit2N$coefficients
 fitNp$ints[coefnames %in% names(fit2N$coefficients)] <- summary(fit2N)$coefficients[,4] <= 0.05
 ## ONLY INTERACTIONS W/O COVARYING INT STRENGTHS
-fit2N <- lm(N~nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit2N <- lm(N~nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit2N) # .58
 Nfit$ints2 <- c(AIC(fit2N), summary(fit2N)$r.squared) # 22595
 fitNdf$ints2[coefnames %in% names(fit2N$coefficients)] <- fit2N$coefficients
 fitNp$ints2[coefnames %in% names(fit2N$coefficients)] <- summary(fit2N)$coefficients[,4] <= 0.05
 ## ALL INT STRENGTHS AND NUM INTS
-fit2N <- lm(N~d.tot+allOut, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit2N <- lm(N~d.tot+allOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit2N) # .25
 Nfit$degstr <- c(AIC(fit2N), summary(fit2N)$r.squared) # 23772
 fitNdf$degstr[coefnames %in% names(fit2N$coefficients)] <- fit2N$coefficients
 fitNp$degstr[coefnames %in% names(fit2N$coefficients)] <- summary(fit2N)$coefficients[,4] <= 0.05
 ## ONLY COMP AND MUT
-fit2N <- lm(N~nComp+CompOut+nMut+MutOut, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit2N <- lm(N~nComp+CompOut+nMut+MutOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit2N) # .41
 Nfit$commut <- c(AIC(fit2N), summary(fit2N)$r.squared)  # 23264
 fitNdf$commut[coefnames %in% names(fit2N$coefficients)] <- fit2N$coefficients
@@ -311,13 +348,13 @@ fitsdf <- fitmadf
 sfitp <- fitmap
 sfit <- data.frame(full1 = c(NA, NA), full2 = c(NA, NA), struct = c(NA, NA), ints = c(NA, NA), ints2 = c(NA, NA), degstr = c(NA, NA), commut = c(NA, NA))
 ## ALL PRED
-fit3 <- lm(fz~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit3 <- lm(fz~N2, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit3) # .83
 sfit$full1 <- c(AIC(fit3), summary(fit3)$r.squared) # -5350
 fitsdf$full1[coefnames %in% names(fit3$coefficients)] <- fit3$coefficients
 sfitp$full1[coefnames %in% names(fit3$coefficients)] <- summary(fit3)$coefficients[,4] <= 0.05
 ## WITHOUT COVARYING INT STRENGTHS (IN vs OUT)
-fit3 <- lm(fz~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit3 <- lm((fz)~(N2)+K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit3) # .83
 sfit$full2 <- c(AIC(fit3), summary(fit3)$r.squared)# -5341
 fitsdf$full2[coefnames %in% names(fit3$coefficients)] <- fit3$coefficients
@@ -341,7 +378,7 @@ sfit$ints2 <- c(AIC(fit3), summary(fit3)$r.squared) # -3287
 fitsdf$ints2[coefnames %in% names(fit3$coefficients)] <- fit3$coefficients
 sfitp$ints2[coefnames %in% names(fit3$coefficients)] <- summary(fit3)$coefficients[,4] <= 0.05
 ## ALL INT STRENGTHS AND NUM INTS
-fit3 <- lm(fz~d.tot+allOut, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit3 <- lm(fz~d.tot+allOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit3) # .22
 sfit$degstr <- c(AIC(fit3), summary(fit3)$r.squared) # -2320
 fitsdf$degstr[coefnames %in% names(fit3$coefficients)] <- fit3$coefficients
@@ -354,7 +391,7 @@ fitsdf$commut[coefnames %in% names(fit3$coefficients)] <- fit3$coefficients
 sfitp$commut[coefnames %in% names(fit3$coefficients)] <- summary(fit3)$coefficients[,4] <= 0.05
 
 # fit2ma and fit2N second fits better than first
-fit4 <- (lm(c(rbfz[,2],rbfz2[,2])~fit2ma$fitted.values+fit2N$fitted.values)) 
+fit4 <- (lm(alldat$fz~fit2ma$fitted.values+fit2N$fitted.values+alldat$typ)) 
 summary(fit4)
 AIC(fit4)
 ###########################################################################
@@ -393,9 +430,9 @@ cbind(ct,pv <= 0.05)
 
 
 #crt <- rpart(fz~K2+bet.w+d.in+d.out+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut+typ, dat = alldat2[alldat2$r2 > 0.8])
-crt <- rpart(fz~N+K2+bet.w+bet.uw+d.in+d.out+cc.w+cc.uw+apl.uw.mu+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+typ, dat = alldat2[alldat2$r2 > 0.7 & alldat2$N > 130,])
-prp(crt, extra = 1, main = "S")
-plotcp(crt)
+crt <- rpart(fz~N+K2+bet.w+bet.uw+d.in+d.out+cc.w+cc.uw+apl.uw.mu+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+typ, dat = alldat[alldat2$r2 > 0.8 & alldat$N > 130,])
+#prp(crt, extra = 1, main = "S")
+#plotcp(crt)
 prp(prune(crt, cp = crt$cptable[which.min(crt$cptable[,"xerror"]),"CP"]), extra = 1)
 par(mfrow = c(1,2))
 rsq.rpart(crt)
@@ -405,7 +442,7 @@ par(mfrow = c(1,1))
 rf <- randomForest(fz~N+K2+bet.w+bet.uw+d.in+d.out+cc.w+cc.uw+apl.uw.mu+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+typ, dat = alldat2[alldat2$r2 > 0.8], importance = TRUE, mtry = 15, ntree = 2000)
 varImpPlot(rf)
 
-crt <- rpart(r2~N+K2+bet.w+bet.uw+d.in+d.out+cc.w+cc.uw+apl.uw.mu+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+typ, dat = alldat2[alldat2$r2 > 0.5])
+crt <- rpart(r2~N+K2+bet.w+bet.uw+d.in+d.out+cc.w+cc.uw+apl.uw.mu+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+typ, dat = alldat2)
 prp(crt, extra = 1)
 plotcp(crt)
 prp(prune(crt, cp = crt$cptable[which.min(crt$cptable[,"xerror"]),"CP"]))
@@ -420,11 +457,10 @@ rf <- randomForest(ma~N+K2+bet.w+bet.uw+d.in+d.out+cc.w+cc.uw+apl.uw.mu+apl.w.mu
 varImpPlot(rf)
 
 
-crt <- rpart(N~K2+bet.w+bet.uw+d.in+d.out+cc.w+cc.uw+apl.uw.mu+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+typ, dat = alldat2[alldat2$r2 > 0.8])
+crt <- rpart((N > 130)~K2+bet.w+bet.uw+d.in+d.out+cc.w+cc.uw+apl.uw.mu+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+typ, dat = alldat[alldat2$r2 > 0.8], method= "class")
 prp(crt, extra = 1, main = "N")
 plotcp(crt)
-prp(prune(crt, cp = crt$cptable[which.min(crt$cptable[,"xerror"]),"CP"]))
-
+prp(prune(crt, cp = crt$cptable[which.min(crt$cptable[,"xerror"]),"CP"]), extra = 1)
 rf <- randomForest(N~K2+bet.w+bet.uw+d.in+d.out+cc.w+cc.uw+apl.uw.mu+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+typ, dat = alldat2[alldat2$r2 > 0.8], importance = TRUE, mtry = 15, ntree = 2000)
 varImpPlot(rf)
 
