@@ -198,5 +198,11 @@ webprops <- function(mat){
   apl <- average.path.length(g)
   nclust <- no.clusters(g2, "strong")
   
+  m.int <- mean(mat[mat != 0])
+  m.n.int <- mean(mat[mat < 0])
+  m.p.int <- mean(mat[mat > 0])
+  
+  #itypes
+  
   return(data.frame(cc.w, conn, diam.uw, diam.w, apl, mod.uw, mod.w, nclust))
 }
