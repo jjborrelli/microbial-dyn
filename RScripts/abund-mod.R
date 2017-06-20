@@ -158,28 +158,58 @@ maxab4 <- sapply(lapply(dat4,"[[", 2), function(x) max(x$ab))
 maxab5 <- sapply(lapply(dat5,"[[", 2), function(x) max(x$ab))
 maxab6 <- sapply(lapply(dat6,"[[", 2), function(x) max(x$ab))
 
+
+ga1 <- lapply(lapply(dat, "[[", 2), function(x) (get_abundvec(x$ab/sum(x$ab), 2000)))
+ga2 <- lapply(lapply(dat2, "[[", 2), function(x) (get_abundvec(x$ab/sum(x$ab), 2000)))
+ga3 <- lapply(lapply(dat3, "[[", 2), function(x) (get_abundvec(x$ab/sum(x$ab), 2000)))
+ga4 <- lapply(lapply(dat4, "[[", 2), function(x) (get_abundvec(x$ab/sum(x$ab), 2000)))
+ga5 <- lapply(lapply(dat5, "[[", 2), function(x) (get_abundvec(x$ab/sum(x$ab), 2000)))
+ga6 <- lapply(lapply(dat6, "[[", 2), function(x) (get_abundvec(x$ab/sum(x$ab), 2000)))
+
+sk1 <- sapply(ga1, function(x) sum((x-mean(x))^3/length(x))/sd(x)^3)
+sk2 <- sapply(ga2, function(x) sum((x-mean(x))^3/length(x))/sd(x)^3)
+sk3 <- sapply(ga3, function(x) sum((x-mean(x))^3/length(x))/sd(x)^3)
+sk4 <- sapply(ga4, function(x) sum((x-mean(x))^3/length(x))/sd(x)^3)
+sk5 <- sapply(ga5, function(x) sum((x-mean(x))^3/length(x))/sd(x)^3)
+sk6 <- sapply(ga6, function(x) sum((x-mean(x))^3/length(x))/sd(x)^3)
+
+
 ## 
-rbfz <- lapply(lapply(dat, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+rbfz <- lapply(ga1, function(x) fzmod(x))
 #rbfz <- lapply(lapply(dat, "[[", 2), function(x) fzmod((x$ab/sum(x$ab))))
 rbfz <- do.call(rbind, rbfz)
-rbfz2 <- lapply(lapply(dat2, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+rbfz2 <- lapply(ga2, function(x) fzmod(x))
 #rbfz2 <- lapply(lapply(dat2, "[[", 2), function(x) fzmod((x$ab/sum(x$ab))))
 rbfz2 <- do.call(rbind, rbfz2)
-rbfz3 <- lapply(lapply(dat3, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+rbfz3 <- lapply(ga3, function(x) fzmod(x))
 #rbfz3 <- lapply(lapply(dat3, "[[", 2), function(x) fzmod((x$ab/sum(x$ab))))
 rbfz3 <- do.call(rbind, rbfz3)
-rbfz4 <- lapply(lapply(dat4, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+rbfz4 <- lapply(ga4, function(x) fzmod(x))
 #rbfz4 <- lapply(lapply(dat4, "[[", 2), function(x) fzmod((x$ab/sum(x$ab))))
 rbfz4 <- do.call(rbind, rbfz4)
-rbfz5 <- lapply(lapply(dat5, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+rbfz5 <- lapply(ga5, function(x) fzmod(x))
 #rbfz5 <- lapply(lapply(dat5, "[[", 2), function(x) fzmod((x$ab/sum(x$ab))))
 rbfz5 <- do.call(rbind, rbfz5)
-rbfz6 <- lapply(lapply(dat6, "[[", 2), function(x) fzmod(get_abundvec(x$ab/sum(x$ab), 2000)))
+rbfz6 <- lapply(ga6, function(x) fzmod(x))
 #rbfz6 <- lapply(lapply(dat6, "[[", 2), function(x) fzmod((x$ab/sum(x$ab))))
 rbfz6 <- do.call(rbind, rbfz6)
 
 #points(rbfz[,1:2], pch = 20)
 #plot(rbfz2[,1:2], pch = 20, col = "blue")
+
+df1.1sd <- as.data.frame(t(sapply(lapply(dat,"[[", 2), function(x) apply(dplyr::select(x, gr:allOut), 2, sd))))
+colnames(df1.1sd) <- paste0(colnames(df1.1sd), ".sd")
+df1.2sd <- as.data.frame(t(sapply(lapply(dat2,"[[", 2), function(x) apply(dplyr::select(x, gr:allOut), 2, sd))))
+colnames(df1.2sd) <- paste0(colnames(df1.2sd), ".sd")
+df1.3sd <- as.data.frame(t(sapply(lapply(dat3,"[[", 2), function(x) apply(dplyr::select(x, gr:allOut), 2, sd))))
+colnames(df1.3sd) <- paste0(colnames(df1.3sd), ".sd")
+df1.4sd <- as.data.frame(t(sapply(lapply(dat4,"[[", 2), function(x) apply(dplyr::select(x, gr:allOut), 2, sd))))
+colnames(df1.4sd) <- paste0(colnames(df1.4sd), ".sd")
+df1.5sd <- as.data.frame(t(sapply(lapply(dat5,"[[", 2), function(x) apply(dplyr::select(x, gr:allOut), 2, sd))))
+colnames(df1.5sd) <- paste0(colnames(df1.5sd), ".sd")
+df1.6sd <- as.data.frame(t(sapply(lapply(dat6,"[[", 2), function(x) apply(dplyr::select(x, gr:allOut), 2, sd))))
+colnames(df1.6sd) <- paste0(colnames(df1.6sd), ".sd")
+
 
 df1.1 <- as.data.frame(t(sapply(lapply(dat,"[[", 2), function(x) colMeans(x))))
 df1.2 <- as.data.frame(t(sapply(lapply(dat2,"[[", 2), function(x) colMeans(x))))
@@ -239,8 +269,8 @@ alldat2 <- rbindlist(list(df1.1, df1.2, df1.3, df1.4, df1.5, df1.6))
 alldat2$typ <- factor(rep(c("rand", "hub"), c(3000, 4500)))
 alldat2$r2 <- c(rbfz[,"r2"],rbfz2[,"r2"], rbfz3[,"r2"],rbfz4[,"r2"],rbfz5[,"r2"],rbfz6[,"r2"])
 alldat$N2 <- ((alldat$N-mean(alldat$N))/sd(alldat$N))
-
-
+alldat2$sk <- c(sk1, sk2, sk3, sk4, sk5, sk6)
+alldat$sk <- c(sk1, sk2, sk3, sk4, sk5, sk6)
 #########################
 # MODEL MAXIMUM ABUNDANCE
 fit2ma <- lm(log10(ma)~N2+K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompIn+CompOut+nMut+MutIn+MutOut+nPred+PredIn+PredOut+nAmens+AmensIn+AmensOut+nComm+CommIn+CommOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
@@ -354,14 +384,16 @@ sfit$full1 <- c(AIC(fit3), summary(fit3)$r.squared) # -5350
 fitsdf$full1[coefnames %in% names(fit3$coefficients)] <- fit3$coefficients
 sfitp$full1[coefnames %in% names(fit3$coefficients)] <- summary(fit3)$coefficients[,4] <= 0.05
 ## WITHOUT COVARYING INT STRENGTHS (IN vs OUT)
-fit3 <- lm((fz)~(N2)+K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit3 <- lm((fz)~K2+bet.w+d.tot+cc.w+apl.w.mu+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit3) # .83
 sfit$full2 <- c(AIC(fit3), summary(fit3)$r.squared)# -5341
 fitsdf$full2[coefnames %in% names(fit3$coefficients)] <- fit3$coefficients
 sfitp$full2[coefnames %in% names(fit3$coefficients)] <- summary(fit3)$coefficients[,4] <= 0.05
 ## ONLY NETWORK STRUCTURE
-fit3 <- lm(fz~K2+bet.w+d.tot+cc.w+apl.w.mu+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+fit3 <- lm(log(fz)~bet.w+d.tot+cc.w+mod.uw+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit3) # .80
+fit3.2 <- lm(log(fz)~K2+bet.uw+d.tot+cc.uw+apl.uw.mu+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
+summary(fit3.2)
 sfit$struct <- c(AIC(fit3), summary(fit3)$r.squared) # -5030
 fitsdf$struct[coefnames %in% names(fit3$coefficients)] <- fit3$coefficients
 sfitp$struct[coefnames %in% names(fit3$coefficients)] <- summary(fit3)$coefficients[,4] <= 0.05
@@ -466,3 +498,43 @@ varImpPlot(rf)
 
 
 plot(alldat2[alldat2$r2 > 0.5,]$N, alldat2[alldat2$r2 > 0.5,]$bet.uw)
+
+
+########################################################################################
+########################################################################################
+ga <- lapply(lapply(dat3, "[[", 2), function(x) (get_abundvec(x$ab/sum(x$ab), 2000)))
+rbfz <- sapply(ga, function(x) fitpoilog(x)@fullcoef)
+rbfz2 <- lapply(ga, function(x) radfit(x))
+rbfz6 <- sapply(ga2, function(x) fzmod(x)$s)
+rbfz6.2 <- sapply(ga2, function(x) fitpoilog(x)@fullcoef)
+
+cmplx <- sqrt(c(sapply(ga, length),sapply(ga2, length)) * c(sapply(dat3, "[[", 3)[1,],sapply(dat6, "[[", 3)[1,]))
+
+sum((ga[[1]]-mean(ga[[1]]))^3/length(ga[[1]]))/sd(ga[[1]])^3
+
+sk1 <- sapply(ga, function(x) sum((x-mean(x))^3/length(x))/sd(x)^3)
+sk2 <- sapply(ga, function(x) sum((x-mean(x))^3/length(x))/sd(x)^3)
+sk3 <- sapply(ga, function(x) sum((x-mean(x))^3/length(x))/sd(x)^3)
+sk4 <- sapply(ga, function(x) sum((x-mean(x))^3/length(x))/sd(x)^3)
+sk5 <- sapply(ga, function(x) sum((x-mean(x))^3/length(x))/sd(x)^3)
+sk6 <- sapply(ga, function(x) sum((x-mean(x))^3/length(x))/sd(x)^3)
+
+
+ku <- sapply(ga, function(x) sum((x-mean(x))^4/length(x))/sd(x)^4 - 3)
+
+idat <- (reshape2::melt(apply(dplyr::select(alldat2, nComp, nMut, nPred, nComm, nAmens), 1, function(x) x/sum(x))))
+ggplot(idat, aes(x = Var2, y = value)) + geom_bar(aes(fill = Var1), stat = "identity") + scale_fill_manual(values = c("#999999", "#E69F00", "#56B4E9", "#009E73", "#0072B2"))
+
+d1 <- c()
+for(i in 50:300){
+  d1[i-49] <- median(allfitRe$s[allfitRe$N == i]) - median(alldat2$fz[alldat2$N == i]) 
+}
+
+m1 <- c()
+m2 <- c()
+for(i in 1:300){
+  m1[i] <- median(allfitRe$s[allfitRe$N == i])
+  m2[i] <- median(alldat2$fz[alldat2$N == i])
+}
+plot(m1, ylim = c(0,5), typ = "l")
+points(m2, typ = "l")
