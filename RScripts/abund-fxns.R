@@ -179,6 +179,18 @@ sp_role <- function(mat){
   return(res)
 }
 
+itypes <- function(x){
+  i1 <- x[upper.tri(x)]
+  i2 <- t(x)[upper.tri(x)] 
+  
+  comp <- sum(i1 < 0 & i2 < 0)
+  mut <- sum(i1 > 0 & i2 > 0)
+  pred <- sum(i1 > 0 & i2 < 0 | i1 < 0 & i2 > 0)
+  amens <- sum(i1 < 0 & i2  == 0 | i1 == 0 & i2 < 0)
+  comm <- sum(i1 > 0 & i2  == 0 | i1 == 0 & i2 > 0)
+  
+  return(c(comp = comp, mut = mut, pred = pred, amens = amens, comm = comm))
+}
 
 webprops <- function(mat){
   # convert to unweighted and weighted graphs 
@@ -203,6 +215,6 @@ webprops <- function(mat){
   m.p.int <- mean(mat[mat > 0])
   
   #itypes
-  
-  return(data.frame(cc.w, conn, diam.uw, diam.w, apl, mod.uw, mod.w, nclust))
+  ity <- itypes(mat)
+  return(data.frame(cc.w, conn, diam.uw, diam.w, apl, mod.uw, mod.w, nclust, m.int, m.n.int, m.p.int, ity))
 }
