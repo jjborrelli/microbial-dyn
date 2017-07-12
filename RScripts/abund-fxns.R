@@ -1,3 +1,4 @@
+
 ############################################################################
 ############################################################################
 #### Libraries
@@ -216,5 +217,134 @@ webprops <- function(mat){
   
   #itypes
   ity <- itypes(mat)
+  cnames <- names(ity)
+  ity <- data.frame(matrix(ity, ncol = 5))
+  colnames(ity) <- cnames
   return(data.frame(cc.w, conn, diam.uw, diam.w, apl, mod.uw, mod.w, nclust, m.int, m.n.int, m.p.int, ity))
 }
+
+localstability <- function(tp, par, dyn){
+  mrev <- c()
+  for(i in 1:length(tp)){
+    t1 <- tp[i]
+    jf <- rootSolve::jacobian.full(dyn[t1,dyn[t1,] > 0], func = lvmod, parms = par)
+    mrev[i] <- max(Re(eigen(jf)$values))
+  }
+  
+  return(mrev)
+}
+
+
+
+fitzipf_r <- function(x, N, trunc, start.value, upper = 20, ...){
+  if (any(x <= 0)) stop ("All x must be positive")
+  if(class(x)!="rad") rad.tab <- rad(x)
+  else rad.tab <- x
+  # y <- rep(rad.tab$rank, rad.tab$abund)
+  dots <- list(...)
+  if (!missing(trunc)){
+    if (min(rad.tab$rank)<=trunc) stop("truncation point should be lower than the lowest rank") #
+  }
+  if(missing(N)){
+    N <- max(rad.tab$rank) #
+  }
+  if(missing(start.value)){
+    p <- rad.tab$abund/sum(rad.tab$abund)
+    lzipf <- function(s, N) -s*log(1:N) - log(sum(1/(1:N)^s))
+    opt.f <- function(s) sum((log(p) - lzipf(s, length(p)))^2)
+    opt <- optimize(opt.f, c(0.5, length(p)))
+    sss <- opt$minimum
+  }
+  else{
+    sss <- start.value
+  }
+  if(missing(trunc)){
+    LL <- function(N, s) -sum(rad.tab$abund*dzipf(rad.tab$rank, N=N, s=s, log = TRUE)) #
+  }
+  else{
+    LL <- function(N, s) -sum(rad.tab$abund*dtrunc("zipf", x = rad.tab$rank, coef = list(N = N, s = s), trunc = trunc, log = TRUE)) #
+  }
+  result <- do.call("mle2", c(list(LL, start = list(s = sss), data = list(x = rad.tab$rank), fixed=list(N=N), method = "Brent", lower = 0, upper = upper), dots))
+  if(abs(as.numeric(result@coef) - upper) < 0.001)
+    warning("mle equal to upper bound provided. \n Try increase value for the 'upper' argument")
+  new("fitrad", result, rad="zipf", distr = "zipf of relative abundance", trunc = ifelse(missing(trunc), NaN, trunc), rad.tab=rad.tab)
+}
+
+
+# Function to get interaction numbers and strengths for a given community
+itystr <- function(x){
+  if(sum(x) == 0){
+    return(data.frame(typ = c("amensalism", "commensalism", "competition", "mutualism", "predation"), 
+                      num = c(0,0,0,0,0), m1 = c(0,0,0,0,0), m2 = c(0,0,0,0,0)))
+  }
+  
+  i1 <- x[upper.tri(x)]
+  i2 <- t(x)[upper.tri(x)] 
+  
+  nonI <- i1 == 0 & i2 == 0
+  
+  ints <- cbind(i1 = apply(cbind(i1, i2), 1, max), i2 = apply(cbind(i1, i2), 1, min))#[!nonI,]
+  
+  inty <- vector(length = nrow(ints))
+  
+  inty[ints[,1] < 0 & ints[,2] < 0] <- "competition"
+  inty[ints[,1] > 0 & ints[,2] > 0] <- "mutualism"
+  inty[ints[,1] > 0 & ints[,2] < 0 | ints[,1] < 0 & ints[,2] > 0] <- "predation"
+  inty[ints[,1] < 0 & ints[,2]  == 0 | ints[,1] == 0 & ints[,2] < 0] <- "amensalism"
+  inty[ints[,1] > 0 & ints[,2]  == 0 | ints[,1] == 0 & ints[,2] > 0] <- "commensalism"
+  inty[ints[,1] == 0 & ints[,2] == 0] <- "none"
+  
+  df1 <- data.frame(ints, inty)[inty != "none",]
+  
+  num <- vector(length = 5, mode = "numeric")
+  umu <- vector(length = 5, mode = "numeric")
+  lmu <- vector(length = 5, mode = "numeric")
+  
+  
+  iL <- c("amensalism", "commensalism", "competition", "mutualism", "predation")
+  num[iL %in% aggregate(df1$inty, list(df1$inty), length)$Group.1] <- aggregate(df1$inty, list(df1$inty), length)$x
+  umu[iL %in% aggregate(df1$inty, list(df1$inty), length)$Group.1] <- aggregate(df1$i2, list(df1$inty), mean)$x
+  lmu[iL %in% aggregate(df1$inty, list(df1$inty), length)$Group.1] <- aggregate(df1$i1, list(df1$inty), mean)$x
+  
+  
+  df2 <- data.frame(typ = iL, num = num, m1 = umu, m2 = lmu)
+  
+  return(df2)
+}
+
+
+# My r2 function
+get_r2 <- function(o, p){
+  1 - sum((o-p)^2)/sum((o - mean(o))^2)
+}
+
+
+# Yingnan's modified r2 function
+r2modified <- function(x,y,log=FALSE){
+  if(log){
+    rm = 1-sum((log10(x)-log10(y))^2)/sum((log10(x)-mean(log10(x)))^2)
+  }
+  else{
+    rm = 1-sum((x-y)^2)/sum((x-mean(x))^2)
+  }
+  return(rm)  
+}
+
+
+get_abundvec <- function(abund, N = 10000){
+  r.ab <- abund/sum(abund)
+  samp2 <- sample(1:length(abund), N, replace = T, prob = r.ab)
+  t1 <- table(samp2)
+  return(as.numeric(t1))
+}
+
+
+fzmod <- function(x){
+  fz1 <- fitzipf_r(x)
+  fc1 <- fz1@fullcoef
+  nll <- fz1@minuslogl(N = fz1@fullcoef[1], s = fz1@fullcoef[2])
+  r2 <- r2modified(sort(x, decreasing = T), radpred(fz1)$abund)
+  
+  return(data.frame(t(fc1), nll, r2))
+}
+

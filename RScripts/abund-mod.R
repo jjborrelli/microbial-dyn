@@ -409,6 +409,11 @@ summary(fit3) # .52
 sfit$ints2 <- c(AIC(fit3), summary(fit3)$r.squared) # -3287
 fitsdf$ints2[coefnames %in% names(fit3$coefficients)] <- fit3$coefficients
 sfitp$ints2[coefnames %in% names(fit3$coefficients)] <- summary(fit3)$coefficients[,4] <= 0.05
+
+## ONLY "ENVIRONMENT"
+fit3 <- lm(fz~gr+d, data = alld)
+summary(fit3)
+
 ## ALL INT STRENGTHS AND NUM INTS
 fit3 <- lm(fz~d.tot+allOut+typ, data = alldat, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit3) # .22
@@ -538,3 +543,6 @@ for(i in 1:300){
 }
 plot(m1, ylim = c(0,5), typ = "l")
 points(m2, typ = "l")
+
+
+alld <- readRDS("~/Documents/AbundData/alldat.rds")
