@@ -41,7 +41,8 @@ fit2.2 <- lm(log10(ab1$s)~m.int+comp+mut+pred+amens+comm, data = wp1, x = F, y =
 summary(fit2.2)
 fit3 <- lm(log10(ab1$s)~bet.uw+d.tot+cc.uw+mod.uw, data = fdat1, x = F, y = F, model = F, na.action = "na.fail")
 summary(fit3)
-
+fit3.2 <- lm(log10(ab1$s)~bet.w+d.tot+cc.w+mod.uw+conn+diam.uw+diam.w+apl+mod.uw+m.int+c1+ls, data = data.frame(wp1,fdat1), x = F, y = F, model = F, na.action = "na.fail")
+summary(fit3.2)
 fit4 <- lm(log10(ab1$s)~bet.w+d.tot+cc.w+mod.uw+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+conn+diam.uw+diam.w+apl+mod.uw+m.int+c1+ls, data = data.frame(wp1,fdat1), x = F, y = F, model = F, na.action = "na.fail")
 summary(fit4)
 
@@ -56,12 +57,12 @@ for(i in 1:nrow(ab1)){
 }
 sum(!ir)
 
-frqL <- rq((s)~(N), tau = .025,  data = log10(fzag))
+frqL <- rq((s)~(N), tau = .975,  data = log10(allf))
 abline(frqL)
-cutoff <- matrix(c(10:600, predict(frqL, data.frame(N = log10(10:600)))), ncol = 2)
+cutoff2 <- matrix(c(10:600, predict(frqL, data.frame(N = log10(10:600)))), ncol = 2)
 irL <- c()
-for(i in 1:nrow(ab1)){
-  irL[i] <- (ab1$s[i]) > 10^(cutoff[cutoff[,1] %in% (ab1$N[i]), 2])
+for(i in 1:nrow(do.call(rbind, im0k0)[,1:2])){
+  irL[i] <- (do.call(rbind, im0k0)[,2][i]) > 10^(cutoff[cutoff[,1] %in% (do.call(rbind, im0k0)[,1][i]), 2]) & (do.call(rbind, im0k0)[,2][i]) < 10^(cutoff2[cutoff2[,1] %in% (do.call(rbind, im0k0)[,1][i]), 2])
 }
 sum(!irL)
 
@@ -72,9 +73,9 @@ DAAG::cv.binary(fit5)
 
 
 
-plot(fzag[,1:2], xlim = c(0, 600), ylim = c(.5, 3.5))
+plot(fzag2[,1:2], xlim = c(0, 600), ylim = c(.5, 3.5))
 points(ab1[,1:2], col = ifelse(irL, "green4", "blue2"))
-lines(cutoff[,1], 10^cutoff[,2])
+lines(cutoff[,1], 10^cutoff[,2], col = "blue")
 
 
 
@@ -114,7 +115,7 @@ rfir <- randomForest::randomForest(factor(irL)~bet.w+d.tot+cc.w+mod.uw+nComp+Com
 randomForest::varImpPlot(rfir)
 
 cart  <- rpart::rpart(factor(irL)~bet.w+d.tot+cc.w+mod.uw+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+conn+diam.uw+diam.w+apl+mod.uw+m.int+c1+ls, data = data.frame(irL, wp1, fdat1), method = "class")
-rpart::plotcp(cart)
+#rpart::plotcp(cart)
 rpart.plot::prp(cart, extra = 1)
 ssmod(table((predict(cart, type = "class")), irL))
 ssmod(con1)
