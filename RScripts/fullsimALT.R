@@ -12,7 +12,7 @@ lvmodK <- function(times, state, parms){
 
 lvmod <- function(times, state, parms){
   with(as.list(c(state, parms)), {
-    dB <- state * parms$alpha + state * parms$m %*% state + 10^-5
+    dB <- state * parms$alpha + state * parms$m %*% state 
     list(dB)
   })
 }
@@ -91,13 +91,13 @@ for(i in 51:iter){
     # Dynamics
     
     ## Initial Abundance
-    inab[,i] <- runif(nrow(mats),.001,.02)
+    inab<- runif(nrow(mats),.001,.02)
     
     ## Growth rates
     gr <- runif(nrow(mats), 0, Rmax)
     
-    parlst[[i]] <- list(alpha = gr, m = mats2, K = 20)
-    dyn <- ode(inab[,i], times = 1:tmax, func = lvmod, parms = parlst[[i]], events = list(func = ext1, time =  1:tmax))
+    parlst <- list(alpha = gr, m = mats2, K = 20)
+    dyn <- ode(inab, times = 1:tmax, func = lvmod, parms = parlst, events = list(func = ext1, time =  1:tmax))
     
     if(nrow(dyn) == tmax){
       spp <- dyn[tmax, -1] > 0
@@ -375,3 +375,50 @@ text(apply(pt7, 2, median)[1],apply(pt7, 2, median)[2], "7", col = cbPalette[7])
 ptk5 <- log10(do.call(rbind,lapply(K.im5, function(x) x[2000,1:2])))
 Plot_ConvexHull(ptk5[,1], ptk5[,2], cbPalette[8])
 text(apply(ptk5, 2, median)[1],apply(ptk5, 2, median)[2], "8", col = cbPalette[8])
+
+
+
+
+
+cond <- FALSE
+S = 50
+while(!cond){
+  p1 <- runif(1,0,1)
+  p2 <- runif(1, p1, 1)
+  
+  ## Connectance
+  c1 <- runif(1, .1, .8)
+  
+  ## Adjacency matrix
+  mats <- get.adjacency(barabasi.game(S, 1, 100, directed = F), sparse = F)
+  mats2 <- mats*sample(c(-1,1,0), length(mats), replace = T, prob = c(p1,p2-p1,1-(p2)))
+  
+  ## Interaction matrix
+  mats2 <- fill_mat(mats2, dis = "beta", p1 = beta1, p2 = beta2)
+  diag(mats2) <- -rbeta(nrow(mats), d1p, d2p)
+  gr <- runif(nrow(mats), 0, Rmax)
+  
+  cond <- sum(-solve(mats2)%*%gr < 0) == 0
+  
+}
+parlst <- list(alpha = gr, m = mats2, K = 20)
+dyn <- ode(runif(50), times = 1:tmax, func = lvmod, parms = parlst, events = list(func = ext1, time =  1:tmax))
+matplot(dyn[,-1], typ = "l")
+cbind(-solve(mats2)%*%gr, dyn[2000,-1])
+
+
+-solve(mats2)%*%gr
+
+eqcomm <- matrix(0, nrow = nrow(mats2), ncol = ncol(mats2))
+for(i in 1:nrow(mats2)){
+  eqcomm[i,-i] <- -solve(mats2)[-i,-i]%*%gr[-i]
+  if(any(eqcomm[i,-i] < 0))
+}
+eqcomm
+vegan::vegdist(eqcomm)
+
+Dbc <- c()
+for(i in 1:nrow(eqcomm)){
+  Dbc[i] <- as.vector(vegan::vegdist(rbind(eqcomm[i,-i], (-solve(mats2)%*%gr)[-i])))
+}
+hist(Dbc)

@@ -7,22 +7,64 @@ get_fz <- function(x, reads = 2000){
   return(do.call(rbind, ab1))
 }
 
-ad1 <- readRDS("~/Documents/ImData2/alldat2.rds")
-ad2 <- readRDS("~/Documents/ImData2/alldat3.rds")
+get_fz1 <- function(x, reads = 2000){
+  ab1 <- apply(x, 1, function(x) unlist(x)[-c(601,602)])
+  
+  ab2 <- list()
+  for(x in 1:ncol(ab1)){
+    fz <- list()
+    for(i in 1:100){
+      ga <- get_abundvec(ab1[,x], N = reads)
+      fz[[i]] <- fzmod(ga)
+    }
+    print(x)
+    ab2[[x]] <- colMeans(do.call(rbind, fz))
+  }
+  
+  
+  return(do.call(rbind, ab2))
+}
+
+
+#ad1 <- readRDS("~/Documents/ImData2/alldat2.rds")
+#ad2 <- readRDS("~/Documents/ImData2/alldat3.rds")
+
+ad1 <- readRDS("D:/UVA/ImData2/alldat2.rds")
+ad2 <- readRDS("D:/UVA/ImData2/alldat3.rds")
+
 
 wp1 <- ad1[[2]]
 wp2 <- ad2[[2]]
 fdat1 <- ad1[[1]]
 fdat2 <- ad2[[1]]
-ab1 <- ad1[[3]]
-ab2 <- ad2[[3]]
+ad1 <- ad1[[3]]
+ad2 <- ad2[[3]]
 
-rm(ad1)
-rm(ad2)
+#rm(ad1)
+#rm(ad2)
 
 
-ab1 <- get_fz(ab1, reads = 2000)
-ab2 <- get_fz(ab2, reads = 2000)
+ab1a <- get_fz(ad1, reads = 10000)
+ab2a <- get_fz(ad2, reads = 10000)
+
+saveRDS(ab1a, "D:/microbiome-dynamics/data/fz_fit_1a.rds")
+saveRDS(ab2a, "D:/microbiome-dynamics/data/fz_fit_2a.rds")
+
+saveRDS(rbind(ab1a, ab2a), "D:/microbiome-dynamics/data/fz_fit_alla.rds")
+
+ab1b <- get_fz1(ad1, reads = 10000)
+saveRDS(ab1b, "D:/microbiome-dynamics/data/fz_fit_1b.rds")
+ab2b <- get_fz1(ad2, reads = 10000)
+saveRDS(ab2b, "D:/microbiome-dynamics/data/fz_fit_2b.rds")
+
+plot(rbind(ab1b,ab2b)[,1:2])
+
+
+otu <- read.csv("F:/AmericanGut/amergutOTU.csv")
+fzag <- apply(otu[,-1], 2, get_abundvec, N = 10000)
+fzag <- lapply(fzag, fzmod)
+fzag <- do.call(rbind, fzag)
+saveRDS(fzag, "D:/microbiome-dynamics/data/fzag10k.rds")
 
 plot(fzag[,1:2], xlim = c(0, 600), ylim = c(.5, 3.5))
 points(ab1[,1:2], col = "green3")
@@ -66,16 +108,16 @@ for(i in 1:nrow(do.call(rbind, im0k0)[,1:2])){
 }
 sum(!irL)
 
-fit5 <- glm(irL~bet.w+d.tot+cc.w+mod.uw+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+conn+diam.uw+diam.w+apl+mod.uw+m.int+c1+ls, data = data.frame(irL, wp1, fdat1), family = "binomial")
+fit5 <- glm(ir~bet.w+d.tot+cc.w+mod.uw+nComp+CompOut+nMut+MutOut+nPred+PredOut+nAmens+AmensOut+nComm+CommOut+conn+diam.uw+diam.w+apl+mod.uw+m.int+c1+ls, data = data.frame(ir, wp1, fdat1), family = "binomial")
 summary(fit5)
 DAAG::cv.binary(fit5)
 
 
 
 
-plot(fzag2[,1:2], xlim = c(0, 600), ylim = c(.5, 3.5))
-points(ab1[,1:2], col = ifelse(irL, "green4", "blue2"))
-lines(cutoff[,1], 10^cutoff[,2], col = "blue")
+plot(fzag[,1:2], xlim = c(0, 600), ylim = c(.5, 3.5))
+points(ab1[,1:2], col = ifelse(ir, "green4", "blue2"))
+lines(cutoff[,1], cutoff[,2], col = "blue")
 
 
 
@@ -119,3 +161,7 @@ cart  <- rpart::rpart(factor(irL)~bet.w+d.tot+cc.w+mod.uw+nComp+CompOut+nMut+Mut
 rpart.plot::prp(cart, extra = 1)
 ssmod(table((predict(cart, type = "class")), irL))
 ssmod(con1)
+
+
+
+#######################################################################
